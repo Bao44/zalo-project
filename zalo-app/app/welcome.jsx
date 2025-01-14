@@ -22,9 +22,9 @@ const Welcome = () => {
 
         {/* title */}
         <View style={{ gap: 20 }}>
-          <Text style={styles.title}>Music!</Text>
+          <Text style={styles.title}>Zalo!</Text>
           <Text style={styles.punchline}>
-            Welcome to NoChill.
+            Welcome.
           </Text>
         </View>
 
