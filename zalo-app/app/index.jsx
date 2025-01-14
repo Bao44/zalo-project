@@ -8,6 +8,7 @@ const index = () => {
     <View>
       <Text>index</Text>
       <Button title='welcome' onPress={() => router.push('welcome')}/>
+      <Text>hello</Text>
     </View>
   )
 }
