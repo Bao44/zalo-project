@@ -1,10 +1,14 @@
-import { View, Text } from 'react-native'
+import { View, Text, Button } from 'react-native'
 import React from 'react'
+import { useRouter } from 'expo-router';
 
 const index = () => {
+  const router = useRouter();
   return (
     <View>
-      <Text>index 1</Text>
+      <Text>index</Text>
+      <Button title='welcome' onPress={() => router.push('welcome')}/>
+      <Text>hello</Text>
     </View>
   )
 }
