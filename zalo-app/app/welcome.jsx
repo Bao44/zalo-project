@@ -12,46 +12,38 @@ const Welcome = () => {
   return (
     <ScreenWrapper bg="white">
       <StatusBar style="dark" />
+      {/* title */}
+      <View style={{ gap: 20 }}>
+        <Text style={styles.title}>Yalo</Text>
+      </View>
+
       <View style={styles.container}>
         {/* welcome image */}
         <Image
           style={styles.welcomeImage}
           resizeMode="contain"
-          source={require("../assets/images/welcome.png")}
+          source={require("../assets/images/video-chat.png")}
         />
-
-        {/* title */}
-        <View style={{ gap: 20 }}>
-          <Text style={styles.title}>Zalo!</Text>
-          <Text style={styles.punchline}>
-            Welcome.
-          </Text>
-        </View>
 
         {/* footer */}
         <View style={styles.footer}>
           <Btn
-            title="Getting Started"
-            buttonStyle={{ marginHorizontal: wp(10) }}
-            onPress={() => router.push("signUp")}
+            title="Đăng nhập"
+            buttonStyle={{ marginHorizontal: wp(10), borderRadius: 50 }}
+            textStyle={{ fontSize: hp(2) }}
+            onPress={() => router.push("login")}
           />
 
-          <View style={styles.bottomTextContainer}>
-            <Text style={styles.loginText}>Already have an account!</Text>
-            <Pressable onPress={() => router.push("login")}>
-              <Text
-                style={
-                  (styles.loginText,
-                  {
-                    color: theme.colors.primaryDark,
-                    fontWeight: theme.fonts.semibold,
-                  })
-                }
-              >
-                Login
-              </Text>
-            </Pressable>
-          </View>
+          <Btn
+            title="Tạo tài khoản mới"
+            buttonStyle={{
+              marginHorizontal: wp(10),
+              backgroundColor: theme.colors.grayLight,
+              borderRadius: 50,
+            }}
+            textStyle={{ color: theme.colors.textDark, fontSize: hp(2) }}
+            onPress={() => router.push("signUp")}
+          />
         </View>
       </View>
     </ScreenWrapper>
@@ -74,10 +66,11 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   title: {
-    color: theme.colors.text,
-    fontSize: hp(4),
+    color: theme.colors.primary,
+    fontSize: hp(6),
     textAlign: "center",
     fontWeight: theme.fonts.extraBold,
+    marginTop: hp(4),
   },
   punchline: {
     textAlign: "center",
@@ -88,16 +81,5 @@ const styles = StyleSheet.create({
   footer: {
     gap: 30,
     width: "100%",
-  },
-  bottomTextContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 5,
-  },
-  loginText: {
-    color: theme.colors.text,
-    textAlign: "center",
-    fontSize: hp(1.6),
   },
 });
