@@ -15,7 +15,33 @@ import Menu from "./Menu";
 import Wallet from "./Wallet";
 import Cloud from "./Cloud";
 import Phone from "./Phone";
+import Notification from "./Notification";
 import { theme } from "../../constants/theme";
+import ImageFile from "./ImageFile";
+import MicroOn from "./MicroOn";
+import MicroOff from "./MicroOff";
+import UserAdd from "./UserAdd";
+import UserGroup from "./UserGroup";
+import Pin from "./Pin";
+import Calendar from "./calendar";
+import Information from "./Information";
+import Ztyle from "./Ztyle";
+import Security from "./Security";
+import Link from "./Link";
+import EyeHide from "./EyeHide";
+import Report from "./Report";
+import Delete from "./Delete";
+import LeaveGroup from "./LeaveGroup";
+import UserSetting from "./UserSetting";
+import Edit from "./Edit";
+import Share from "./Share";
+import Forward from "./Forward";
+import Reply from "./Reply";
+import Copy from "./Copy";
+import VolumeOn from "./VolumeOn";
+import Translate from "./Translate";
+import VolumeOff from "./VolumeOff";
+
 
 const icons = {
   add: Add,
@@ -34,6 +60,32 @@ const icons = {
   setting: Setting,
   timeLine: Timeline,
   wallet: Wallet,
+  notification : Notification,
+  imageFile : ImageFile,
+  microOn : MicroOn,
+  microOff : MicroOff,
+  userAdd : UserAdd,
+  userGroup : UserGroup,
+  pin : Pin,
+  calendar : Calendar,
+  information : Information,
+  zTyle : Ztyle,
+  security : Security,
+  link : Link,
+  eyeHide : EyeHide,
+  report : Report,
+  delete : Delete,
+  leaveGroup : LeaveGroup,
+  userSetting : UserSetting,
+  edit : Edit,
+  share : Share,
+  forward : Forward,
+  reply : Reply,
+  copy : Copy,
+  volumeOn : VolumeOn,
+  translate : Translate,
+  volumeOff : VolumeOff,
+  
 };
 
 const Icon = ({ name, ...props }) => {
