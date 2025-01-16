@@ -41,6 +41,7 @@ import Copy from "./Copy";
 import VolumeOn from "./VolumeOn";
 import Translate from "./Translate";
 import VolumeOff from "./VolumeOff";
+import BirthdayCake from "./BirthdayCake";
 
 
 const icons = {
@@ -85,7 +86,7 @@ const icons = {
   volumeOn : VolumeOn,
   translate : Translate,
   volumeOff : VolumeOff,
-  
+  birthdayCake : BirthdayCake
 };
 
 const Icon = ({ name, ...props }) => {
