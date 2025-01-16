@@ -1,12 +1,10 @@
 import React from "react";
-import Navigation from "../../StackNavigator";
 import { Text, View } from "react-native";
+import Navigation from "../../StackNavigator";
 
 const Home = () => {
   return (
-    <View>
-      <Text>Home</Text>
-    </View>
+    <Navigation />
   );
 };
 

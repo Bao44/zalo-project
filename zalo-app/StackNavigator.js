@@ -11,6 +11,7 @@ import DiaryScreen from "./app/(tabs)/DiaryScreen";
 import PhoneBookScreen from "./app/(tabs)/PhoneBookScreen";
 import DiscoverScreen from "./app/(tabs)/DiscoverScreen";
 import PersonalScreen from "./app/(tabs)/PersonalScreen";
+import Icon from "./assets/icons";
 
 const Tab = createBottomTabNavigator();
 
@@ -21,7 +22,7 @@ function BottomTabs() {
         screenOptions={{
           tabBarStyle: {
             backgroundColor: "white",
-            height: 60,
+            height: 80,
           },
         }}
       >
@@ -31,12 +32,12 @@ function BottomTabs() {
           options={{
             tabBarLabel: "Tin nhắn",
             headerShown: false,
-            tabBarLabelStyle: { color: "white", fontSize: 14 },
+            tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <AntDesign name="home" size={30} color="white" />
+                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <AntDesign name="home" size={30} color="gray" />
+                <Icon name="message" size={26} strokeWidth={1.6} />
               ),
           }}
         />
@@ -47,44 +48,44 @@ function BottomTabs() {
           options={{
             tabBarLabel: "Danh bạ",
             headerShown: false,
-            tabBarLabelStyle: { color: "white", fontSize: 14 },
+            tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <Fontisto name="music-note" size={24} color="white" />
+                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <Fontisto name="music-note" size={24} color="gray" />
+                <Icon name="message" size={26} strokeWidth={1.6} />
               ),
           }}
         />
 
         <Tab.Screen
           name="Khám phá"
-          component={DiaryScreen}
+          component={DiscoverScreen}
           options={{
             tabBarLabel: "Khám phá",
             headerShown: false,
-            tabBarLabelStyle: { color: "white", fontSize: 14 },
+            tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <FontAwesome5 name="globe-asia" size={24} color="white" />
+                <Icon name="moreHorizontal" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <FontAwesome5 name="globe-asia" size={24} color="gray" />
+                <Icon name="moreHorizontal" size={26} strokeWidth={1.6} />
               ),
           }}
         />
 
         <Tab.Screen
           name="Nhật kí"
-          component={DiscoverScreen}
+          component={DiaryScreen}
           options={{
             tabBarLabel: "Nhật kí",
             headerShown: false,
-            tabBarLabelStyle: { color: "white", fontSize: 14 },
+            tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <FontAwesome5 name="globe-asia" size={24} color="white" />
+                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <FontAwesome5 name="globe-asia" size={24} color="gray" />
+                <Icon name="message" size={26} strokeWidth={1.6} />
               ),
           }}
         />
@@ -95,12 +96,12 @@ function BottomTabs() {
           options={{
             tabBarLabel: "Cá nhân",
             headerShown: false,
-            tabBarLabelStyle: { color: "white", fontSize: 14 },
+            tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <FontAwesome5 name="globe-asia" size={24} color="white" />
+                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <FontAwesome5 name="globe-asia" size={24} color="gray" />
+                <Icon name="message" size={26} strokeWidth={1.6} />
               ),
           }}
         />
@@ -113,15 +114,15 @@ const Stack = createNativeStackNavigator();
 
 function Navigation() {
   return (
-    <NavigationContainer independent={true}>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="Main"
-          component={BottomTabs}
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    // <NavigationContainer independent={true}>
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Main"
+        component={BottomTabs}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+    // </NavigationContainer>
   );
 }
 

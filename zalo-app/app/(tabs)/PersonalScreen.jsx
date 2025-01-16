@@ -1,12 +1,15 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import { View, Text } from "react-native";
+import React from "react";
+import ScreenWrapper from "../../components/ScreenWrapper";
 
 const PersonalScreen = () => {
   return (
-    <View>
-      <Text>PersonalScreen</Text>
-    </View>
-  )
-}
+    <ScreenWrapper>
+      <View>
+        <Text>PersonalScreen</Text>
+      </View>
+    </ScreenWrapper>
+  );
+};
 
-export default PersonalScreen
+export default PersonalScreen;

@@ -1,12 +1,15 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import { View, Text } from "react-native";
+import React from "react";
+import ScreenWrapper from "../../components/ScreenWrapper";
 
 const MessageScreen = () => {
   return (
-    <View>
-      <Text>MessageScreen</Text>
-    </View>
-  )
-}
+    <ScreenWrapper>
+      <View>
+        <Text>MessageScreen</Text>
+      </View>
+    </ScreenWrapper>
+  );
+};
 
-export default MessageScreen
+export default MessageScreen;
