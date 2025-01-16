@@ -42,6 +42,7 @@ import VolumeOn from "./VolumeOn";
 import Translate from "./Translate";
 import VolumeOff from "./VolumeOff";
 import Lock from "./Lock";
+import Contact from "./Contact";
 
 
 const icons = {
@@ -87,7 +88,7 @@ const icons = {
   volumeOn : VolumeOn,
   translate : Translate,
   volumeOff : VolumeOff,
-  
+  contact : Contact,
 };
 
 const Icon = ({ name, ...props }) => {

@@ -51,9 +51,9 @@ function BottomTabs() {
             tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
+                <Icon name="contact" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <Icon name="message" size={26} strokeWidth={1.6} />
+                <Icon name="contact" size={26} strokeWidth={1.6} />
               ),
           }}
         />
@@ -67,9 +67,9 @@ function BottomTabs() {
             tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <Icon name="moreHorizontal" size={32} strokeWidth={1.6} color="#0068FF"/>
+                <Icon name="discovery" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <Icon name="moreHorizontal" size={26} strokeWidth={1.6} />
+                <Icon name="discovery" size={26} strokeWidth={1.6} />
               ),
           }}
         />
@@ -83,9 +83,9 @@ function BottomTabs() {
             tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
+                <Icon name="timeLine" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <Icon name="message" size={26} strokeWidth={1.6} />
+                <Icon name="timeLine" size={26} strokeWidth={1.6} />
               ),
           }}
         />
@@ -99,9 +99,9 @@ function BottomTabs() {
             tabBarLabelStyle: { color: "gray", fontSize: 14, paddingTop: 10 },
             tabBarIcon: ({ focused }) =>
               focused ? (
-                <Icon name="message" size={32} strokeWidth={1.6} color="#0068FF"/>
+                <Icon name="profile" size={32} strokeWidth={1.6} color="#0068FF"/>
               ) : (
-                <Icon name="message" size={26} strokeWidth={1.6} />
+                <Icon name="profile" size={26} strokeWidth={1.6} />
               ),
           }}
         />
