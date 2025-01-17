@@ -48,7 +48,7 @@ const Login = () => {
             onChangeText={(value) => (phoneRef.current = value)}
           />
           <Input
-            icon={<Icon name="message" size={26} strokeWidth={1.6} />}
+            icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
             placeholder="Enter your password"
             secureTextEntry
             onChangeText={(value) => (passwordRef.current = value)}
@@ -56,7 +56,7 @@ const Login = () => {
           <Text style={styles.forgotPassword}>Lấy lại mật khẩu</Text>
 
           {/* button */}
-          <Button title={"Đăng nhập"} buttonStyle={{ borderRadius: 50 }} />
+          <Button title={"Đăng nhập"} buttonStyle={{ borderRadius: 50 }} onPress={() => router.push("/home")}/>
         </View>
 
         {/* footer */}

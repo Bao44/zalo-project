@@ -1,4 +1,5 @@
 import React from "react";
+import { theme } from "../../constants/theme";
 import Message from "./Message";
 import Timeline from "./Timeline";
 import Discovery from "./Discovery";
@@ -16,14 +17,13 @@ import Wallet from "./Wallet";
 import Cloud from "./Cloud";
 import Phone from "./Phone";
 import Notification from "./Notification";
-import { theme } from "../../constants/theme";
 import ImageFile from "./ImageFile";
 import MicroOn from "./MicroOn";
 import MicroOff from "./MicroOff";
 import UserAdd from "./UserAdd";
 import UserGroup from "./UserGroup";
 import Pin from "./Pin";
-import Calendar from "./calendar";
+import Calendar from "./Calendar";
 import Information from "./Information";
 import Ztyle from "./Ztyle";
 import Security from "./Security";
@@ -42,6 +42,8 @@ import VolumeOn from "./VolumeOn";
 import Translate from "./Translate";
 import VolumeOff from "./VolumeOff";
 import BirthdayCake from "./BirthdayCake";
+import Lock from "./Lock";
+import Contact from "./Contact";
 
 
 const icons = {
@@ -73,6 +75,7 @@ const icons = {
   zTyle : Ztyle,
   security : Security,
   link : Link,
+  lock: Lock,
   eyeHide : EyeHide,
   report : Report,
   delete : Delete,
@@ -86,7 +89,9 @@ const icons = {
   volumeOn : VolumeOn,
   translate : Translate,
   volumeOff : VolumeOff,
-  birthdayCake : BirthdayCake
+  birthdayCake : BirthdayCake,
+  contact : Contact,
+
 };
 
 const Icon = ({ name, ...props }) => {
