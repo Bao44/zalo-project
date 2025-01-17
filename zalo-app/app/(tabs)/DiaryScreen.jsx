@@ -6,7 +6,7 @@ const DiaryScreen = () => {
   return (
     <ScreenWrapper>
       <View>
-        <Text>DiaryScreen</Text>
+        <Text>Diary Screen</Text>
       </View>
     </ScreenWrapper>
   )
