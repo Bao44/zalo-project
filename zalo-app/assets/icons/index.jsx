@@ -43,6 +43,7 @@ import Translate from "./Translate";
 import VolumeOff from "./VolumeOff";
 import Lock from "./Lock";
 import Contact from "./Contact";
+import ImageAdd from "./ImageAdd";
 
 
 const icons = {
@@ -89,6 +90,7 @@ const icons = {
   translate : Translate,
   volumeOff : VolumeOff,
   contact : Contact,
+  imageAdd : ImageAdd
 };
 
 const Icon = ({ name, ...props }) => {
