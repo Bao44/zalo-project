@@ -6,7 +6,7 @@ const PhoneBookScreen = () => {
   return (
     <ScreenWrapper>
       <View>
-        <Text>PhoneBookScreen</Text>
+        <Text>PhoneBookScreenThuan</Text>
       </View>
     </ScreenWrapper>
   );
