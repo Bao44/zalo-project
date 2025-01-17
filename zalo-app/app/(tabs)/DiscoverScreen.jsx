@@ -6,7 +6,7 @@ const DiscoverScreen = () => {
   return (
     <ScreenWrapper>
       <View>
-        <Text>DiscoverScreen</Text>
+        <Text>Dis</Text>
       </View>
     </ScreenWrapper>
   );
