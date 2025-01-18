@@ -1,15 +1,12 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import ScreenWrapper from '../../components/ScreenWrapper'
+import { View, Text } from "react-native";
+import React from "react";
 
 const DiaryScreen = () => {
   return (
-    <ScreenWrapper>
-      <View>
-        <Text>DiaryScreen</Text>
-      </View>
-    </ScreenWrapper>
-  )
-}
+    <View>
+      <Text>DiaryScreen</Text>
+    </View>
+  );
+};
 
-export default DiaryScreen
+export default DiaryScreen;

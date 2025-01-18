@@ -3,14 +3,14 @@ import React from "react";
 import Icon from "../assets/icons";
 import { theme } from "../constants/theme";
 
-const BackButton = ({ size = 30, router }) => {
+const BackButton = ({ size = 30, router, color }) => {
   return (
     <Pressable onPress={() => router.back()} style={styles.button}>
       <Icon
         name="arrowLeft"
         strokeWidth={2.5}
         size={size}
-        color={theme.colors.text}
+        color={color || theme.colors.text}
       />
     </Pressable>
   );
