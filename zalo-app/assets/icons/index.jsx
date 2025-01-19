@@ -45,6 +45,7 @@ import BirthdayCake from "./BirthdayCake";
 import Lock from "./Lock";
 import Contact from "./Contact";
 import ImageAdd from "./ImageAdd";
+import UserMultiple from "./UserMultiple";
 
 
 const icons = {
@@ -92,7 +93,8 @@ const icons = {
   volumeOff : VolumeOff,
   birthdayCake : BirthdayCake,
   contact : Contact,
-  imageAdd : ImageAdd
+  imageAdd : ImageAdd,
+  userMultiple : UserMultiple,
 };
 
 const Icon = ({ name, ...props }) => {
