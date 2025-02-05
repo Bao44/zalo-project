@@ -11,39 +11,44 @@ const PhoneBookScreen = () => {
     setTypeContact(type);
   }
   return (
-    <View style={style.container}>
-      <View style={style.boxTypeContact}>
-        <TouchableOpacity onPress={() => handelTypeContact("friends")} style={typeContact === "friends" ? style.typeContactActive : style.typeContactNoActive}>
-          <Text style={typeContact === "friends" ? style.textTypeContactActive : style.textTypeContact}>Bạn bè</Text>
+    <View style={styles.container}>
+      <View style={styles.boxTypeContact}>
+        <TouchableOpacity onPress={() => handelTypeContact("friends")} style={typeContact === "friends" ? styles.typeContactActive : styles.typeContactNoActive}>
+          <Text style={typeContact === "friends" ? styles.textTypeContactActive : styles.textTypeContact}>Bạn bè</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handelTypeContact("groups")} style={typeContact === "groups" ? style.typeContactActive : style.typeContactNoActive}>
-          <Text style={typeContact === "groups" ? style.textTypeContactActive : style.textTypeContact}>Nhóm</Text>
+        <TouchableOpacity onPress={() => handelTypeContact("groups")} style={typeContact === "groups" ? styles.typeContactActive : styles.typeContactNoActive}>
+          <Text style={typeContact === "groups" ? styles.textTypeContactActive : styles.textTypeContact}>Nhóm</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handelTypeContact("OA")} style={typeContact === "OA" ? style.typeContactActive : style.typeContactNoActive}>
-          <Text style={typeContact === "OA" ? style.textTypeContactActive : style.textTypeContact}>OA</Text>
+        <TouchableOpacity onPress={() => handelTypeContact("OA")} style={typeContact === "OA" ? styles.typeContactActive : styles.typeContactNoActive}>
+          <Text style={typeContact === "OA" ? styles.textTypeContactActive : styles.textTypeContact}>OA</Text>
         </TouchableOpacity>
       </View>
       {typeContact === "friends" && <FriendsTabs />}
-
+      {typeContact === "groups" && <GroupsTabs />}
     </View>
   );
 };
 
 export default PhoneBookScreen;
 
+// List friends
 const FriendsTabs = () => {
+  const [typeListFriend, setTypeListFriend] = useState("all");
+  const handelTypeListFriend = (type) => {
+    setTypeListFriend(type);
+  }
   return (
     <ScrollView>
-      <View style={style.container}>
+      <View style={styles.listFriendContainer}>
         <View>
-          <TouchableOpacity style={style.boxFeature}>
-            <View style={{ backgroundColor: theme.colors.primary, borderRadius: 15, padding: 5, margin: 20 }}>
+          <TouchableOpacity style={styles.feature}>
+            <View style={styles.boxIconFeature}>
               <Icon name="userMultiple" size={32} strokeWidth={1.6} color="#FFF" />
             </View>
             <Text style={{ fontSize: 16 }}>Lời mời kết bạn ({6})</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={style.boxFeature}>
-            <View style={{ backgroundColor: theme.colors.primary, borderRadius: 15, padding: 5, margin: 20 }}>
+          <TouchableOpacity style={styles.feature}>
+            <View style={styles.boxIconFeature}>
               <Icon name="contact" size={32} strokeWidth={1.6} color="#FFF" />
             </View>
             <View>
@@ -51,8 +56,8 @@ const FriendsTabs = () => {
               <Text style={{ fontSize: 12, color: theme.colors.textLight }}>Các liên hệ có dùng Yalo</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={style.boxFeature}>
-            <View style={{ backgroundColor: theme.colors.primary, borderRadius: 15, padding: 5, margin: 20 }}>
+          <TouchableOpacity style={styles.feature}>
+            <View style={styles.boxIconFeature}>
               <Icon name="birthdayCake" size={32} strokeWidth={1.6} color="#FFF" />
             </View>
             <Text style={{ fontSize: 16 }}>Sinh nhật</Text>
@@ -61,25 +66,24 @@ const FriendsTabs = () => {
 
         <View style={{ backgroundColor: theme.colors.gray, height: hp(1.5) }} />
 
-        <View style={{ height: hp(8), flexDirection: 'row', alignItems: 'center', borderBottomColor: theme.colors.gray, borderBottomWidth: 1 }}>
-          <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', height: hp(4), width: wp(25), backgroundColor: theme.colors.gray, borderRadius: 20, marginLeft: 20 }}>
-            <Text style={{ fontSize: 14, fontWeight: theme.fonts.bold }}>Tất cả</Text>
-            <Text>({102})</Text>
+        <View style={styles.boxListFriend}>
+          <TouchableOpacity onPress={() => handelTypeListFriend("all")} style={styles.typeList}>
+            <Text style={typeListFriend === 'all' ? styles.textTypeListActive : styles.textTypeListNoActive}>Tất cả ({Users.length})</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', height: hp(4), paddingHorizontal: 15, borderColor: theme.colors.gray, borderWidth: 1, borderRadius: 20, marginLeft: 10 }}>
-            <Text style={{ fontSize: 14, }}>Mới truy cập</Text>
+          <TouchableOpacity onPress={() => handelTypeListFriend("online")} style={styles.typeList}>
+            <Text style={typeListFriend === 'online' ? styles.textTypeListActive : styles.textTypeListNoActive}>Mới truy cập ({Users.filter((user) => user.timeOnline > 0).length})</Text>
           </TouchableOpacity>
         </View>
 
         <View>
-          {Users.map((user, index) => (
-            <TouchableOpacity key={index} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: "space-between", paddingVertical: 15, paddingHorizontal: 20 }}>
+          {(typeListFriend === "all" ? Users : Users.filter((user) => user.timeOnline > 0)).map((user, index) => (
+            <TouchableOpacity key={index} style={styles.buttonFriend}>
               <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                <Image style={{ width: 50, height: 50, borderRadius: 25, marginRight: 20 }} source={{ uri: user.avatar }} />
-                <Text style={{ fontSize: 16, fontWeight: theme.fonts.bold }}>{user.name}</Text>
+                <Image style={styles.image} source={{ uri: user.avatar }} />
+                <Text style={styles.textNameFriend}>{user.name}</Text>
               </View>
-              <View style={{ marginLeft: 10, flexDirection: 'row', justifyContent: 'space-between', width: wp(20) }}>
+              <View style={styles.boxContactMethod}>
                 <TouchableOpacity>
                   <Icon name="phone" size={28} strokeWidth={1.6} color="gray" />
                 </TouchableOpacity>
@@ -95,7 +99,15 @@ const FriendsTabs = () => {
   )
 }
 
-const style = StyleSheet.create({
+const GroupsTabs = () => {
+  return (
+    <View>
+      <Text>Hello, NativeWind!</Text>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -132,9 +144,69 @@ const style = StyleSheet.create({
     alignItems: "center",
     width: "25%",
   },
-  boxFeature: {
+
+  // style list friend
+  listFriendContainer: {
+    flex: 1,
+  },
+  feature: {
     flexDirection: 'row',
     alignItems: 'center',
     height: hp(7),
-  }
+  },
+  boxIconFeature: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 15,
+    padding: 5,
+    margin: 20
+  },
+  boxListFriend: {
+    height: hp(8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomColor: theme.colors.gray,
+    borderBottomWidth: 1
+  },
+  typeList: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: hp(4),
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.gray,
+    borderRadius: 20,
+    marginLeft: 20
+  },
+  textTypeListActive: {
+    fontSize: 14,
+    fontWeight: theme.fonts.bold
+  },
+  textTypeListNoActive: {
+    fontSize: 14,
+  },
+
+  // Component friend
+  buttonFriend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: "space-between",
+    paddingVertical: 15,
+    paddingHorizontal: 20
+  },
+  image: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 20
+  },
+  textNameFriend: {
+    fontSize: 16,
+    fontWeight: theme.fonts.bold
+  },
+  boxContactMethod: {
+    marginLeft: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: wp(20)
+  },
+
 });
