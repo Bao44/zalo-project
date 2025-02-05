@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, SectionList } from "react-native";
 import React, { useState } from "react";
 import { hp, wp } from "../../helpers/common"
 import { theme } from "../../constants/theme";
@@ -34,9 +34,30 @@ export default PhoneBookScreen;
 // List friends
 const FriendsTabs = () => {
   const [typeListFriend, setTypeListFriend] = useState("all");
+  const filterUsers = typeListFriend === "all" ? Users : Users.filter((user) => user.timeOnline > 0);
   const handelTypeListFriend = (type) => {
     setTypeListFriend(type);
   }
+
+  const groupUsersByFirstLetter = (users) => {
+    const grouped = users.reduce((acc, user) => {
+      const firstLetter = user.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
+      if (!acc[firstLetter]) {
+        acc[firstLetter] = [];
+      }
+      acc[firstLetter].push(user);
+      return acc;
+    }, {});
+
+    // Chuyển đổi object thành mảng để sử dụng với SectionList
+    return Object.keys(grouped)
+      .sort() // Sắp xếp theo thứ tự ABC
+      .map((letter) => ({
+        title: letter,
+        data: grouped[letter],
+      }));
+  };
+  const groupedUsers = groupUsersByFirstLetter(filterUsers);
   return (
     <ScrollView>
       <View style={styles.listFriendContainer}>
@@ -76,12 +97,15 @@ const FriendsTabs = () => {
           </TouchableOpacity>
         </View>
 
-        <View>
-          {(typeListFriend === "all" ? Users : Users.filter((user) => user.timeOnline > 0)).map((user, index) => (
-            <TouchableOpacity key={index} style={styles.buttonFriend}>
+        <SectionList
+          sections={groupedUsers}
+          scrollEnabled={false}
+          keyExtractor={(item, index) => item + index}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.buttonFriend}>
               <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                <Image style={styles.image} source={{ uri: user.avatar }} />
-                <Text style={styles.textNameFriend}>{user.name}</Text>
+                <Image style={styles.image} source={{ uri: item.avatar }} />
+                <Text style={styles.textNameFriend}>{item.name}</Text>
               </View>
               <View style={styles.boxContactMethod}>
                 <TouchableOpacity>
@@ -92,8 +116,11 @@ const FriendsTabs = () => {
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
-          ))}
-        </View>
+          )}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={{ fontSize: 16, fontWeight: 'bold', paddingHorizontal: 20, paddingVertical: 5 }}>{title}</Text>
+          )}
+        />
       </View>
     </ScrollView>
   )
@@ -200,7 +227,6 @@ const styles = StyleSheet.create({
   },
   textNameFriend: {
     fontSize: 16,
-    fontWeight: theme.fonts.bold
   },
   boxContactMethod: {
     marginLeft: 10,
