@@ -46,6 +46,8 @@ import Lock from "./Lock";
 import Contact from "./Contact";
 import ImageAdd from "./ImageAdd";
 import UserMultiple from "./UserMultiple";
+import AddGroup from "./addGroup";
+import Sort from "./Sort";
 
 
 const icons = {
@@ -95,6 +97,8 @@ const icons = {
   contact : Contact,
   imageAdd : ImageAdd,
   userMultiple : UserMultiple,
+  addGroup : AddGroup,
+  sort : Sort
 };
 
 const Icon = ({ name, ...props }) => {

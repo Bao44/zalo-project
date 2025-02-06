@@ -1,0 +1,547 @@
+const groups = [
+    {
+        id: 1,
+        name: "Nhóm 1 - Công ty ABC XYZ 123 456",
+        avatar: "",
+        users: [
+            {
+                id: 1,
+                name: "Nguyễn Văn A",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/310",
+                timeOnline: 10,
+            },
+            {
+                id: 2,
+                name: "Nguyễn Văn B",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/312",
+                timeOnline: 10,
+            },
+            {
+                id: 3,
+                name: "Nguyễn Văn C",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/313",
+                timeOnline: 10,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 1,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 2,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 3,
+                content: "Chào bạn, rất vui được làm quen với mọi người!",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 2,
+        name: "Nhóm 2",
+        avatar: "",
+        users: [
+            {
+                id: 5,
+                name: "Trần Văn E",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/301",
+                timeOnline: 0,
+            },
+            {
+                id: 6,
+                name: "Dặng Văn F",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/302",
+                timeOnline: 0,
+            },
+            {
+                id: 7,
+                name: "Lê Văn G",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/303",
+                timeOnline: 0,
+            },
+            {
+                id: 8,
+                name: "Cao Văn H",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/304",
+                timeOnline: 0,
+            },
+            {
+                id: 9,
+                name: "Cao Văn H",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/305",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 5,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 6,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 7,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 8,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 3,
+        name: "Nhóm 3",
+        avatar: "https://i.pravatar.cc/302",
+        users: [
+            {
+                id: 9,
+                name: "Nguyễn Văn I",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 10,
+                name: "Trần Văn K",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 11,
+                name: "Lê Văn L",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 12,
+                name: "Cao Văn M",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 9,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 10,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 11,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 12,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 4,
+        name: "Nhóm 4",
+        avatar: "https://i.pravatar.cc/303",
+        users: [
+            {
+                id: 13,
+                name: "Nguyễn Văn N",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 14,
+                name: "Trần Văn O",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 15,
+                name: "Lê Văn P",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 16,
+                name: "Cao Văn Q",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 13,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 14,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 15,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 16,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 5,
+        name: "Nhóm 5",
+        avatar: "https://i.pravatar.cc/304",
+        users: [
+            {
+                id: 17,
+                name: "Nguyễn Văn R",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 18,
+                name: "Trần Văn S",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 19,
+                name: "Lê Văn T",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 20,
+                name: "Cao Văn U",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 17,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 18,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 19,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 20,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 6,
+        name: "Nhóm 6",
+        avatar: "https://i.pravatar.cc/305",
+        users: [
+            {
+                id: 21,
+                name: "Nguyễn Văn V",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 22,
+                name: "Trần Văn W",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 23,
+                name: "Lê Văn X",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 24,
+                name: "Cao Văn Y",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 21,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 22,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 23,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 24,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 7,
+        name: "Nhóm 7",
+        avatar: "https://i.pravatar.cc/306",
+        users: [
+            {
+                id: 25,
+                name: "Nguyễn Văn Z",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 26,
+                name: "Trần Văn A1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 27,
+                name: "Lê Văn B1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 28,
+                name: "Cao Văn C1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 25,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 26,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 27,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 28,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 8,
+        name: "Nhóm 8",
+        avatar: "https://i.pravatar.cc/307",
+        users: [
+            {
+                id: 29,
+                name: "Nguyễn Văn D1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 30,
+                name: "Trần Văn E1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 31,
+                name: "Lê Văn F1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 32,
+                name: "Cao Văn G1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 29,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 30,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 31,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 32,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+    {
+        id: 9,
+        name: "Nhóm 9",
+        avatar: "https://i.pravatar.cc/308",
+        users: [
+            {
+                id: 33,
+                name: "Nguyễn Văn H1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 34,
+                name: "Trần Văn I1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 35,
+                name: "Lê Văn K1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+            {
+                id: 36,
+                name: "Cao Văn L1",
+                phone: "0123456789",
+                avatar: "https://i.pravatar.cc/300",
+                timeOnline: 0,
+            },
+        ],
+        message: [
+            {
+                id: 1,
+                userId: 33,
+                content: "Xin chào",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 2,
+                userId: 34,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 3,
+                userId: 35,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+            {
+                id: 4,
+                userId: 36,
+                content: "Chào bạn",
+                time: "2021-07-27T07:00:00.000Z",
+            },
+        ]
+    },
+];
+
+export default groups;
