@@ -48,6 +48,8 @@ import ImageAdd from "./ImageAdd";
 import UserMultiple from "./UserMultiple";
 import AddGroup from "./addGroup";
 import Sort from "./Sort";
+import Camera from "./Camera";
+import Tick from "./Tick";
 
 
 const icons = {
@@ -98,7 +100,9 @@ const icons = {
   imageAdd : ImageAdd,
   userMultiple : UserMultiple,
   addGroup : AddGroup,
-  sort : Sort
+  sort : Sort,
+  camera : Camera,
+  tick : Tick
 };
 
 const Icon = ({ name, ...props }) => {

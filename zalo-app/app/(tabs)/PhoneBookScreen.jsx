@@ -6,6 +6,8 @@ import Icon from "../../assets/icons";
 import Users from "../../assets/dataLocals/UserLocal";
 import Groups from "../../assets/dataLocals/GroupLocal";
 
+import { useRouter } from "expo-router";
+
 const PhoneBookScreen = () => {
   const [typeContact, setTypeContact] = useState("friends");
   const handelTypeContact = (type) => {
@@ -143,9 +145,11 @@ const GroupsTabs = () => {
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
+  const router = useRouter();
+
   return (
     <ScrollView>
-      <TouchableOpacity style={styles.createGroup}>
+      <TouchableOpacity style={styles.createGroup} onPress={() => router.push("newGroup")}>
         <View style={styles.boxIconAddGroup}>
           <Icon name="addGroup" size={32} strokeWidth={1.6} color={theme.colors.primaryDark} />
         </View>
