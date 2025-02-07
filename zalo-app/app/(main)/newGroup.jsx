@@ -1,5 +1,5 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image, SectionList, Animated } from "react-native";
-import React, { useEffect, useRef } from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image, SectionList, Animated, Alert, BackHandler } from "react-native";
+import React, { useEffect, useRef, useCallback } from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
@@ -8,6 +8,7 @@ import { useState } from "react";
 import users from "../../assets/dataLocals/UserLocal";
 import RadioButton from "../../components/RadioButton";
 import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 
 
 const NewGroup = () => {
@@ -16,12 +17,41 @@ const NewGroup = () => {
     const [selected, setSelected] = useState("recent");
     const [recent, setRecent] = useState(users);
     const [selectedIds, setSelectedIds] = useState([]);
-    const [modalVisible, setModalVisible] = useState(false);
     const [userSelecteds, setUserSelecteds] = useState([]);
     const [nameGroup, setNameGroup] = useState("");
     const [search, setSearch] = useState("");
 
+    //back to previous screen
+    const handleBackPress = () => {
+        if (userSelecteds.length > 0 || nameGroup !== "") {
+            Alert.alert(
+                "Xác nhận",
+                "Chưa tạo nhóm xong. Thoát khỏi trang này?",
+                [
+                    { text: "Ở lại", style: "cancel" },
+                    { text: "Thoát", onPress: () => router.back() }
+                ]
+            );
+            return true; // Chặn hành động mặc định của nút Back
+        } else {
+            return false; // Cho phép quay lại bình thường
+        }
+    };
 
+    useFocusEffect(
+        useCallback(() => {
+            // Đăng ký sự kiện BackHandler
+            BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+            // Cleanup khi rời khỏi màn hình
+            return () => {
+                BackHandler.removeEventListener("hardwareBackPress", handleBackPress);
+            };
+        }, [userSelecteds, nameGroup])
+    );
+
+
+
+    // Chức năng chọn người dùng
     const toggleSelection = (id) => {
         setSelectedIds((prevSelected) =>
             prevSelected.includes(id) ? prevSelected.filter((item) => item !== id) : [...prevSelected, id]
@@ -34,6 +64,7 @@ const NewGroup = () => {
         setAmount((prevAmount) => (selectedIds.includes(id) ? prevAmount - 1 : prevAmount + 1));
     };
 
+    // Nhóm người dùng theo chữ cái đầu tiên
     const groupUsersByFirstLetter = (users) => {
         const grouped = users.reduce((acc, user) => {
             const firstLetter = user.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
@@ -53,8 +84,10 @@ const NewGroup = () => {
             }));
     };
 
+    // Lấy danh sách người dùng đã nhóm theo chữ cái đầu tiên
     const groupedUsers = groupUsersByFirstLetter(users);
 
+    // Animation hiển thị danh sách user đã chọn
     const slideAnim = useRef(new Animated.Value(100)).current; // Giá trị ban đầu ở ngoài màn hình
     useEffect(() => {
         if (userSelecteds.length > 0) {
@@ -75,7 +108,7 @@ const NewGroup = () => {
     return (
         <ScreenWrapper >
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
+                <TouchableOpacity onPress={() => handleBackPress() || router.back()} >
                     <Icon style={styles.iconGoback} name="arrowLeft" size={32} strokeWidth={1.6} color="black" />
                 </TouchableOpacity>
                 <View>
@@ -111,8 +144,8 @@ const NewGroup = () => {
                     <Text style={selected === "contact" ? styles.textActive : styles.textNoActive}>Danh bạ</Text>
                 </TouchableOpacity>
             </View>
-            <View pointerEvents="box-none">
-                {selected === "recent" &&
+            <View style={{ height: hp(71) }}>
+                {selected === "recent" ?
                     <FlatList
                         data={recent}
                         keyExtractor={(item) => item.id.toString()}
@@ -136,9 +169,13 @@ const NewGroup = () => {
                                 </TouchableOpacity>
                             )
                         }}
+                        ListFooterComponent={() => (
+                            <View style={styles.listFooterComponent}>
+                                <Text style={{ color: theme.colors.textLight }}>Vuốt trái để thêm những người khác</Text>
+                            </View>
+                        )}
                     />
-                }
-                {selected === "contact" &&
+                    :
                     <SectionList
                         sections={groupedUsers}
                         keyExtractor={(item, index) => item + index}
@@ -164,6 +201,11 @@ const NewGroup = () => {
                         }}
                         renderSectionHeader={({ section: { title } }) => (
                             <Text style={{ fontSize: 16, fontWeight: 'bold', paddingHorizontal: 20, paddingVertical: 5 }}>{title}</Text>
+                        )}
+                        ListFooterComponent={() => (
+                            <View style={styles.listFooterComponent}>
+                                <Text style={{ color: theme.colors.textLight }}>{groupedUsers.length} bạn</Text>
+                            </View>
                         )}
                     />
                 }
@@ -306,7 +348,7 @@ const styles = StyleSheet.create({
         width: wp(20)
     },
 
-    // Modal
+    // Animation
     boxUsersSelected: {
         position: "absolute",
         bottom: 0,
@@ -340,4 +382,11 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 10
     },
+
+    // Footer SectionList
+    listFooterComponent: {
+        alignItems: "center",
+        height: hp(18),
+        paddingTop: 10,
+    }
 });
