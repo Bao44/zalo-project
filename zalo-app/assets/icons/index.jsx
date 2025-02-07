@@ -50,6 +50,8 @@ import AddGroup from "./addGroup";
 import Sort from "./Sort";
 import Camera from "./Camera";
 import Tick from "./Tick";
+import ArrowRight from "./ArrowRight";
+import Cancel from "./Cancel";
 
 
 const icons = {
@@ -102,7 +104,9 @@ const icons = {
   addGroup : AddGroup,
   sort : Sort,
   camera : Camera,
-  tick : Tick
+  tick : Tick,
+  arrowRight : ArrowRight,
+  cancel : Cancel
 };
 
 const Icon = ({ name, ...props }) => {

@@ -1,5 +1,5 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image, SectionList } from "react-native";
-import React from "react";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, FlatList, Image, SectionList, Animated } from "react-native";
+import React, { useEffect, useRef } from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
@@ -16,10 +16,20 @@ const NewGroup = () => {
     const [selected, setSelected] = useState("recent");
     const [recent, setRecent] = useState(users);
     const [selectedIds, setSelectedIds] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [userSelecteds, setUserSelecteds] = useState([]);
+    const [nameGroup, setNameGroup] = useState("");
+    const [search, setSearch] = useState("");
+
 
     const toggleSelection = (id) => {
         setSelectedIds((prevSelected) =>
             prevSelected.includes(id) ? prevSelected.filter((item) => item !== id) : [...prevSelected, id]
+        );
+        setUserSelecteds((prevUserSelected) =>
+            prevUserSelected.some((item) => item.id === id)
+                ? prevUserSelected.filter((item) => item.id !== id)
+                : [...prevUserSelected, users.find((item) => item.id === id)]
         );
         setAmount((prevAmount) => (selectedIds.includes(id) ? prevAmount - 1 : prevAmount + 1));
     };
@@ -42,9 +52,28 @@ const NewGroup = () => {
                 data: grouped[letter],
             }));
     };
+
     const groupedUsers = groupUsersByFirstLetter(users);
+
+    const slideAnim = useRef(new Animated.Value(100)).current; // Giá trị ban đầu ở ngoài màn hình
+    useEffect(() => {
+        if (userSelecteds.length > 0) {
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(slideAnim, {
+                toValue: 100,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [userSelecteds]);
+
     return (
-        <ScreenWrapper>
+        <ScreenWrapper >
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()}>
                     <Icon style={styles.iconGoback} name="arrowLeft" size={32} strokeWidth={1.6} color="black" />
@@ -64,6 +93,8 @@ const NewGroup = () => {
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
                         placeholder="Đặt tên nhóm"
+                        value={nameGroup}
+                        onChangeText={setNameGroup}
                     />
                     <Icon style={styles.iconTick} name="tick" size={32} strokeWidth={1.6} color={theme.colors.primaryDark} />
                 </View>
@@ -80,62 +111,85 @@ const NewGroup = () => {
                     <Text style={selected === "contact" ? styles.textActive : styles.textNoActive}>Danh bạ</Text>
                 </TouchableOpacity>
             </View>
-            {selected === "recent" &&
-                <FlatList
-                    data={recent}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={({ item }) => {
-                        const isSelected = selectedIds.includes(item.id);
-                        return (
-                            <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.id)}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                    <Image style={styles.avatar} source={{ uri: item.avatar }} />
-                                    <View>
-                                        <Text style={styles.textName}>{item.name}</Text>
-                                        <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>1 day ago</Text>
+            <View pointerEvents="box-none">
+                {selected === "recent" &&
+                    <FlatList
+                        data={recent}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={({ item }) => {
+                            const isSelected = selectedIds.includes(item.id);
+                            return (
+                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.id)}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', }}>
+                                        <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                                        <View>
+                                            <Text style={styles.textName}>{item.name}</Text>
+                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>1 day ago</Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <RadioButton
-                                    isSelect={isSelected}
-                                    size={20}
-                                    color={theme.colors.primaryDark}
-                                    onPress={() => toggleSelection(item.id)}
-                                />
-                            </TouchableOpacity>
-                        )
-                    }}
-                />
-            }
-            {selected === "contact" &&
-                <SectionList
-                    sections={groupedUsers}
-                    scrollEnabled={false}
-                    keyExtractor={(item, index) => item + index}
-                    renderItem={({ item }) => {
-                        const isSelected = selectedIds.includes(item.id);
-                        return (
-                            <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.id)}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                    <Image style={styles.avatar} source={{ uri: item.avatar }} />
-                                    <View>
-                                        <Text style={styles.textName}>{item.name}</Text>
-                                        <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>1 day ago</Text>
+                                    <RadioButton
+                                        isSelect={isSelected}
+                                        size={20}
+                                        color={theme.colors.primaryDark}
+                                        onPress={() => toggleSelection(item.id)}
+                                    />
+                                </TouchableOpacity>
+                            )
+                        }}
+                    />
+                }
+                {selected === "contact" &&
+                    <SectionList
+                        sections={groupedUsers}
+                        keyExtractor={(item, index) => item + index}
+                        renderItem={({ item }) => {
+                            const isSelected = selectedIds.includes(item.id);
+                            return (
+                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.id)}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', }}>
+                                        <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                                        <View>
+                                            <Text style={styles.textName}>{item.name}</Text>
+                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>1 day ago</Text>
+                                        </View>
                                     </View>
+                                    <RadioButton
+                                        isSelect={isSelected}
+                                        size={20}
+                                        color={theme.colors.primaryDark}
+                                        onPress={() => toggleSelection(item.id)}
+                                    />
+                                </TouchableOpacity>
+                            )
+                        }}
+                        renderSectionHeader={({ section: { title } }) => (
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', paddingHorizontal: 20, paddingVertical: 5 }}>{title}</Text>
+                        )}
+                    />
+                }
+            </View>
+            {/* View hiển thị danh sách đã chọn */}
+            {userSelecteds.length > 0 && (
+                <Animated.View style={[styles.boxUsersSelected, { transform: [{ translateY: slideAnim }] }]}>
+                    <FlatList
+                        data={userSelecteds}
+                        keyExtractor={(item) => item.id.toString()}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity onPress={() => toggleSelection(item.id)}>
+                                <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                                <View style={styles.cancel}>
+                                    <Icon name="cancel" size={12} strokeWidth={2.6} color="white" />
                                 </View>
-                                <RadioButton
-                                    isSelect={isSelected}
-                                    size={20}
-                                    color={theme.colors.primaryDark}
-                                    onPress={() => toggleSelection(item.id)}
-                                />
                             </TouchableOpacity>
-                        )
-                    }}
-                    renderSectionHeader={({ section: { title } }) => (
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', paddingHorizontal: 20, paddingVertical: 5 }}>{title}</Text>
-                    )}
-                />
-            }
+                        )}
+                    />
+                    <TouchableOpacity style={styles.modalButton}>
+                        <Icon name="arrowRight" size={32} strokeWidth={1.6} color="white" />
+                    </TouchableOpacity>
+                </Animated.View>
+            )}
         </ScreenWrapper>
     );
 };
@@ -250,5 +304,40 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: wp(20)
+    },
+
+    // Modal
+    boxUsersSelected: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: "white",
+        padding: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        elevation: 10,
+    },
+    modalButton: {
+        width: 54,
+        height: 54,
+        borderRadius: 27,
+        backgroundColor: "#007bff",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    cancel: {
+        position: "absolute",
+        top: 0,
+        right: 12,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "gray",
+        width: 20,
+        height: 20,
+        borderRadius: 10
     },
 });
