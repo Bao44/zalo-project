@@ -105,6 +105,18 @@ const NewGroup = () => {
         }
     }, [userSelecteds]);
 
+    //Tạo nhóm
+    const handleCreateGroup = () => {
+        //Xử lý back end
+        Alert.alert(
+            "Thông báo!",
+            "Thêm thành công!",
+            [
+                {text: "OK", onPress: () => router.back()}
+            ]
+        );
+    }
+
     return (
         <ScreenWrapper >
             <View style={styles.header}>
@@ -227,7 +239,7 @@ const NewGroup = () => {
                             </TouchableOpacity>
                         )}
                     />
-                    <TouchableOpacity style={styles.modalButton}>
+                    <TouchableOpacity style={styles.modalButton} onPress={() => handleCreateGroup()}>
                         <Icon name="arrowRight" size={32} strokeWidth={1.6} color="white" />
                     </TouchableOpacity>
                 </Animated.View>
