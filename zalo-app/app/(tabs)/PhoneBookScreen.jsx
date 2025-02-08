@@ -5,6 +5,8 @@ import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
 import Users from "../../assets/dataLocals/UserLocal";
 import Groups from "../../assets/dataLocals/GroupLocal";
+import OfficialAccount from "../../assets/dataLocals/OfficialAccount";
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useRouter } from "expo-router";
 
@@ -28,6 +30,7 @@ const PhoneBookScreen = () => {
       </View>
       {typeContact === "friends" && <FriendsTabs />}
       {typeContact === "groups" && <GroupsTabs />}
+      {typeContact === "OA" && <OATabs />}
     </View>
   );
 };
@@ -220,7 +223,44 @@ const GroupsTabs = () => {
           </View>
         )}
       />
+    </ScrollView>
+  )
+}
 
+//List Official Account
+const OATabs = () => {
+  return (
+    <ScrollView>
+      <View style={styles.listOAContainer}>
+        <TouchableOpacity style={styles.boxSearchOA}>
+          <LinearGradient style={styles.iconCellular}
+            colors={['#CC6CE7', '#023986']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1.2 }}
+            locations={[0, 1]}
+          >
+            <Icon name="cellular" size={32} strokeWidth={1.6} color="white" />
+          </LinearGradient>
+          <Text style={styles.textSearchOA}>Tìm kiếm Official Account</Text>
+        </TouchableOpacity>
+        <FlatList
+          data={OfficialAccount}
+          scrollEnabled={false}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.buttonOA}>
+              <Image style={styles.avatarOA} source={{ uri: item.avatar }} />
+              <Text style={styles.textNameOA}>{item.name}</Text>
+            </TouchableOpacity>
+          )}
+          ListHeaderComponent={() => (
+            <View>
+              <View style={{ height: hp(1.5), backgroundColor: theme.colors.gray }} />
+              <Text style={styles.textTitleOfficialed}>Official Account đã quan tâm</Text>
+            </View>
+          )}
+        />
+      </View>
     </ScrollView>
   )
 }
@@ -425,12 +465,12 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -16 }],
   },
   bottomLeft3: {
-    bottom: "-5%", 
-    left: "-5%", 
+    bottom: "-5%",
+    left: "-5%",
   },
   bottomRight3: {
     bottom: "-5%",
-    right: "-5%", 
+    right: "-5%",
   },
 
   // Avatar group 4 người
@@ -479,4 +519,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
+
+  // List Official Account
+  listOAContainer: {
+    flex: 1,
+  },
+  iconCellular: {
+    width: 60,
+    height: 60,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  boxSearchOA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  textSearchOA: {
+    fontSize: 16,
+    marginLeft: 20
+  },
+  buttonOA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20,
+    height: hp(9),
+  },
+  avatarOA: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  textNameOA: {
+    fontSize: 18,
+    marginLeft: 20
+  },
+  textTitleOfficialed:{
+    fontSize: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    fontWeight: "bold"
+  }
 });

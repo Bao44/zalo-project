@@ -52,6 +52,7 @@ import Camera from "./Camera";
 import Tick from "./Tick";
 import ArrowRight from "./ArrowRight";
 import Cancel from "./Cancel";
+import Cellular from "./Cellular";
 
 
 const icons = {
@@ -106,7 +107,8 @@ const icons = {
   camera : Camera,
   tick : Tick,
   arrowRight : ArrowRight,
-  cancel : Cancel
+  cancel : Cancel,
+  cellular : Cellular
 };
 
 const Icon = ({ name, ...props }) => {
