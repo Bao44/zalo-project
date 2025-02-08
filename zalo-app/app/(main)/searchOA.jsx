@@ -5,15 +5,25 @@ import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
 import OfficialAccount from "../../assets/dataLocals/OfficialAccount";
 import { hp, wp } from "../../helpers/common";
+import { router } from "expo-router";
 
 const SearchOA = () => {
 
     const [search, setSearch] = useState("");
 
+    //Xử lý logic nút quan tâm
+    const handleFollow = (status) => {
+        if(status === 'uninterested'){
+            //Xử lý logic quan tâm thay đổi trạng thái
+        }else{
+            //Xử lý logic xem
+        }
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
-                <TouchableOpacity style={{ paddingHorizontal: 20 }}>
+                <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
                     <Icon
                         name="arrowLeft"
                         size={28}
@@ -41,8 +51,8 @@ const SearchOA = () => {
                                 <Text style={styles.textNameOA} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
                                 <Text style={styles.textDescriptionOA} numberOfLines={1} ellipsizeMode="tail">{item.description}</Text>
                             </View>
-                            <TouchableOpacity style={styles.button}>
-                                <Text style={styles.textButton}>Quan tâm</Text>
+                            <TouchableOpacity style={styles.button} onPress={() => handleFollow(item.status)}>
+                                <Text style={styles.textButton}>{item.status === "uninterested" ? "Quan tâm" : "Xem"}</Text>
                             </TouchableOpacity>
                         </TouchableOpacity>
                     )}
@@ -107,8 +117,8 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 7,
+        width: wp(22),
+        height: hp(4),
     },
     textButton: {
         color: theme.colors.primaryLight,
