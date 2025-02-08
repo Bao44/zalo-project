@@ -232,7 +232,7 @@ const GroupsTabs = () => {
 const OATabs = () => {
   // Router
   const router = useRouter();
-  
+
   return (
     <ScrollView>
       <View style={styles.listOAContainer}>
@@ -254,7 +254,7 @@ const OATabs = () => {
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.buttonOA}>
               <Image style={styles.avatarOA} source={{ uri: item.avatar }} />
-              <Text style={styles.textNameOA}>{item.name}</Text>
+              <Text style={styles.textNameOA} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
             </TouchableOpacity>
           )}
           ListHeaderComponent={() => (
@@ -549,7 +549,8 @@ const styles = StyleSheet.create({
   buttonOA: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
     height: hp(9),
   },
   avatarOA: {
@@ -559,7 +560,8 @@ const styles = StyleSheet.create({
   },
   textNameOA: {
     fontSize: 18,
-    marginLeft: 20
+    marginLeft: 20,
+    width: "80%"
   },
   textTitleOfficialed:{
     fontSize: 16,
