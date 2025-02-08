@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, SectionList, FlatList, Modal } from "react-native";
-import React, { useState, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, SectionList, FlatList } from "react-native";
+import React, { useState } from "react";
 import { hp, wp } from "../../helpers/common"
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
@@ -148,6 +148,7 @@ const GroupsTabs = () => {
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
+  // Router
   const router = useRouter();
 
   return (
@@ -229,10 +230,13 @@ const GroupsTabs = () => {
 
 //List Official Account
 const OATabs = () => {
+  // Router
+  const router = useRouter();
+  
   return (
     <ScrollView>
       <View style={styles.listOAContainer}>
-        <TouchableOpacity style={styles.boxSearchOA}>
+        <TouchableOpacity style={styles.boxSearchOA} onPress={() => router.push("searchOA")}>
           <LinearGradient style={styles.iconCellular}
             colors={['#CC6CE7', '#023986']}
             start={{ x: 0, y: 0 }}

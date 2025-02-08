@@ -1,7 +1,7 @@
 const officialAccount = [
     {
         id: 1,
-        name: 'Official Account 1',
+        name: 'Official Account One Piece',
         avatar: 'https://i.pravatar.cc/150',
         description: 'Description of Official Account 1',
 
