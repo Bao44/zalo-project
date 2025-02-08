@@ -9,6 +9,7 @@ import OfficialAccount from "../../assets/dataLocals/OfficialAccount";
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useRouter } from "expo-router";
+import friendRequest from "../../assets/dataLocals/FriendRequest";
 
 const PhoneBookScreen = () => {
   const [typeContact, setTypeContact] = useState("friends");
@@ -64,15 +65,19 @@ const FriendsTabs = () => {
       }));
   };
   const groupedUsers = groupUsersByFirstLetter(filterUsers);
+
+  // Router
+  const router = useRouter();
+
   return (
     <ScrollView>
       <View style={styles.listFriendContainer}>
         <View>
-          <TouchableOpacity style={styles.feature}>
+          <TouchableOpacity style={styles.feature} onPress={() => router.push("friendRequest")}>
             <View style={styles.boxIconFeature}>
               <Icon name="userMultiple" size={32} strokeWidth={1.6} color="#FFF" />
             </View>
-            <Text style={{ fontSize: 16 }}>Lời mời kết bạn ({6})</Text>
+            <Text style={{ fontSize: 16 }}>Lời mời kết bạn ({friendRequest.length})</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.feature}>
             <View style={styles.boxIconFeature}>
