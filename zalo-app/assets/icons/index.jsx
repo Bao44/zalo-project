@@ -53,6 +53,7 @@ import Tick from "./Tick";
 import ArrowRight from "./ArrowRight";
 import Cancel from "./Cancel";
 import Cellular from "./Cellular";
+import ArrowDown from "./ArrowDown";
 
 
 const icons = {
@@ -108,7 +109,8 @@ const icons = {
   tick : Tick,
   arrowRight : ArrowRight,
   cancel : Cancel,
-  cellular : Cellular
+  cellular : Cellular,
+  arrowDown : ArrowDown
 };
 
 const Icon = ({ name, ...props }) => {

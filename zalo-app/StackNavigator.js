@@ -12,6 +12,7 @@ import PersonalScreen from "./app/(tabs)/PersonalScreen";
 import Icon from "./assets/icons";
 import { theme } from "./constants/theme";
 import ScreenWrapper from "./components/ScreenWrapper";
+import { router } from "expo-router";
 
 const Tab = createBottomTabNavigator();
 
@@ -53,7 +54,7 @@ const CustomHeader = ({ tabName }) => {
       )}
       {tabName === "contacts" && (
         <View style={style.containerIcon}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("addFriend")}>
             <Icon
               name="userAdd"
               size={28}
