@@ -59,7 +59,7 @@ const FriendRequest = () => {
     const [expanded, setExpanded] = useState({});
 
     const renderContent = (text, id) => {
-        const maxLength = 60; // Số ký tự tối đa trước khi cắt
+        const maxLength = wp(14); // Số ký tự tối đa trước khi cắt
         if (expanded[id] || text.length <= maxLength) {
             return text; // Hiển thị toàn bộ nội dung nếu đã mở rộng hoặc nội dung ngắn
         }
@@ -111,7 +111,7 @@ const FriendRequest = () => {
                                         </Text>
                                         {!expanded[item.id] && item.content.length > 50 && (
                                             <TouchableOpacity onPress={() => setExpanded(prev => ({ ...prev, [item.id]: true }))}>
-                                                <Text style={{ color: "gray", fontSize: 15, position: "absolute", right: 20, bottom: 10 }}>Xem thêm</Text>
+                                                <Text style={{ color: "gray", fontSize: 15, position: "absolute", right: 10, bottom: 10 }}>Xem thêm</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
