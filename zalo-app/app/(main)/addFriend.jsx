@@ -110,8 +110,7 @@ const styles = StyleSheet.create({
         height: hp(9),
         borderBottomWidth: 0.5, 
         borderBottomColor: "gray",
-        marginLeft: 20,
-        paddingRight: 20,
+        paddingHorizontal: 20,
         backgroundColor: "#FFF"
     },
     boxPhone:{
