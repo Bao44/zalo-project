@@ -45,6 +45,15 @@ import BirthdayCake from "./BirthdayCake";
 import Lock from "./Lock";
 import Contact from "./Contact";
 import ImageAdd from "./ImageAdd";
+import UserMultiple from "./UserMultiple";
+import AddGroup from "./addGroup";
+import Sort from "./Sort";
+import Camera from "./Camera";
+import Tick from "./Tick";
+import ArrowRight from "./ArrowRight";
+import Cancel from "./Cancel";
+import Cellular from "./Cellular";
+import ArrowDown from "./ArrowDown";
 
 
 const icons = {
@@ -92,7 +101,16 @@ const icons = {
   volumeOff : VolumeOff,
   birthdayCake : BirthdayCake,
   contact : Contact,
-  imageAdd : ImageAdd
+  imageAdd : ImageAdd,
+  userMultiple : UserMultiple,
+  addGroup : AddGroup,
+  sort : Sort,
+  camera : Camera,
+  tick : Tick,
+  arrowRight : ArrowRight,
+  cancel : Cancel,
+  cellular : Cellular,
+  arrowDown : ArrowDown
 };
 
 const Icon = ({ name, ...props }) => {
