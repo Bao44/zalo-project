@@ -4,11 +4,9 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 
 const MessageScreen = () => {
   return (
-    <ScreenWrapper>
-      <View>
-        <Text>MessageScreen</Text>
-      </View>
-    </ScreenWrapper>
+    <View>
+      <Text>Message Screen</Text>
+    </View>
   );
 };
 
