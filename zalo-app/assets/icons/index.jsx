@@ -54,6 +54,7 @@ import ArrowRight from "./ArrowRight";
 import Cancel from "./Cancel";
 import Cellular from "./Cellular";
 import ArrowDown from "./ArrowDown";
+import Computer from "./Computer";
 
 
 const icons = {
@@ -110,7 +111,8 @@ const icons = {
   arrowRight : ArrowRight,
   cancel : Cancel,
   cellular : Cellular,
-  arrowDown : ArrowDown
+  arrowDown : ArrowDown,
+  computer : Computer
 };
 
 const Icon = ({ name, ...props }) => {

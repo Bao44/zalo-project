@@ -1,4 +1,5 @@
-import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TextInput, TouchableOpacity, View, Animated, Text } from "react-native";
+import { useState, useEffect, useRef } from "react";
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -13,10 +14,24 @@ import Icon from "./assets/icons";
 import { theme } from "./constants/theme";
 import ScreenWrapper from "./components/ScreenWrapper";
 import { router } from "expo-router";
+import { hp, wp } from "./helpers/common";
 
 const Tab = createBottomTabNavigator();
 
 const CustomHeader = ({ tabName }) => {
+  // Animation
+  const [listOptions, setListOptions] = useState(false);
+
+  // Animation hiển thị danh sách user đã chọn
+  const slideAnim = useRef(new Animated.Value(100)).current;
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: listOptions ? 0 : 100, // Hiện hoặc ẩn
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [listOptions]);
+
   return (
     <View style={style.container}>
       <TouchableOpacity>
@@ -42,7 +57,7 @@ const CustomHeader = ({ tabName }) => {
               color={theme.colors.darkLight}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => setListOptions(!listOptions)}>
             <Icon
               name="add"
               size={28}
@@ -107,6 +122,47 @@ const CustomHeader = ({ tabName }) => {
             />
           </TouchableOpacity>
         </View>
+      )}
+      {/* View hiển thị danh sách các tùy chọn of MessageScreen*/}
+      {listOptions === true && (
+        <Animated.View style={[style.boxOptions, { transform: [{ translateX: slideAnim }] }]}>
+          <TouchableOpacity style={style.buttonOption} onPress={() => {router.push("addFriend"); setListOptions(false)}}>
+            <View style={style.iconOption}>
+              <Icon name="userAdd" size={22} strokeWidth={1.6} color="gray" />
+            </View>
+            <Text style={style.textOption}>Thêm bạn</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={style.buttonOption} onPress={() => {router.push("newGroup"); setListOptions(false)}}>
+            <View style={style.iconOption}>
+              <Icon name="addGroup" size={22} strokeWidth={1.6} color="gray" />
+            </View>
+            <Text style={style.textOption}>Tạo nhóm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={style.buttonOption}>
+            <View style={style.iconOption}>
+              <Icon name="cloud" size={22} strokeWidth={1.6} color="gray" />
+            </View>
+            <Text style={style.textOption}>Cloud của tôi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={style.buttonOption}>
+            <View style={style.iconOption}>
+              <Icon name="calendar" size={22} strokeWidth={1.6} color="gray" />
+            </View>
+            <Text style={style.textOption}>Lịch Yalo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={style.buttonOption}>
+            <View style={style.iconOption}>
+              <Icon name="callVideoOn" size={22} strokeWidth={1.6} color="gray" />
+            </View>
+            <Text style={style.textOption}>Tạo cuộc gọi nhóm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={style.buttonOption}>
+            <View style={style.iconOption}>
+              <Icon name="computer" size={22} strokeWidth={1.6} color="gray" />
+            </View>
+            <Text style={style.textOption}>Thiết bị đăng nhập</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
     </View>
   );
@@ -274,4 +330,26 @@ const style = StyleSheet.create({
     justifyContent: "space-between",
     width: "20%",
   },
+
+  // options
+  boxOptions: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    borderRadius: 5,
+    backgroundColor: "#FFFFFF",
+    width: "50%",
+  },
+  buttonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconOption: {
+    padding: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textOption: {
+    fontSize: 15,
+  }
 });

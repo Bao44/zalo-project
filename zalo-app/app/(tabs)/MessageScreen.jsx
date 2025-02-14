@@ -5,6 +5,7 @@ import { theme } from "../../constants/theme";
 import Groups from "../../assets/dataLocals/GroupLocal";
 import Icon from "../../assets/icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 
 const MessageScreen = () => {
   // Format time
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: theme.colors.darkLight
   },
-  buttonSearchFiendFooter:{
+  buttonSearchFiendFooter: {
     flexDirection: 'row',
     justifyContent: 'center',
     backgroundColor: theme.colors.primaryDark,
@@ -247,8 +248,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  textButtonSearchFriendFooter:{
+  textButtonSearchFriendFooter: {
     color: "#FFF",
     fontSize: 16
-  }
+  },
+
+  
 });
