@@ -30,7 +30,7 @@ const MessageScreen = () => {
         keyExtractor={(item) => item.id.toString()}
         scrollEnabled={true}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.buttonMessage}>
+          <TouchableOpacity style={styles.buttonMessage} onPress={() => router.push("chatDetailScreen")}>
             {item.avatar === "" ?
               (item.users.length === 3 ?
                 <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>

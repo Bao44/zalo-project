@@ -3,6 +3,8 @@ export const theme = {
       primary: "#0068FF",
       primaryDark: "#0057d6",
       primaryLight: "#2196f3",
+
+      skyBlue: "#8FE3FF",
       
       dark: "#3E3E3E",
       darkLight: "#E1E1E1",
@@ -16,6 +18,8 @@ export const theme = {
   
       rose: "#ef4444",
       roseLight: "#f87171",
+
+      yellow: "#6B5200"
     },
   
     fonts: {

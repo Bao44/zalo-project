@@ -55,6 +55,8 @@ import Cancel from "./Cancel";
 import Cellular from "./Cellular";
 import ArrowDown from "./ArrowDown";
 import Computer from "./Computer";
+import Emoji from "./emoji";
+import Sent from "./Sent";
 
 
 const icons = {
@@ -112,7 +114,9 @@ const icons = {
   cancel : Cancel,
   cellular : Cellular,
   arrowDown : ArrowDown,
-  computer : Computer
+  computer : Computer,
+  emoji : Emoji,
+  sent : Sent
 };
 
 const Icon = ({ name, ...props }) => {
