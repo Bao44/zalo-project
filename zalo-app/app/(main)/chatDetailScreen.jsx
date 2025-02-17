@@ -10,9 +10,9 @@ import { wp, hp } from "../../helpers/common";
 
 const ChatDetailScreen = () => {
     //User
-    const [user, setUser] = useState(users[6]);
+    const [user, setUser] = useState(users[0]);
     //Group
-    const [convarsation, setConvarsation] = useState(groups[8]);
+    const [convarsation, setConvarsation] = useState(groups[0]);
 
     //Message
     const [message, setMessage] = useState("");
@@ -22,6 +22,34 @@ const ChatDetailScreen = () => {
         const date = timestamp && new Date(timestamp);
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
+
+    // sort message by time when first render
+    useEffect(() => {
+        setConvarsation((prev) => ({
+            ...prev,
+            message: prev.message.sort((a, b) => new Date(b.time) - new Date(a.time)),
+        }));
+    }, [message]);
+
+    //send message
+    const sendMessage = () => {
+        if (message.trim() === "") return;
+
+        const newMessage = {
+            id: convarsation.message.length + 1,
+            userId: user.id,
+            content: message,
+            time: new Date().toISOString(),
+        };
+
+        setConvarsation((prev) => ({
+            ...prev,
+            message: [...prev.message, newMessage],
+        }));
+
+        setMessage(""); // Reset input
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -58,34 +86,24 @@ const ChatDetailScreen = () => {
                         renderItem={({ item, index }) => (
                             (item.userId === user?.id)
                                 ?
-                                ((index !== 0 && item.userId === convarsation.message[index - 1].userId) ?
-                                (
-                                    <View style={[styles.messageOfMe, { marginTop: 5 }]}>
-                                        <Text style={styles.textMessage}>{item.content}</Text>
-                                        <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                    </View>
-                                )
-                                :
-                                (
-                                    <View style={styles.messageOfMe}>
-                                        <Text style={styles.textMessage}>{item.content}</Text>
-                                        <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                    </View>
-                                ))
-                                :
-                                (index !== 0 && item.userId === convarsation.message[index - 1].userId) ?
+                                ((index !== convarsation.message.length - 1 && item.userId === convarsation.message[index + 1].userId) ?
                                     (
-                                        <View style={[styles.messageOfOther, { marginTop: 5 }]}>
-                                            <Image style={styles.avatar} />
-                                            <View style={styles.boxMessageContent}>
-                                                <Text style={styles.textMessage}>{item.content}</Text>
-                                                <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                            </View>
+                                        <View style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                            <Text style={styles.textTime}>{formatTime(item.time)}</Text>
                                         </View>
                                     )
                                     :
                                     (
-                                        <View style={styles.messageOfOther}>
+                                        <View style={styles.messageOfMe}>
+                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                            <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                        </View>
+                                    ))
+                                :
+                                (index === convarsation.message.length - 1) ?
+                                    (
+                                        <View style={[styles.messageOfOther, { marginBottom: 5 }]}>
                                             <Image source={{ uri: (users.filter((u) => u.id === item.userId))[0].avatar }} style={styles.avatar} />
                                             <View style={styles.boxMessageContent}>
                                                 <Text style={styles.textNameOthers}>{(users.filter((u) => u.id === item.userId))[0].name}</Text>
@@ -94,7 +112,34 @@ const ChatDetailScreen = () => {
                                             </View>
                                         </View>
                                     )
+                                    :
+                                    (item.userId === convarsation.message[index + 1].userId) ?
+
+                                        (
+                                            <View style={[styles.messageOfOther, { marginBottom: 5 }]}>
+                                                <Image style={styles.avatar} />
+                                                <View style={styles.boxMessageContent}>
+                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                </View>
+                                            </View>
+                                        )
+                                        :
+                                        (
+                                            <View style={[styles.messageOfOther, { marginBottom: 5 }]}>
+                                                <Image source={{ uri: (users.filter((u) => u.id === item.userId))[0].avatar }} style={styles.avatar} />
+                                                <View style={styles.boxMessageContent}>
+                                                    <Text style={styles.textNameOthers}>{(users.filter((u) => u.id === item.userId))[0].name}</Text>
+                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    
+                                                </View>
+                                            </View>
+                                        )
                         )}
+                        // Để hiển thị tin nhắn mới nhất
+                        inverted
+                        ListFooterComponent={<View style={{ height: 20 }} />}
+                        ListHeaderComponent={<View style={{ height: 20 }} />}
                     />
                 </View>
 
@@ -102,7 +147,7 @@ const ChatDetailScreen = () => {
                 <View style={styles.sendMessage}>
                     <View style={styles.boxSendMessage}>
                         <Icon name="emoji" size={28} color="gray" />
-                        <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" onChangeText={(text) => setMessage(text)} />
+                        <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
                     </View>
                     {message === "" ? (
                         <View style={styles.boxFeatureSendMessage}>
@@ -114,7 +159,7 @@ const ChatDetailScreen = () => {
                         :
                         (
                             <View>
-                                <TouchableOpacity><Icon name="sent" size={26} color={theme.colors.primary} /></TouchableOpacity>
+                                <TouchableOpacity onPress={() => sendMessage()}><Icon name="sent" size={26} color={theme.colors.primary} /></TouchableOpacity>
                             </View>
                         )
                     }
@@ -185,14 +230,15 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         marginTop: 10,
         borwderWidth: 1,
-        borderColor: "gray"
+        borderColor: "gray",
+        maxWidth: wp(70),
     },
     messageOfOther: {
         alignSelf: "flex-start",
         borderColor: "gray",
         flexDirection: "row",
         marginHorizontal: 15,
-        marginTop: 10,
+        marginBottom: 10,
     },
     boxMessageContent: {
         backgroundColor: '#FFF',
