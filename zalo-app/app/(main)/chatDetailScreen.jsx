@@ -7,15 +7,20 @@ import groups from "../../assets/dataLocals/GroupLocal";
 import users from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
+import { useLocalSearchParams } from "expo-router";
+import { io } from "socket.io-client";
 
 const ChatDetailScreen = () => {
+    const socket = io("http://172.20.36.62:3000");
+    const params = useLocalSearchParams();
     //User
     const [user, setUser] = useState(users[0]);
     //Group
-    const [convarsation, setConvarsation] = useState(groups[0]);
+    const [convarsation, setConvarsation] = useState(groups.filter((g) => g.id === parseInt(params.conversationId))[0]);
 
     //Message
     const [message, setMessage] = useState("");
+
 
     //Format time
     const formatTime = (timestamp) => {
@@ -25,27 +30,40 @@ const ChatDetailScreen = () => {
 
     // sort message by time when first render
     useEffect(() => {
-        setConvarsation((prev) => ({
-            ...prev,
-            message: prev.message.sort((a, b) => new Date(b.time) - new Date(a.time)),
-        }));
+        socket.on("receiveMessage", (data) => {
+            setConvarsation((prev) => ({
+                ...prev,
+                message: prev.message.sort((a, b) => new Date(b.time) - new Date(a.time)),
+            }));
+        });
+
+        return () => {
+            socket.off("receiveMessage");
+        };
     }, [message]);
 
     //send message
     const sendMessage = () => {
-        if (message.trim() === "") return;
+        if (message.trim() === ""){
+            socket.emit("sendMessage", {
+                id: convarsation.message.length + 1,
+                userId: user.id,
+                content: message,
+                time: new Date().toISOString(),
+            });
 
-        const newMessage = {
-            id: convarsation.message.length + 1,
-            userId: user.id,
-            content: message,
-            time: new Date().toISOString(),
-        };
+        }
+        // const newMessage = {
+        //     id: convarsation.message.length + 1,
+        //     userId: user.id,
+        //     content: message,
+        //     time: new Date().toISOString(),
+        // };
 
-        setConvarsation((prev) => ({
-            ...prev,
-            message: [...prev.message, newMessage],
-        }));
+        // setConvarsation((prev) => ({
+        //     ...prev,
+        //     message: [...prev.message, newMessage],
+        // }));
 
         setMessage(""); // Reset input
     };
@@ -90,20 +108,28 @@ const ChatDetailScreen = () => {
                                     (
                                         <View style={[styles.messageOfMe, { marginTop: 5 }]}>
                                             <Text style={styles.textMessage}>{item.content}</Text>
-                                            <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                            {
+                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                    :
+                                                    (item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                            }
                                         </View>
                                     )
                                     :
                                     (
                                         <View style={styles.messageOfMe}>
                                             <Text style={styles.textMessage}>{item.content}</Text>
-                                            <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                            {
+                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                    :
+                                                    (item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                            }
                                         </View>
                                     ))
                                 :
                                 (index === convarsation.message.length - 1) ?
                                     (
-                                        <View style={[styles.messageOfOther, { marginBottom: 5 }]}>
+                                        <View style={[styles.messageOfOther]}>
                                             <Image source={{ uri: (users.filter((u) => u.id === item.userId))[0].avatar }} style={styles.avatar} />
                                             <View style={styles.boxMessageContent}>
                                                 <Text style={styles.textNameOthers}>{(users.filter((u) => u.id === item.userId))[0].name}</Text>
@@ -116,22 +142,34 @@ const ChatDetailScreen = () => {
                                     (item.userId === convarsation.message[index + 1].userId) ?
 
                                         (
-                                            <View style={[styles.messageOfOther, { marginBottom: 5 }]}>
+                                            <View style={[styles.messageOfOther, { marginTop: 5 }]}>
                                                 <Image style={styles.avatar} />
                                                 <View style={styles.boxMessageContent}>
                                                     <Text style={styles.textMessage}>{item.content}</Text>
-                                                    <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                    {(index === convarsation.message.length - 1) ?
+                                                        ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
+                                                        :
+                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                            :
+                                                            ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
+                                                    }
                                                 </View>
                                             </View>
                                         )
                                         :
                                         (
-                                            <View style={[styles.messageOfOther, { marginBottom: 5 }]}>
+                                            <View style={[styles.messageOfOther]}>
                                                 <Image source={{ uri: (users.filter((u) => u.id === item.userId))[0].avatar }} style={styles.avatar} />
                                                 <View style={styles.boxMessageContent}>
                                                     <Text style={styles.textNameOthers}>{(users.filter((u) => u.id === item.userId))[0].name}</Text>
                                                     <Text style={styles.textMessage}>{item.content}</Text>
-                                                    
+                                                    {(index === convarsation.message.length - 1) ?
+                                                        ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
+                                                        :
+                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                            :
+                                                            ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
+                                                    }
                                                 </View>
                                             </View>
                                         )
@@ -238,7 +276,7 @@ const styles = StyleSheet.create({
         borderColor: "gray",
         flexDirection: "row",
         marginHorizontal: 15,
-        marginBottom: 10,
+        marginTop: 10,
     },
     boxMessageContent: {
         backgroundColor: '#FFF',

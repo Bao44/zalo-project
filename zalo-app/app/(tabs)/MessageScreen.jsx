@@ -5,7 +5,9 @@ import { theme } from "../../constants/theme";
 import Groups from "../../assets/dataLocals/GroupLocal";
 import Icon from "../../assets/icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Path } from "react-native-svg";
+import { getConversations } from "../../api/conversationAPI";
 
 const MessageScreen = () => {
   // Format time
@@ -21,60 +23,105 @@ const MessageScreen = () => {
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
+  //get conversations
+  const [userId, setUserId] = useState("67b8cbdb2dd3b2334bd64726");
+  const [loading, setLoading] = useState(true);
+  const [conversations, setConversations] = useState([]);
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const data = await getConversations(userId);
+        setConversations(data);
+      } catch (error) {
+        console.error("Failed to fetch conversations:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [userId]);
+
   // Router
   const router = useRouter();
   return (
     <View>
       <FlatList
-        data={Groups}
-        keyExtractor={(item) => item.id.toString()}
+        data={conversations}
+        keyExtractor={(item) => item._id.toString()}
         scrollEnabled={true}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.buttonMessage} onPress={() => router.push("chatDetailScreen")}>
-            {item.avatar === "" ?
-              (item.users.length === 3 ?
-                <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>
-                  {/* Ảnh 1 - Góc trên */}
-                  <Image style={[styles.avatar3, styles.top3]} source={{ uri: item.users[0].avatar }} />
-
-                  {/* Ảnh 2 - Góc dưới trái */}
-                  <Image style={[styles.avatar3, styles.bottomLeft3]} source={{ uri: item.users[1].avatar }} />
-
-                  {/* Ảnh 3 - Góc dưới phải */}
-                  <Image style={[styles.avatar3, styles.bottomRight3]} source={{ uri: item.users[2].avatar }} />
+          (item.type === "private") ? (
+            <TouchableOpacity style={styles.buttonMessage} onPress={() => router.navigate("Chat", { conversationId: item._id })}>
+              <Image style={styles.avatarConversation} source={{ uri: (item.members.filter((u) => u._id !== userId))[0].avatar }} />
+              <View style={styles.boxContentButton}>
+                <View style={styles.boxNameConversation}>
+                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{(item.members.filter((u) => u._id !== userId))[0].name}</Text>
+                  <Text style={styles.textTimeConversation}>20:00</Text>
                 </View>
-                :
-                <View style={[styles.containerAvatar4, { width: 60, height: 60 }]}>
-                  {/* Ảnh 1 - Trên trái (dịch vào trung tâm) */}
-                  <Image style={[styles.avatar4, styles.topLeft4]} source={{ uri: item.users[0].avatar }} />
-
-                  {/* Ảnh 2 - Trên phải (dịch vào trung tâm) */}
-                  <Image style={[styles.avatar4, styles.topRight4]} source={{ uri: item.users[1].avatar }} />
-
-                  {/* Ảnh 3 - Dưới trái (dịch vào trung tâm) */}
-                  <Image style={[styles.avatar4, styles.bottomLeft4]} source={{ uri: item.users[2].avatar }} />
-
-                  {/* Ảnh 4 - Dưới phải hoặc +N */}
-                  {item.users.length > 4 ? (
-                    <View style={styles.moreContainer4}>
-                      <Text style={styles.moreText4}>+{item.users.length - 3}</Text>
-                    </View>
-                  ) : (
-                    <Image style={[styles.avatar4, styles.bottomRight4]} source={{ uri: item.users[3].avatar }} />
-                  )}
-                </View>
-              )
-              :
-              <Image style={styles.avatarConversation} source={{ uri: item.avatar }} />
-            }
-            <View style={styles.boxContentButton}>
-              <View style={styles.boxNameConversation}>
-                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-                <Text style={styles.textTimeConversation}>{formatTime(item.message.at(-1).time)}</Text>
+                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{item.lastMessage}</Text>
               </View>
-              <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{(item.message[item.message.length - 1].content)}</Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.buttonMessage} onPress={() => router.push({ pathname: "chatDetailScreen", params: { conversationId: item._id } })}>
+              {item.avatar === null ?
+                (item.members.length === 3 ?
+                  <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>
+                    {/* Ảnh 1 - Góc trên */}
+                    <Image style={[styles.avatar3, styles.top3]} source={{ uri: item.members[0].avatar }} />
+
+                    {/* Ảnh 2 - Góc dưới trái */}
+                    <Image style={[styles.avatar3, styles.bottomLeft3]} source={{ uri: item.members[1].avatar }} />
+
+                    {/* Ảnh 3 - Góc dưới phải */}
+                    <Image style={[styles.avatar3, styles.bottomRight3]} source={{ uri: item.members[2].avatar }} />
+                  </View>
+                  :
+                  <View style={[styles.containerAvatar4, { width: 60, height: 60 }]}>
+                    {/* Ảnh 1 - Trên trái (dịch vào trung tâm) */}
+                    <Image style={[styles.avatar4, styles.topLeft4]} source={{ uri: item.members[0].avatar }} />
+
+                    {/* Ảnh 2 - Trên phải (dịch vào trung tâm) */}
+                    <Image style={[styles.avatar4, styles.topRight4]} source={{ uri: item.members[1].avatar }} />
+
+                    {/* Ảnh 3 - Dưới trái (dịch vào trung tâm) */}
+                    <Image style={[styles.avatar4, styles.bottomLeft4]} source={{ uri: item.members[2].avatar }} />
+
+                    {/* Ảnh 4 - Dưới phải hoặc +N */}
+                    {item.members.length > 4 ? (
+                      <View style={styles.moreContainer4}>
+                        <Text style={styles.moreText4}>+{item.members.length - 3}</Text>
+                      </View>
+                    ) : (
+                      <Image style={[styles.avatar4, styles.bottomRight4]} source={{ uri: item.members[3].avatar }} />
+                    )}
+                  </View>
+                )
+                :
+                <Image style={styles.avatarConversation} source={{ uri: item.avatar }} />
+              }
+              <View style={styles.boxContentButton}>
+                <View style={styles.boxNameConversation}>
+                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+                  {
+                    item?.lastMessage ? (
+                      <Text style={styles.textTimeConversation}>{formatTime(item.lastMessage.at(-1).createdAt)}</Text>
+                    ) : (
+                      <Text style={styles.textTimeConversation}>{formatTime(item.createdAt)}</Text>
+                    )
+                  }
+                </View>
+                {
+                  item?.lastMessage ? (
+                    <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{(item.lastMessage.content)}</Text>
+                  ) : (
+                    <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">Bạn hãy là người mở đầu cuộc trò chuyện</Text>
+                  )
+                }
+              </View>
+            </TouchableOpacity>
+          )
         )}
         ListHeaderComponent={() => (
           <View>
@@ -124,6 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingLeft: 20,
     height: hp(9),
+    backgroundColor: "#FFF",
   },
   textTimeConversation: {
     color: "gray",
@@ -238,7 +286,7 @@ const styles = StyleSheet.create({
     height: hp(15),
     justifyContent: "space-evenly",
     alignItems: "center",
-    backgroundColor: theme.colors.darkLight
+    // backgroundColor: theme.colors.darkLight
   },
   buttonSearchFiendFooter: {
     flexDirection: 'row',
@@ -253,5 +301,5 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
 
-  
+
 });
