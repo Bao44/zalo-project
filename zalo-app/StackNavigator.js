@@ -13,7 +13,7 @@ import PersonalScreen from "./app/(tabs)/PersonalScreen";
 import Icon from "./assets/icons";
 import { theme } from "./constants/theme";
 import ScreenWrapper from "./components/ScreenWrapper";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
 import { hp, wp } from "./helpers/common";
 
 const Tab = createBottomTabNavigator();
@@ -31,6 +31,8 @@ const CustomHeader = ({ tabName }) => {
       useNativeDriver: true,
     }).start();
   }, [listOptions]);
+
+  const router = useRouter();
 
   return (
     <View style={style.container}>
@@ -93,7 +95,7 @@ const CustomHeader = ({ tabName }) => {
       )}
       {tabName === "timeline" && (
         <View style={style.containerIcons}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("newPost")}>
             <Icon
               name="imageAdd"
               size={28}
@@ -101,7 +103,7 @@ const CustomHeader = ({ tabName }) => {
               color={theme.colors.darkLight}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("notifications")}>
             <Icon
               name="notification"
               size={28}
@@ -292,7 +294,7 @@ const Stack = createNativeStackNavigator();
 
 function Navigation() {
   return (
-    <ScreenWrapper>
+    // <ScreenWrapper>
       <Stack.Navigator>
         <Stack.Screen
           name="Main"
@@ -300,7 +302,7 @@ function Navigation() {
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
-    </ScreenWrapper>
+    // </ScreenWrapper>
   );
 }
 

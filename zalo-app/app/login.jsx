@@ -15,11 +15,36 @@ import Input from "../components/Input";
 import Button from "../components/Button";
 import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
+import { supabase } from "../lib/supabase";
 
 const Login = () => {
   const router = useRouter();
   const phoneRef = useRef("");
   const passwordRef = useRef("");
+
+  const onSubmit = async () => {
+    if (!phoneRef.current || !passwordRef.current) {
+      Alert.alert("Error", "Please fill all fields");
+      return;
+    }
+
+    let phone = phoneRef.current.trim();
+    let password = passwordRef.current.trim();
+
+    const { error } = await supabase.auth.signInWithOtp({
+      phone,
+      password,
+    });
+
+
+    console.log("error", error); 
+    if (error) {
+      Alert.alert("Error", error.message);
+      return;
+    }
+
+    router.push("/home");
+  };
 
   return (
     <ScreenWrapper bg="white">
@@ -56,7 +81,12 @@ const Login = () => {
           <Text style={styles.forgotPassword}>Lấy lại mật khẩu</Text>
 
           {/* button */}
-          <Button title={"Đăng nhập"} buttonStyle={{ borderRadius: 50 }} onPress={() => router.push("/home")}/>
+          <Button
+            title={"Đăng nhập"}
+            buttonStyle={{ borderRadius: 50 }}
+            onPress={() => router.push("/home")}
+            // onPress={onSubmit}
+          />
         </View>
 
         {/* footer */}
