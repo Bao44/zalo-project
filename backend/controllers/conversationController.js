@@ -52,5 +52,21 @@ const getUserConversations = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+// 📌 API: Lấy thông tin 1 cuộc trò chuyện bằng id
+const getConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
 
-module.exports = { create1vs1, getUserConversations };
+    const conversation = await Conversation.findById(conversationId)
+      .populate("members", "name avatar") 
+      .populate("lastMessage", "type content createdAt") 
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error fetching conversation:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { create1vs1, getUserConversations, getConversation };

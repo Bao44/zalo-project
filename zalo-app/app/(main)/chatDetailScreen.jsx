@@ -3,20 +3,34 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image } 
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
-import groups from "../../assets/dataLocals/GroupLocal";
 import users from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { io } from "socket.io-client";
+import { getMessages } from "../../api/messageAPI";
+import { getConversation } from "../../api/conversationAPI";
 
 const ChatDetailScreen = () => {
-    const socket = io("http://172.20.36.62:3000");
+    const socket = io("http://192.168.1.230:3000");
     const params = useLocalSearchParams();
+    const convarsationId = params.conversationId;
+    const [loading, setLoading] = useState(true);
     //User
-    const [user, setUser] = useState(users[0]);
+    const [userId, setUserId] = useState("67b8cbdb2dd3b2334bd64726");
     //Group
-    const [convarsation, setConvarsation] = useState(groups.filter((g) => g.id === parseInt(params.conversationId))[0]);
+    const [convarsation, setConvarsation] = useState({
+        _id: "",
+        name: "",
+        type: "",
+        members: [],
+        avatar: "",
+        admin: null,
+        lastMessage: null,
+        createdAt: "",
+        updatedAt: "",
+        __v: 0,
+    });
 
     //Message
     const [message, setMessage] = useState("");
@@ -27,6 +41,36 @@ const ChatDetailScreen = () => {
         const date = timestamp && new Date(timestamp);
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
+
+    //Get conversation
+    useEffect(() => {
+        const fetchConversation = async () => {
+            try {
+                const data = await getConversation(convarsationId);
+                setConvarsation(data);
+            } catch (error) {
+                console.error("Failed to fetch conversations:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchConversation();
+    }, [])
+
+    //Load message
+    // useEffect(() => {
+    //     socket.emit("loadMessage", { conversationId: convarsation.id });
+    //     socket.on("loadMessage", (data) => {
+    //         setConvarsation((prev) => ({
+    //             ...prev,
+    //             message: data,
+    //         }));
+    //     });
+
+    //     return () => {
+    //         socket.off("loadMessage");
+    //     };
+    // }, []);
 
     // sort message by time when first render
     useEffect(() => {
@@ -44,10 +88,10 @@ const ChatDetailScreen = () => {
 
     //send message
     const sendMessage = () => {
-        if (message.trim() === ""){
+        if (message.trim() === "") {
             socket.emit("sendMessage", {
                 id: convarsation.message.length + 1,
-                userId: user.id,
+                userId: userId,
                 content: message,
                 time: new Date().toISOString(),
             });
@@ -77,10 +121,16 @@ const ChatDetailScreen = () => {
                         <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
                             <Icon name="arrowLeft" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />
                         </TouchableOpacity>
-                        <View style={styles.boxInfoConversation}>
-                            <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{convarsation.name}</Text>
-                            <Text style={styles.textNumberMember}>{convarsation.users.length} thành viên</Text>
-                        </View>
+                        {convarsation.type === "private" ? (
+                            <View style={styles.boxInfoConversation}>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{(convarsation.members?.filter((u) => u._id !== userId))[0]?.name}</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.boxInfoConversation}>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{convarsation.name}</Text>
+                                <Text style={styles.textNumberMember}>{convarsation.members?.length} thành viên</Text>
+                            </View>
+                        )}
                     </View>
                     <View style={styles.boxFeatureHeader}>
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
@@ -93,7 +143,7 @@ const ChatDetailScreen = () => {
                 <View style={styles.contentChat}>
                     {
                         // Nếu không có tin nhắn
-                        convarsation.message.length === 0 &&
+                        convarsation.message?.length === 0 &&
                         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                             <Text>Không có tin nhắn</Text>
                         </View>
