@@ -28,6 +28,7 @@ const MessageScreen = () => {
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState([]);
 
+  // Load conversations
   useEffect(() => {
     const fetchConversations = async () => {
       try {
@@ -53,7 +54,7 @@ const MessageScreen = () => {
         scrollEnabled={true}
         renderItem={({ item }) => (
           (item.type === "private") ? (
-            <TouchableOpacity style={styles.buttonMessage} onPress={() => router.navigate("Chat", { conversationId: item._id })}>
+            <TouchableOpacity style={styles.buttonMessage} onPress={() => router.push({ pathname: "chatDetailScreen", params: { conversationId: item._id } })}>
               <Image style={styles.avatarConversation} source={{ uri: (item.members.filter((u) => u._id !== userId))[0].avatar }} />
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
