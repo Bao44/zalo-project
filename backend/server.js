@@ -2,7 +2,7 @@ require("dotenv").config(); // Load file .env
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-const socketIo = require("./socket");
+const { initSocket } = require("./socket");
 
 const { mariadb } = require("./config/database"); // Import kết nối MariaDB
 const mongoose = require("mongoose"); // MongoDB đã kết nối trong database.js
