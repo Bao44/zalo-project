@@ -130,7 +130,7 @@ const ChatDetailScreen = () => {
                                 <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{convarsation.name}</Text>
                                 <Text style={styles.textNumberMember}>{convarsation.members?.length} thành viên</Text>
                             </View>
-                        )}
+                        )}                                  
                     </View>
                     <View style={styles.boxFeatureHeader}>
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
