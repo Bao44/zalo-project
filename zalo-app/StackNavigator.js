@@ -294,7 +294,7 @@ const Stack = createNativeStackNavigator();
 
 function Navigation() {
   return (
-    // <ScreenWrapper>
+    <ScreenWrapper>
       <Stack.Navigator>
         <Stack.Screen
           name="Main"
@@ -302,7 +302,7 @@ function Navigation() {
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
-    // </ScreenWrapper>
+    </ScreenWrapper>
   );
 }
 
