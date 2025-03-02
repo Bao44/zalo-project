@@ -65,7 +65,7 @@ const Login = () => {
         {/* form */}
         <View style={styles.form}>
           <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
-            Vui lòng nhập số điện thoại và mật khẩu để đăng nhập
+            Vui lòng nhập email và mật khẩu để đăng nhập
           </Text>
           <Input
             icon={<Icon name="phone" size={26} strokeWidth={1.6} />}

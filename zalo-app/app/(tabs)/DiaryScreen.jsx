@@ -19,7 +19,7 @@ import { router, useRouter } from "expo-router";
 const DiaryScreen = () => {
   const router = useRouter();
   return (
-    <ScreenWrapper bg="white">
+    <View>
       {/* Header */}
       <View style={styles.container}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -46,45 +46,38 @@ const DiaryScreen = () => {
             style={styles.buttonNewPost}
             onPress={() => router.push("newPost")}
           >
-            <Icon name="imageFile" size={22} color={theme.colors.textLight} />
+            <Icon name="imageFile" size={20} color={theme.colors.textLight} />
             <Text style={styles.textButtonNewPost}>Ảnh</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.buttonNewPost}
             onPress={() => router.push("newPost")}
           >
-            <Icon name="callVideoOn" size={22} color={theme.colors.textLight} />
+            <Icon name="callVideoOn" size={20} color={theme.colors.textLight} />
             <Text style={styles.textButtonNewPost}>Video</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.buttonNewPost}
             onPress={() => router.push("newPost")}
           >
-            <Icon name="contact" size={22} color={theme.colors.textLight} />
+            <Icon name="contact" size={20} color={theme.colors.textLight} />
             <Text style={styles.textButtonNewPost}>Album</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.buttonNewPost}
             onPress={() => router.push("newPost")}
           >
-            <Icon name="timeLine" size={22} color={theme.colors.textLight} />
+            <Icon name="timeLine" size={20} color={theme.colors.textLight} />
             <Text style={styles.textButtonNewPost}>Kỉ niệm</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.grayLine}></View>
-      {/* Moment */}
-      <View style={styles.container}>
-        <Text style={{marginVertical: hp(1), fontSize: 16, fontWeight: theme.fonts.semibold}}>Khoảnh khắc</Text>
-        <TouchableOpacity>
-        <Avatar />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.grayLine}></View>
+
       {/* Post */}
       <View style={styles.container}></View>
-    </ScreenWrapper>
+    </View>
   );
 };
 
@@ -93,18 +86,19 @@ export default DiaryScreen;
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: wp(2.5),
+    paddingVertical: hp(2),
   },
   textInput: {
-    fontSize: 18,
+    fontSize: 16,
     width: "60%",
     color: "#FFF",
   },
   pressableNewPost: {
     marginHorizontal: wp(3),
     paddingVertical: hp(1.5),
-    paddingRight: wp(35),
+    marginRight: wp(35),
+    width: wp(80),
   },
-
   buttonNewPost: {
     flexDirection: "row",
     alignItems: "center",
@@ -116,11 +110,11 @@ const styles = StyleSheet.create({
   },
   textButtonNewPost: {
     color: "black",
-    fontSize: 17,
+    fontSize: 12,
     marginLeft: wp(2),
   },
   grayLine: {
-    marginTop: hp(2),
+    marginTop: hp(1),
     height: 10,
     backgroundColor: theme.colors.gray,
   },

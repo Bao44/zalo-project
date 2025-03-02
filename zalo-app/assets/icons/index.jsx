@@ -57,6 +57,7 @@ import ArrowDown from "./ArrowDown";
 import Computer from "./Computer";
 import Emoji from "./emoji";
 import Sent from "./Sent";
+import Mail from "./Mail";
 
 
 const icons = {
@@ -116,7 +117,8 @@ const icons = {
   arrowDown : ArrowDown,
   computer : Computer,
   emoji : Emoji,
-  sent : Sent
+  sent : Sent,
+  mail : Mail
 };
 
 const Icon = ({ name, ...props }) => {

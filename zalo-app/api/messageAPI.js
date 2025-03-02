@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const getMessages = async (conversationId) => {
     try {
-        const res = await axios.get(`http://192.168.43.77:3000/api/messages/${conversationId}`);
+        const res = await axios.get(`http://192.168.2.143:3000/api/messages/${conversationId}`);
         return res.data;
     }
     catch (error) {

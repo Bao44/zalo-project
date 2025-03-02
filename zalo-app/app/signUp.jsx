@@ -4,6 +4,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import React, { useRef, useState } from "react";
@@ -15,11 +16,45 @@ import { useRouter } from "expo-router";
 import { hp, wp } from "../helpers/common";
 import Input from "../components/Input";
 import Button from "../components/Button";
+import { supabase } from "../lib/supabase";
 
 const SignUp = () => {
   const router = useRouter();
-  const phoneRef = useRef("");
+  const emailRef = useRef("");
+  const nameRef = useRef("");
+  const passwordRef = useRef("");
+  const [loading, setLoading] = useState(false);
 
+  const onSubmit = async () => {
+    if (!emailRef.current || !passwordRef.current) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    let name = nameRef.current.trim();
+    let email = emailRef.current.trim();
+    let password = passwordRef.current.trim();
+
+    setLoading(true);
+
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name },
+      },
+    });
+    setLoading(false);
+
+    // console.log("session", session);
+    // console.log("error", error);
+    if (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
   return (
     <ScreenWrapper bg="white">
       <StatusBar style="dark" />
@@ -29,19 +64,34 @@ const SignUp = () => {
         {/* welcome */}
 
         <View>
-          <Text style={styles.welcomeText}>Nhập số điện thoại</Text>
+          <Text style={styles.welcomeText}>Hãy,</Text>
+          <Text style={styles.welcomeText}>Đăng kí tài khoản nào</Text>
         </View>
 
         {/* form */}
         <View style={styles.form}>
+          <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
+            Vui lòng điền thông tin chi tiết để tạo tài khoản
+          </Text>
           <Input
-            icon={<Icon name="phone" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your phone"
-            onChangeText={(value) => (phoneRef.current = value)}
+            icon={<Icon name="profile" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your name"
+            onChangeText={(value) => (nameRef.current = value)}
+          />
+          <Input
+            icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your email"
+            onChangeText={(value) => (emailRef.current = value)}
+          />
+          <Input
+            icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your password"
+            secureTextEntry
+            onChangeText={(value) => (passwordRef.current = value)}
           />
 
           {/* button */}
-          <Button title={"Tiếp tục"} buttonStyle={{borderRadius: 50}} />
+          <Button title={"Đăng kí"} loading={loading} />
         </View>
 
         {/* footer */}
@@ -76,10 +126,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(5),
   },
   welcomeText: {
-    fontSize: hp(3),
+    fontSize: hp(4),
     color: theme.colors.text,
     fontWeight: theme.fonts.bold,
-    textAlign: "center",
   },
   form: {
     gap: 28,
