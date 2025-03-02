@@ -19,31 +19,29 @@ import { supabase } from "../lib/supabase";
 
 const Login = () => {
   const router = useRouter();
-  const phoneRef = useRef("");
+  const emailRef = useRef("");
   const passwordRef = useRef("");
+  const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-    if (!phoneRef.current || !passwordRef.current) {
-      Alert.alert("Error", "Please fill all fields");
+    if (!emailRef.current || !passwordRef.current) {
+      alert("Please fill in all fields");
       return;
     }
 
-    let phone = phoneRef.current.trim();
+    let email = emailRef.current.trim();
     let password = passwordRef.current.trim();
-
-    const { error } = await supabase.auth.signInWithOtp({
-      phone,
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
       password,
     });
 
+    setLoading(false);
 
-    console.log("error", error); 
     if (error) {
       Alert.alert("Error", error.message);
-      return;
     }
-
-    router.push("/home");
   };
 
   return (
@@ -68,9 +66,9 @@ const Login = () => {
             Vui lòng nhập email và mật khẩu để đăng nhập
           </Text>
           <Input
-            icon={<Icon name="phone" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your phone"
-            onChangeText={(value) => (phoneRef.current = value)}
+            icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your email"
+            onChangeText={(value) => (emailRef.current = value)}
           />
           <Input
             icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
@@ -81,12 +79,7 @@ const Login = () => {
           <Text style={styles.forgotPassword}>Lấy lại mật khẩu</Text>
 
           {/* button */}
-          <Button
-            title={"Đăng nhập"}
-            buttonStyle={{ borderRadius: 50 }}
-            onPress={() => router.push("/home")}
-            // onPress={onSubmit}
-          />
+          <Button title={"Login"} loading={loading} onPress={onSubmit} />
         </View>
 
         {/* footer */}

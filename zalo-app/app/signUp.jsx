@@ -47,12 +47,13 @@ const SignUp = () => {
         data: { name },
       },
     });
+
     setLoading(false);
 
-    // console.log("session", session);
-    // console.log("error", error);
+    console.log("session", session);
+    console.log("error", error);
     if (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Sign up", error.message);
     }
   };
   return (
@@ -91,7 +92,7 @@ const SignUp = () => {
           />
 
           {/* button */}
-          <Button title={"Đăng kí"} loading={loading} />
+          <Button title={"Đăng kí"} loading={loading} onPress={onSubmit} />
         </View>
 
         {/* footer */}

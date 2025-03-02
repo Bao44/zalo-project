@@ -12,7 +12,7 @@ import { getMessages } from "../../api/messageAPI";
 import { getConversation } from "../../api/conversationAPI";
 
 const ChatDetailScreen = () => {
-    const socket = io("http://192.168.1.230:3000");
+    const socket = io("http://192.168.2.143:3000");
     const params = useLocalSearchParams();
     const convarsationId = params.conversationId;
     const [loading, setLoading] = useState(true);
