@@ -24,38 +24,6 @@ const SignUp = () => {
   const nameRef = useRef("");
   const passwordRef = useRef("");
   const [loading, setLoading] = useState(false);
-
-  // const onSubmit = async () => {
-  //   if (!emailRef.current || !passwordRef.current) {
-  //     alert("Please fill in all fields");
-  //     return;
-  //   }
-
-  //   let name = nameRef.current.trim();
-  //   let email = emailRef.current.trim();
-  //   let password = passwordRef.current.trim();
-
-  //   setLoading(true);
-
-  //   const {
-  //     data: { session },
-  //     error,
-  //   } = await supabase.auth.signUp({
-  //     email,
-  //     password,
-  //     options: {
-  //       data: { name },
-  //     },
-  //   });
-
-  //   setLoading(false);
-
-  //   console.log("session", session);
-  //   console.log("error", error);
-  //   if (error) {
-  //     Alert.alert("Sign up", error.message);
-  //   }
-  // };
   
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
@@ -74,11 +42,12 @@ const SignUp = () => {
       password,
       options: {
         data: { name },
-        emailRedirectTo: "exp://192.168.2.143:8081/auth-callback", // Đặt deep link 
       },
     });
   
     setLoading(false);
+
+    router.push("login");
   
     if (error) {
       Alert.alert("Sign up", error.message);

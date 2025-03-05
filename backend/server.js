@@ -52,3 +52,12 @@ io.on("connection", (socket) => {
 // Chạy server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+
+
+
+// --------------------------------------------------
+
+// Connect supabase
+const userRoutes = require("./routes/userRoutes");
+app.use("/api/users", userRoutes);

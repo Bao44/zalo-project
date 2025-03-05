@@ -13,14 +13,15 @@ const register = async (req, res) => {
 
     // Tạo user trong MongoDB trước
     const userMongo = new User({ email, password, name, phone, avatar });
+    userMongo.password = hashedPassword;
     const savedUser = await userMongo.save();
     const mongoId = savedUser._id.toString();
 
     // Lưu user vào MariaDB, dùng `_id` từ MongoDB làm `userId`
-    await mariadb.query(
-      "INSERT INTO user (userId, email, password, name, phone, avatar) VALUES (?, ?, ?, ?, ?, ?)",
-      [mongoId, email, hashedPassword, name, phone, avatar]
-    );
+    // await mariadb.query(
+    //   "INSERT INTO user (userId, email, password, name, phone, avatar) VALUES (?, ?, ?, ?, ?, ?)",
+    //   [mongoId, email, hashedPassword, name, phone, avatar]
+    // );
 
     res.status(201).json({ message: "User registered successfully", userId: mongoId });
   } catch (error) {
