@@ -15,9 +15,18 @@ import Icon from "../../assets/icons";
 import Loading from "../../components/Loading";
 import Avatar from "../../components/Avatar";
 import { router, useRouter } from "expo-router";
+import { useAuth } from "../../contexts/AuthContext";
+import { getUserData } from "../../services/userService";
 
 const DiaryScreen = () => {
   const router = useRouter();
+  const { setAuth, setUserData } = useAuth();
+
+  useEffect(() => async () => {
+    let res = await getUserData(user?.id);
+    console.log("res", res.data);
+  });
+
   return (
     <View>
       {/* Header */}

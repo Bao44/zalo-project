@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import { getUserData } from "../services/userService";
 
 LogBox.ignoreLogs([
   "Warning: TNodeChildrenRenderer",
@@ -22,19 +23,24 @@ const MainLayout = () => {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("session user", session?.user?.id);
+  const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
 
-      if (session) {
-        setAuth(session?.user);
-        updateUserData(session?.user, session?.user?.email);
-        router.replace("/home");
-      } else {
-        setAuth(null);
-        router.replace("/welcome");
-      }
-    });
-  }, []);
+    if (session) {
+      setAuth(session?.user);
+      updateUserData(session?.user, session?.user?.email);
+      router.replace("/home");
+    } else {
+      setAuth(null);
+      router.replace("/welcome");
+    }
+  });
+
+  // Cleanup listener khi component unmount
+  return () => {
+    authListener?.unsubscribe();
+  };
+}, []);
+
 
   const updateUserData = async (user, email) => {
     let res = await getUserData(user?.id);

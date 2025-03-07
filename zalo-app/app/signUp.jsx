@@ -16,8 +16,7 @@ import { useRouter } from "expo-router";
 import { hp, wp } from "../helpers/common";
 import Input from "../components/Input";
 import Button from "../components/Button";
-import { supabase } from "../lib/supabase";
-import { syncUserToMongoDB } from "../services/userService";
+import { signUp } from "../services/userService";
 
 const SignUp = () => {
   const router = useRouter();
@@ -27,7 +26,7 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current) {
+    if (!emailRef.current || !passwordRef.current || !nameRef.current) {
       alert("Please fill in all fields");
       return;
     }
@@ -38,33 +37,22 @@ const SignUp = () => {
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name },
-      },
-    });
+    try {
+      const result = await signUp(email, password, name);
 
-    // Nếu đăng ký thành công, gửi dữ liệu sang MongoDB
-    if (data?.user) {
-      try {
-        await syncUserToMongoDB(data.user);
-      } catch (syncError) {
-        console.error("Error syncing user to MongoDB:", syncError);
+      if (result.success) {
+        Alert.alert(
+          "Check your email",
+          "A confirmation email has been sent. Please verify your email."
+        );
+        router.push("login");
+      } else {
+        Alert.alert("Sign up", result.message);
       }
-    }
-
-    setLoading(false);
-
-    if (error) {
-      Alert.alert("Sign up", error.message);
-    } else {
-      Alert.alert(
-        "Check your email",
-        "A confirmation email has been sent. Please verify your email."
-      );
-      router.push("login");
+    } catch (error) {
+      Alert.alert("Error", error.message || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
