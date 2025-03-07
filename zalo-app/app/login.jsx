@@ -16,6 +16,7 @@ import Button from "../components/Button";
 import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
 import { supabase } from "../lib/supabase";
+import { syncUserToMongoDB } from "../services/userService";
 
 const Login = () => {
   const router = useRouter();
@@ -28,17 +29,27 @@ const Login = () => {
       alert("Please fill in all fields");
       return;
     }
-
+  
     let email = emailRef.current.trim();
     let password = passwordRef.current.trim();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
+  
+    // Nếu đăng nhập thành công, đồng bộ dữ liệu sang MongoDB
+    if (data?.user) {
+      try {
+        await syncUserToMongoDB(data?.user);
+      } catch (syncError) {
+        console.error("Error syncing user to MongoDB:", syncError);
+      }
+    }
+  
     setLoading(false);
-
+  
     if (error) {
       Alert.alert("Error", error.message);
     }

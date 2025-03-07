@@ -13,9 +13,17 @@ const mariadb = mysql.createPool({
     queueLimit: 0
 });
 
-// Kết nối MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 30000, 
+  socketTimeoutMS: 45000,
+})
+  .then(() => console.log("✅ MongoDB connected successfully"))
   .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-module.exports = { mariadb };
+const db = mongoose.connection;
+db.on("error", err => console.error("🔥 MongoDB Error:", err));
+db.on("disconnected", () => console.log("⚠️ MongoDB disconnected!"));
+
+module.exports = { mariadb, mongoose };

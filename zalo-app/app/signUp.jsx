@@ -17,6 +17,7 @@ import { hp, wp } from "../helpers/common";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
+import { syncUserToMongoDB } from "../services/userService";
 
 const SignUp = () => {
   const router = useRouter();
@@ -24,19 +25,19 @@ const SignUp = () => {
   const nameRef = useRef("");
   const passwordRef = useRef("");
   const [loading, setLoading] = useState(false);
-  
+
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
       alert("Please fill in all fields");
       return;
     }
-  
+
     let name = nameRef.current.trim();
     let email = emailRef.current.trim();
     let password = passwordRef.current.trim();
-  
+
     setLoading(true);
-  
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -44,18 +45,28 @@ const SignUp = () => {
         data: { name },
       },
     });
-  
+
+    // Nếu đăng ký thành công, gửi dữ liệu sang MongoDB
+    if (data?.user) {
+      try {
+        await syncUserToMongoDB(data.user);
+      } catch (syncError) {
+        console.error("Error syncing user to MongoDB:", syncError);
+      }
+    }
+
     setLoading(false);
 
-    router.push("login");
-  
     if (error) {
       Alert.alert("Sign up", error.message);
     } else {
-      Alert.alert("Check your email", "A confirmation email has been sent. Please verify your email.");
+      Alert.alert(
+        "Check your email",
+        "A confirmation email has been sent. Please verify your email."
+      );
+      router.push("login");
     }
   };
-  
 
   return (
     <ScreenWrapper bg="white">
