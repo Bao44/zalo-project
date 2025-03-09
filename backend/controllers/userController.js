@@ -1,4 +1,4 @@
-const supabaseService = require('../services/supabaseService');
+const authService = require('../services/authService');
 const User = require('../models/User'); 
 
 const userController = {
@@ -7,7 +7,7 @@ const userController = {
       const { userId } = req.params;
       
       // Lấy dữ liệu từ Supabase
-      const { data, error } = await supabaseService.getUserData(userId);
+      const { data, error } = await authService.getUserData(userId);
       
       if (error) {
         return res.status(400).json({ success: false, message: error.message });
@@ -49,8 +49,8 @@ const userController = {
       const userData = req.body;
       
       // Cập nhật trong Supabase
-      const { data, error } = await supabaseService.updateUser(userId, userData);
-      
+      const { data, error } = await authService.updateUser(userId, userData);
+      authService
       if (error) {
         return res.status(400).json({ success: false, message: error.message });
       }

@@ -5,7 +5,7 @@ const supabaseKey = process.env.SUPABASE_ANOKEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const supabaseService = {
+const authService = {
 
   async signUp(email, password, userData) {
     const { data, error } = await supabase.auth.signUp({
@@ -61,4 +61,4 @@ const supabaseService = {
   }
 };
 
-module.exports = supabaseService;
+module.exports = authService;
