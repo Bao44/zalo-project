@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import { hp, wp } from "../helpers/common";
 import Input from "../components/Input";
 import Button from "../components/Button";
-import { signUp } from "../services/userService";
+import { signUp } from "../api/user";
 
 const SignUp = () => {
   const router = useRouter();

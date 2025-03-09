@@ -3,17 +3,18 @@ import React from "react";
 import { theme } from "../constants/theme";
 import { hp } from "../helpers/common";
 import { Image } from "expo-image";
+import { getUserImageSrc } from "../api/image";
 
 
 const Avatar = ({
   uri,
-  size = hp(5.5),
-  rounded = theme.radius.xxl,
+  size = hp(4.5),
+  rounded = theme.radius.md,
   style = {},
 }) => {
   return (
     <Image
-      source={require('../assets/images/defaultUser.png')}
+      source={getUserImageSrc(uri)}
       transition={100}
       style={[
         styles.avatar,

@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
-import { getUserData } from "../services/userService";
+import { getUserData } from "../api/user";
 
 LogBox.ignoreLogs([
   "Warning: TNodeChildrenRenderer",

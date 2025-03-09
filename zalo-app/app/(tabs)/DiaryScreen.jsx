@@ -8,24 +8,16 @@ import {
   View,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
 import Icon from "../../assets/icons";
-import Loading from "../../components/Loading";
 import Avatar from "../../components/Avatar";
 import { router, useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
-import { getUserData } from "../../services/userService";
 
 const DiaryScreen = () => {
   const router = useRouter();
-  const { setAuth, setUserData } = useAuth();
-
-  useEffect(() => async () => {
-    let res = await getUserData(user?.id);
-    console.log("res", res.data);
-  });
+  const { user, setAuth } = useAuth();
 
   return (
     <View>
@@ -33,7 +25,11 @@ const DiaryScreen = () => {
       <View style={styles.container}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Pressable onPress={() => router.push("profile")}>
-            <Avatar />
+            <Avatar
+              uri={user?.image}
+              size={hp(5.5)}
+              rounded={theme.radius.xxl}
+            />
           </Pressable>
           <Pressable
             style={styles.pressableNewPost}

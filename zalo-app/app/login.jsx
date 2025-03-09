@@ -16,8 +16,8 @@ import Button from "../components/Button";
 import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
 import { supabase } from "../lib/supabase";
-import { signIn } from "../services/userService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signIn } from "../api/user";
 
 const Login = () => {
   const router = useRouter();
