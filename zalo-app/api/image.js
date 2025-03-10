@@ -1,23 +1,25 @@
 import * as FileSystem from "expo-file-system";
-import axios from 'axios';
+import axios from "axios";
+import { supabaseUrl } from "../constants";
 
-const BACKEND_URL = 'http://192.168.0.127:3000';
+const BACKEND_URL = "http://192.168.0.127:3000";
 
 const api = axios.create({
   baseURL: BACKEND_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const getUserImageSrc = (imagePath) => {
   if (imagePath) {
-    if (typeof imagePath === 'string') {
+    if (typeof imagePath === "string") {
       return {
-        uri: `${BACKEND_URL}/api/images/url/${encodeURIComponent(imagePath)}`,
+        uri: `${supabaseUrl}/storage/v1/object/public/uploads/${imagePath}`,
       };
     }
-    return imagePath; // Nếu đã là object có uri
+    console.log("Image path:", imagePath);
+    return imagePath;
   } else {
     return require("../assets/images/defaultUser.png");
   }
@@ -40,24 +42,42 @@ export const getLocalFilePath = (filePath) => {
 
 export const uploadFile = async (folderName, fileUri, isImage = true) => {
   try {
+    console.log("Bắt đầu đọc file:", fileUri);
+
     // Đọc file dưới dạng base64
     const fileBase64 = await FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    
-    // Gọi API backend để upload
-    const response = await api.post('/api/images/upload', {
+
+    const response = await api.post("/api/images/uploads", {
       folderName,
       fileBase64,
-      isImage
+      isImage,
     });
-    
+
     return response.data;
   } catch (error) {
-    console.log("Upload file error:", error);
-    return { 
-      success: false, 
-      msg: error.response?.data?.message || "Could not upload media" 
-    };
+    if (error.response) {
+      return {
+        success: false,
+        msg:
+          error.response.data.message ||
+          error.response.data.msg ||
+          "Could not upload media",
+        details: error.response.data,
+      };
+    } else if (error.request) {
+      console.log("Error request:", error.request);
+      return {
+        success: false,
+        msg: "No response received from server",
+      };
+    } else {
+      console.log("Error message:", error.message);
+      return {
+        success: false,
+        msg: error.message,
+      };
+    }
   }
 };

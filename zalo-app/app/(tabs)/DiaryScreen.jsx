@@ -12,7 +12,7 @@ import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
 import Icon from "../../assets/icons";
 import Avatar from "../../components/Avatar";
-import { router, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 
 const DiaryScreen = () => {
@@ -26,9 +26,9 @@ const DiaryScreen = () => {
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Pressable onPress={() => router.push("profile")}>
             <Avatar
-              uri={user?.image}
-              size={hp(5.5)}
-              rounded={theme.radius.xxl}
+              uri={user?.avatar}
+              size={hp(6.5)}
+              rounded={theme.radius.xxl * 100}
             />
           </Pressable>
           <Pressable

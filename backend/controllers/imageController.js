@@ -1,5 +1,7 @@
 const imageService = require('../services/imageService');
 
+const supabaseUrl = process.env.SUPABASE_URL;
+
 const imageController = {
   async uploadFile(req, res) {
     try {
@@ -38,11 +40,12 @@ const imageController = {
         });
       }
       
-      const url = imageService.getSupabaseFileUrl(filePath);
+      const url = `${supabaseUrl}/storage/v1/object/public/uploads/${filePath}`;
+      console.log("URL", url);
       
       return res.status(200).json({ 
         success: true, 
-        data: url 
+        data: { url } 
       });
     } catch (error) {
       return res.status(500).json({ 

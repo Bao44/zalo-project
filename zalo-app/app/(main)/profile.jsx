@@ -13,94 +13,72 @@ import { useRouter } from "expo-router";
 import { hp, wp } from "../../helpers/common";
 import Icon from "../../assets/icons";
 import { theme } from "../../constants/theme";
-import { supabase } from "../../lib/supabase";
 import Avatar from "../../components/Avatar";
-import Header from "../../components/Header";
+import BackButton from "../../components/BackButton";
 
 const Profile = () => {
   const { user, setAuth } = useAuth();
   const router = useRouter();
 
-  const onLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      Alert.alert("Error", "Error signing out!");
-    }
-  };
-
-  const handleLogout = async () => {
-    // show confirm modal
-    Alert.alert("Confirm", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        onPress: () => console.log("modal cancelled"),
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        onPress: () => onLogout(),
-        style: "destructive",
-      },
-    ]);
-  };
   return (
-    <View>
+    <View style={{ backgroundColor: "white" }}>
       <View style={styles.headerContainer}>
-        <Header title="Profile" />
+        <View style={styles.header}>
+          <BackButton router={router} />
+          <TouchableOpacity onPress={() => router.push("optionsUser")}>
+            <Icon name="moreHorizontal" size={20} color={'white'} />
+          </TouchableOpacity>
+        </View>
       </View>
-      <UserHeader user={user} router={router} handleLogout={handleLogout} />
+      <UserHeader user={user} router={router} />
     </View>
   );
 };
 
-const UserHeader = ({ user, router, handleLogout }) => {
+const UserHeader = ({ user, router }) => {
   return (
     <View
-      style={{ flex: 1, backgroundColor: "white", paddingHorizontal: wp(4) }}
+      style={{
+        flex: 1,
+        paddingHorizontal: wp(4),
+        position: "absolute",
+        top: hp(15),
+        left: 0,
+        right: 0,
+      }}
     >
-      <View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Icon name="leaveGroup" color={theme.colors.rose} />
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.container}>
         <View style={{ gap: 15 }}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={() => router.push("editProfile")}>
             <Avatar
-              uri={user?.image}
-              size={hp(12)}
-              rounded={theme.radius.xxl * 1.4}
+              uri={user?.avatar}
+              size={hp(14)}
+              rounded={theme.radius.xxl * 100}
             />
-            <Pressable
-              style={styles.editIcon}
-              onPress={() => router.push("editProfile")}
-            >
-              <Icon name="edit" strokeWidth={2.5} size={20} />
-            </Pressable>
-          </View>
+          </TouchableOpacity>
 
           {/* username and bio */}
-          <View style={{ alignItems: "center", gap: 4 }}>
+          <View style={{ alignItems: "center", gap: 4, marginTop: 10 }}>
             <Text style={styles.userName}>{user && user.name}</Text>
-            <Text style={styles.infoText}>{user && user.bio}</Text>
+            {user.bio == null || user.bio == "" ? (
+              <View>
+                <Pressable
+                  style={styles.editIcon}
+                  onPress={() => router.push("editBio")}
+                >
+                  <Icon name="edit" strokeWidth={2.5} size={16} />
+                  <Text style={styles.infoText}>
+                    {" "}
+                    Cập nhật giới thiệu bản thân
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => router.push("editBio")}>
+                <Text style={styles.infoText}>{user && user.bio}</Text>
+              </Pressable>
+            )}
           </View>
-
-          {/* email, phone, address */}
-          {/* <View style={{ gap: 10 }}>
-            <View style={styles.info}>
-              <Icon name="mail" size={20} color={theme.colors.textLight} />
-              <Text style={styles.infoText}>{user && user.email}</Text>
-            </View>
-            <View style={styles.info}>
-              <Icon name="phone" size={20} color={theme.colors.textLight} />
-              <Text style={styles.infoText}>{user && user.phoneNumber}</Text>
-            </View>
-            <View style={styles.info}>
-              <Icon name="pin" size={20} color={theme.colors.textLight} />
-              <Text style={styles.infoText}>{user && user.address}</Text>
-            </View>
-          </View> */}
         </View>
       </View>
     </View>
@@ -114,51 +92,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-    marginHorizontal: wp(4),
-    marginBottom: 20,
+    height: hp(22),
+    backgroundColor: "gray",
   },
-  headerShape: {
-    width: wp(100),
-    height: hp(20),
+  header: {
+    marginHorizontal: wp(4),
+    marginVertical: hp(2),
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   avatarContainer: {
     height: hp(12),
     width: hp(12),
     alignSelf: "center",
+    alignItems: "center",
   },
   editIcon: {
-    position: "absolute",
-    right: -12,
-    padding: 7,
-    borderRadius: 50,
-    backgroundColor: "white",
-    shadowColor: theme.colors.textLight,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 5,
   },
   userName: {
     fontSize: hp(3),
     fontWeight: "500",
     color: theme.colors.textDark,
-  },
-  info: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  infoText: {
-    fontSize: hp(1.6),
-    fontWeight: "500",
-    color: theme.colors.textLight,
-  },
-  logoutButton: {
-    position: "absolute",
-    right: 0,
-    padding: 5,
-    borderRadius: theme.radius.sm,
-    backgroundColor: "#fee2e2",
   },
   listStyle: {
     paddingHorizontal: wp(2),
@@ -168,12 +127,5 @@ const styles = StyleSheet.create({
     fontSize: hp(2),
     textAlign: "center",
     color: theme.colors.text,
-  },
-  buttonPremium: {
-    padding: 15,
-    backgroundColor: "#130c1c",
-    borderRadius: 30,
-    margin: 10,
-    opacity: 0.8,
   },
 });
