@@ -12,7 +12,11 @@ import Button from "../../components/Button";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { getUserImageSrc, uploadFile } from "../../api/image";
+import {
+  getUserBackgroundImageSrc,
+  getUserImageSrc,
+  uploadFile,
+} from "../../api/image";
 import { updateUser } from "../../api/user";
 
 const EditProfile = () => {
@@ -25,6 +29,7 @@ const EditProfile = () => {
     phone: "",
     address: "",
     avatar: null,
+    background: null,
   });
 
   useEffect(() => {
@@ -34,6 +39,7 @@ const EditProfile = () => {
         phone: currentUser.phone || "",
         address: currentUser.address || "",
         avatar: currentUser.avatar || null,
+        background: currentUser.background || null,
       });
     }
   }, [currentUser]);
@@ -51,9 +57,22 @@ const EditProfile = () => {
     }
   };
 
+  const onPickBackgroundImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setUser({ ...user, background: result.assets[0] });
+    }
+  };
+
   const onSubmit = async () => {
     let userData = { ...user };
-    let { name, phone, address, avatar } = userData;
+    let { name, phone, address, avatar, background } = userData;
     if (!name || !phone || !address || !avatar) {
       Alert.alert("Profile", "Please fill all fields");
       return;
@@ -70,6 +89,20 @@ const EditProfile = () => {
         userData.avatar = null;
       }
     }
+
+    if (typeof background == "object") {
+      let backgroundRes = await uploadFile(
+        "backgrounds",
+        background?.uri,
+        true
+      );
+      if (backgroundRes.success) {
+        userData.background = backgroundRes.data.path;
+      } else {
+        userData.background = null;
+      }
+    }
+
     // update user profile
     const res = await updateUser(currentUser?.id, userData);
     setLoading(false);
@@ -85,47 +118,52 @@ const EditProfile = () => {
       ? user.avatar.uri
       : getUserImageSrc(user.avatar);
 
+  let backgroundSource =
+    user.background && typeof user.background == "object"
+      ? user.background.uri
+      : getUserBackgroundImageSrc(user.background);
+
   return (
-    <ScreenWrapper bg="white">
-      <View style={styles.container}>
-        <ScrollView style={{ flex: 1 }}>
-          <Header title="Edit Profile" />
+    // <ScreenWrapper bg="white">
+    <View style={styles.container}>
+      <ScrollView style={{ flex: 1 }}>
+        <Header title="Edit Profile" />
 
-          {/* form */}
-          <View style={styles.form}>
-            <View style={styles.avatarContainer}>
-              <Image source={avatarSource} style={styles.avatar} />
-              <Pressable style={styles.cameraIcon} onPress={onPickImage}>
-                <Icon name="edit" size={20} strokeWidth={2.5} />
-              </Pressable>
-            </View>
-            <Text style={{ fontSize: hp(1.5), color: theme.fonts.text }}>
-              Please fill your profile details
-            </Text>
-            <Input
-              icon={<Icon name="edit" />}
-              placeholder="Enter your name"
-              value={user.name}
-              onChangeText={(value) => setUser({ ...user, name: value })}
-            />
-            <Input
-              icon={<Icon name="edit" />}
-              placeholder="Enter your phone number"
-              value={user.phone}
-              onChangeText={(value) => setUser({ ...user, phone: value })}
-            />
-            <Input
-              icon={<Icon name="edit" />}
-              placeholder="Enter your address"
-              value={user.address}
-              onChangeText={(value) => setUser({ ...user, address: value })}
-            />
-
-            <Button title="Update" loading={loading} onPress={onSubmit} />
+        {/* form */}
+        <View style={styles.form}>
+          <View style={styles.avatarContainer}>
+            <Image source={avatarSource} style={styles.avatar} />
+            <Pressable style={styles.cameraIcon} onPress={onPickImage}>
+              <Icon name="imageFile" size={20} strokeWidth={2.5} />
+            </Pressable>
           </View>
-        </ScrollView>
-      </View>
-    </ScreenWrapper>
+          <Text style={{ fontSize: hp(1.5), color: theme.fonts.text }}>
+            Please fill your profile details
+          </Text>
+          <Input
+            icon={<Icon name="profile" />}
+            placeholder="Enter your name"
+            value={user.name}
+            onChangeText={(value) => setUser({ ...user, name: value })}
+          />
+          <Input
+            icon={<Icon name="phone" />}
+            placeholder="Enter your phone number"
+            value={user.phone}
+            onChangeText={(value) => setUser({ ...user, phone: value })}
+          />
+          <Input
+            icon={<Icon name="pin" />}
+            placeholder="Enter your address"
+            value={user.address}
+            onChangeText={(value) => setUser({ ...user, address: value })}
+          />
+          <Button title="Đổi ảnh bìa" onPress={onPickBackgroundImage} />
+          <Button title="Update" loading={loading} onPress={onSubmit} />
+        </View>
+      </ScrollView>
+    </View>
+    // </ScreenWrapper>
   );
 };
 

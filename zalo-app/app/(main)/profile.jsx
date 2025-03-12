@@ -15,20 +15,20 @@ import Icon from "../../assets/icons";
 import { theme } from "../../constants/theme";
 import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
+import Background from "../../components/Background";
 
 const Profile = () => {
   const { user, setAuth } = useAuth();
   const router = useRouter();
 
   return (
-    <View style={{ backgroundColor: "white" }}>
-      <View style={styles.headerContainer}>
-        <View style={styles.header}>
-          <BackButton router={router} />
-          <TouchableOpacity onPress={() => router.push("optionsUser")}>
-            <Icon name="moreHorizontal" size={20} color={'white'} />
-          </TouchableOpacity>
-        </View>
+    <View>
+      <Background uri={user?.background} sizeHeight={hp(26)} />
+      <View style={styles.header}>
+        <BackButton router={router} color="white" />
+        <TouchableOpacity onPress={() => router.push("optionsUser")}>
+          <Icon name="moreHorizontal" size={20} color={"white"} />
+        </TouchableOpacity>
       </View>
       <UserHeader user={user} router={router} />
     </View>
@@ -42,14 +42,17 @@ const UserHeader = ({ user, router }) => {
         flex: 1,
         paddingHorizontal: wp(4),
         position: "absolute",
-        top: hp(15),
+        top: hp(18),
         left: 0,
         right: 0,
       }}
     >
       <View style={styles.container}>
         <View style={{ gap: 15 }}>
-          <TouchableOpacity style={styles.avatarContainer} onPress={() => router.push("editProfile")}>
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => router.push("editProfile")}
+          >
             <Avatar
               uri={user?.avatar}
               size={hp(14)}
@@ -91,15 +94,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerContainer: {
-    height: hp(22),
-    backgroundColor: "gray",
-  },
   header: {
-    marginHorizontal: wp(4),
-    marginVertical: hp(2),
+    position: "absolute",
+    top: hp(1),
+    width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingHorizontal: wp(3),
     alignItems: "center",
   },
   avatarContainer: {

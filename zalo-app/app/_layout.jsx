@@ -23,24 +23,24 @@ const MainLayout = () => {
   const router = useRouter();
 
   useEffect(() => {
-  const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    // const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAuth(session?.user);
+        updateUserData(session?.user, session?.user?.email);
+        router.replace("/home");
+      } else {
+        setAuth(null);
+        router.replace("/welcome");
+      }
+    });
 
-    if (session) {
-      setAuth(session?.user);
-      updateUserData(session?.user, session?.user?.email);
-      router.replace("/home");
-    } else {
-      setAuth(null);
-      router.replace("/welcome");
-    }
-  });
-
-  // Cleanup listener khi component unmount
-  return () => {
-    authListener?.unsubscribe();
-  };
-}, []);
-
+    // Cleanup listener khi component unmount
+    return () => {
+      // authListener?.unsubscribe();
+      authListener?.data?.subscription?.unsubscribe();
+    };
+  }, []);
 
   const updateUserData = async (user, email) => {
     let res = await getUserData(user?.id);
@@ -52,8 +52,7 @@ const MainLayout = () => {
       screenOptions={{
         headerShown: false,
       }}
-    >
-    </Stack>
+    ></Stack>
   );
 };
 

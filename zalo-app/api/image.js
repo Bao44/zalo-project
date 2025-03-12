@@ -2,7 +2,7 @@ import * as FileSystem from "expo-file-system";
 import axios from "axios";
 import { supabaseUrl } from "../constants";
 
-const BACKEND_URL = "http://192.168.0.127:3000";
+const BACKEND_URL = "http://192.168.2.30:3000";
 
 const api = axios.create({
   baseURL: BACKEND_URL,
@@ -18,11 +18,32 @@ export const getUserImageSrc = (imagePath) => {
         uri: `${supabaseUrl}/storage/v1/object/public/uploads/${imagePath}`,
       };
     }
-    console.log("Image path:", imagePath);
     return imagePath;
   } else {
     return require("../assets/images/defaultUser.png");
   }
+};
+
+export const getUserBackgroundImageSrc = (imagePath) => {
+  if (imagePath) {
+    if (typeof imagePath === "string") {
+      return {
+        uri: `${supabaseUrl}/storage/v1/object/public/uploads/${imagePath}`,
+      };
+    }
+    return imagePath;
+  } else {
+    return require("../assets/images/defaultBackground.jpg");
+  }
+};
+
+export const getSupabaseFileUrl = (filePath) => {
+  if (filePath) {
+    return {
+      uri: `${supabaseUrl}/storage/v1/object/public/uploads/${filePath}`,
+    };
+  }
+  return null;
 };
 
 export const downloadFile = async (url) => {
