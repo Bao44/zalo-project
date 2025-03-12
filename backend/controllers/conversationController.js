@@ -42,8 +42,8 @@ const getUserConversations = async (req, res) => {
 
     // Tìm tất cả các cuộc trò chuyện có userId trong danh sách members
     const conversations = await Conversation.find({ members: userId })
-      .populate("members", "name avatar") 
-      .populate("lastMessage", "type content createdAt") 
+      .populate("members", "name avatar")
+      .populate("lastMessage", "type content createdAt")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);
@@ -52,14 +52,15 @@ const getUserConversations = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
 // 📌 API: Lấy thông tin 1 cuộc trò chuyện bằng id
 const getConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
     const conversation = await Conversation.findById(conversationId)
-      .populate("members", "name avatar") 
-      .populate("lastMessage", "type content createdAt") 
+      .populate("members", "name avatar")
+      .populate("lastMessage", "type content createdAt")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversation);
@@ -69,4 +70,23 @@ const getConversation = async (req, res) => {
   }
 };
 
-module.exports = { create1vs1, getUserConversations, getConversation };
+//Lấy thông tin cuộc trò chuyện 1-1
+const getConversation1vs1 = async (req, res) => {
+  try {
+    const { user_id, friend_id } = req.params;
+    const conversation = await Conversation.findOne({
+      type: "private",
+      members: { $all: [user_id, friend_id] },
+    })
+      .populate("members", "name avatar")
+      .populate("lastMessage", "type content createdAt")
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error fetching conversation:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1 };

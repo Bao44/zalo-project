@@ -6,8 +6,25 @@ import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
 import UserLocal from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
+import { searchFriends } from "../../api/friendshipAPI";
 
 const AddFriend = () => {
+    const [phone, setPhone] = React.useState("");
+
+    //Tìm kiếm bạn bè
+    const handleSearch = async (phone) => {
+        try {
+            const response = await searchFriends(phone);
+            if (response.success) {
+                router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(response.data), type: "phone"}});
+            } else {
+                alert("Số điện thoại này chưa đăng ký tài khoản hoặc không cho phép tìm kiếm!");
+            }
+        } catch (error) {
+            console.log("Lỗi tìm kiếm bạn bè:", error);
+        }
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -20,7 +37,7 @@ const AddFriend = () => {
                 <View style={styles.myQR}>
                     <View style={styles.boxInfoQR}>
                         <Text style={styles.textName}>{UserLocal[1].name}</Text>
-                        <Image style={styles.imgQR} source={{uri: UserLocal[1].avatar}} />
+                        <Image style={styles.imgQR} source={{ uri: UserLocal[1].avatar }} />
                         <Text style={styles.textQR}>Quét mã để thêm bạn Yalo với tôi</Text>
                     </View>
                 </View>
@@ -30,9 +47,9 @@ const AddFriend = () => {
                             <Text style={styles.textAreaCode}>+84</Text>
                             <Icon name="arrowDown" size={28} strokeWidth={1.6} color="black" />
                         </TouchableOpacity>
-                        <TextInput style={{fontSize: 16, marginLeft: 5}} placeholder="Nhập số điện thoại"/>
+                        <TextInput style={{ fontSize: 16, marginLeft: 5 }} placeholder="Nhập số điện thoại" onChangeText={(text) => setPhone(text)} />
                     </View>
-                    <TouchableOpacity style={styles.buttonNextSearch}>
+                    <TouchableOpacity style={styles.buttonNextSearch} onPress={() => handleSearch(phone)}>
                         <Icon name="arrowRight" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />
                     </TouchableOpacity>
                 </View>
@@ -61,27 +78,27 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header:{
+    header: {
         flexDirection: "row",
         alignItems: "center",
         height: hp(6),
-        borderBottomWidth: 0.5, 
+        borderBottomWidth: 0.5,
         borderBottomColor: "gray",
     },
-    iconBack:{
+    iconBack: {
         marginHorizontal: 15
     },
-    textTitleHeader:{
+    textTitleHeader: {
         fontSize: 18,
         fontWeight: theme.fonts.medium,
         color: "black",
     },
-    myQR:{
+    myQR: {
         height: hp(35),
         justifyContent: "center",
         alignItems: "center",
     },
-    boxInfoQR:{
+    boxInfoQR: {
         width: wp(60),
         height: wp(60),
         backgroundColor: "#3F5C7E",
@@ -89,31 +106,31 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderRadius: 20
     },
-    textName:{
+    textName: {
         fontSize: 16,
         color: "#FFF",
         fontWeight: theme.fonts.medium
     },
-    imgQR:{
+    imgQR: {
         width: "50%",
         height: "50%",
         borderRadius: 10
     },
-    textQR:{
+    textQR: {
         fontSize: 14,
         color: theme.colors.grayLight,
     },
-    phone:{
+    phone: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         height: hp(9),
-        borderBottomWidth: 0.5, 
+        borderBottomWidth: 0.5,
         borderBottomColor: "gray",
         paddingHorizontal: 20,
         backgroundColor: "#FFF"
     },
-    boxPhone:{
+    boxPhone: {
         flexDirection: "row",
         alignItems: "center",
         width: "85%",
@@ -122,7 +139,7 @@ const styles = StyleSheet.create({
         borderColor: "gray",
         borderRadius: 8,
     },
-    areaCode:{
+    areaCode: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-evenly",
@@ -134,11 +151,11 @@ const styles = StyleSheet.create({
         borderRightWidth: 1,
         borderColor: "gray",
     },
-    textAreaCode:{
+    textAreaCode: {
         fontSize: 16,
         color: "black",
     },
-    buttonNextSearch:{
+    buttonNextSearch: {
         width: 45,
         height: 45,
         justifyContent: "center",
@@ -146,18 +163,18 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primaryLight,
         borderRadius: 25
     },
-    textQRcode:{
+    textQRcode: {
         fontSize: 16,
         marginLeft: 20,
     },
-    qrCode:{
+    qrCode: {
         flexDirection: "row",
         alignItems: "center",
         height: hp(8),
         paddingHorizontal: 20,
         backgroundColor: "#FFF"
     },
-    textFooter:{
+    textFooter: {
         fontSize: 14,
         color: "gray",
         textAlign: "center",

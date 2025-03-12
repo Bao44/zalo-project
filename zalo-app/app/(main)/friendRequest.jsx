@@ -1,59 +1,74 @@
 import { StyleSheet, Text, View, TouchableOpacity, Image, SectionList, } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
 import { hp, wp } from "../../helpers/common";
 import { router } from "expo-router";
-import friendRequest from "../../assets/dataLocals/FriendRequest";
-
+import { useAuth } from "../../contexts/AuthContext";
+import { getFriendRequests, respondToFriendRequest } from "../../api/friendshipAPI";
+import Avatar from "../../components/Avatar";
+import socket from "../../utils/socket";
 
 const FriendRequest = () => {
 
     const [selected, setSelected] = useState("received");
+    const [listFriendRequest, setListFriendRequest] = useState([]);
+    const [reload, setReload] = useState(0);
 
-    // nhóm các lời mời kết bạn theo tháng
-    const groupUsersByRecentMonths = (users) => {
-        const now = new Date();
-        const limitDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // Ngày đầu tiên của tháng gần nhất thứ 3
-
-        const grouped = {};
-        const recentMonths = [];
-        let olderData = [];
-
-        users.forEach((user) => {
-            const date = new Date(user.dateRequest);
-            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`; // YYYY-MM
-
-            if (!grouped[key]) grouped[key] = [];
-            grouped[key].push(user);
-        });
-
-        Object.keys(grouped)
-            .sort((a, b) => new Date(b) - new Date(a)) // Sắp xếp giảm dần
-            .forEach((monthKey) => {
-                const [year, month] = monthKey.split("-").map(Number);
-                const monthDate = new Date(year, month - 1, 1); // Ngày đầu tháng
-
-                if (monthDate >= limitDate) {
-                    recentMonths.push({
-                        title: `Tháng ${month}, ${year}`,
-                        data: grouped[monthKey],
-                    });
-                } else {
-                    olderData = olderData.concat(grouped[monthKey]);
-                }
-            });
-
-        if (olderData.length > 0) {
-            recentMonths.push({ title: "Cũ hơn", data: olderData });
-        }
-
-        return recentMonths;
+    const reloadRequest = () => {
+        setReload(reload + 1);
     };
 
+    const { user } = useAuth();
 
-    const friendRequestGrouped = groupUsersByRecentMonths(friendRequest);
+    // Lấy danh sách lời mời kết bạn
+    useEffect(() => {
+        const fetchFriendRequest = async () => {
+            try {
+                const response = await getFriendRequests(user.id);
+                if (response.success) {
+                    setListFriendRequest(response.data);
+                } else {
+                    alert("Lỗi lấy danh sách lời mời kết bạn!");
+                }
+            } catch (error) {
+                console.log("Lỗi lấy danh sách lời mời kết bạn:", error);
+            }
+        }
+        fetchFriendRequest();
+    }, [reload]);
+
+    // Khởi tạo Socket.IO
+    useEffect(() => {
+        // Báo cho server rằng user đang online
+        socket.emit("user-online", user.id);
+
+        // Lắng nghe thông báo lời mời kết bạn mới
+        socket.on("friend-request-notification", (data) => {
+            reloadRequest(); // Tải lại danh sách lời mời
+        });
+
+        // Cleanup khi component unmount
+        return () => {
+            socket.off("friend-request-notification");
+        };
+    }, []);
+
+    //Đồng ý hoặc từ chối yêu cầu kết bạn
+    const handleRespondToFriendRequest = async (senderId, status) => {
+        try {
+            const response = await respondToFriendRequest(senderId, user.id, status);
+            if (response.success) {
+                alert("Đã xử lý yêu cầu kết bạn!");
+                reloadRequest();
+            } else {
+                alert("Đã xảy ra lỗi khi xử lý yêu cầu kết bạn!");
+            }
+        } catch (error) {
+            console.log("Lỗi xử lý yêu cầu kết bạn:", error);
+        }
+    };
 
     // Trạng thái mở rộng nội dung
     const [expanded, setExpanded] = useState({});
@@ -84,26 +99,26 @@ const FriendRequest = () => {
             </View>
             <View style={styles.boxSelect}>
                 <TouchableOpacity onPress={() => setSelected("received")}>
-                    <Text style={selected === "received" ? styles.textActive : styles.textNoActive}>Đã nhận ({friendRequest.length})</Text>
+                    <Text style={selected === "received" ? styles.textActive : styles.textNoActive}>Đã nhận ({listFriendRequest.reduce((count, month) => count + month.data.length, 0)})</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setSelected("sent")}>
                     <Text style={selected === "sent" ? styles.textActive : styles.textNoActive}>Đã gửi</Text>
                 </TouchableOpacity>
             </View>
             <SectionList
-                sections={friendRequestGrouped} // Nhóm user theo tháng
+                sections={listFriendRequest} // Nhóm user theo tháng
                 keyExtractor={(item, index) => `${item.id}-${index}`} // Tránh key trùng lặp
                 renderItem={({ item, section }) => (
                     <TouchableOpacity style={styles.buttonUser}>
-                        <Image source={{ uri: item.user.avatar }} style={styles.avatarUser} />
+                        <Avatar uri={item.sender?.avatar} size={hp(6.5)} rounded={theme.radius.xxl * 100} />
                         <View style={styles.boxContent}>
-                            <Text style={styles.textNameUser}>{item.user.name}</Text>
+                            <Text style={styles.textNameUser}>{item.sender?.name}</Text>
                             {section.title !== "Cũ hơn" ? (
                                 <>
                                     <Text style={styles.textDateRequest}>
-                                        {String(new Date(item.dateRequest).getDate()).padStart(2, "0")}/
-                                        {String(new Date(item.dateRequest).getMonth() + 1).padStart(2, "0")}
-                                        {item.type === "general-group" && " - Bạn cùng nhóm"}
+                                        {String(new Date(item.createdAt).getDate()).padStart(2, "0")}/
+                                        {String(new Date(item.createdAt).getMonth() + 1).padStart(2, "0")}
+                                        {item.type === "phone" && " - Qua số điện thoại"}
                                     </Text>
                                     <View>
                                         <Text style={styles.textContent}>
@@ -123,10 +138,10 @@ const FriendRequest = () => {
                             }
                             <View style={styles.boxButton}>
                                 <TouchableOpacity style={styles.button}>
-                                    <Text style={styles.textDecline}>Từ chối</Text>
+                                    <Text style={styles.textDecline} onPress={() => handleRespondToFriendRequest(item.sender?.supabaseId, "rejected")}>Từ chối</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.button}>
-                                    <Text style={styles.textAccept}>Đồng ý</Text>
+                                    <Text style={styles.textAccept} onPress={() => handleRespondToFriendRequest(item.sender?.supabaseId, "accepted")}>Đồng ý</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
