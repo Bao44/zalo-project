@@ -6,12 +6,13 @@ import BackButton from "../../components/BackButton";
 import { StyleSheet } from "react-native";
 import { theme } from "../../constants/theme";
 import { hp } from "../../helpers/common";
+import ScreenWrapper from "../../components/ScreenWrapper";
 
 const optionsUser = () => {
   const { user, setAuth } = useAuth();
   const router = useRouter();
   return (
-    <View>
+    <ScreenWrapper>
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={{ marginTop: hp(0.2) }}>
@@ -25,7 +26,7 @@ const optionsUser = () => {
           <Text>Update Profile</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 };
 

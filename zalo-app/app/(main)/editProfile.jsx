@@ -115,13 +115,8 @@ const EditProfile = () => {
 
   let avatarSource =
     user.avatar && typeof user.avatar == "object"
-      ? user.avatar.uri
+      ? user.avatar?.uri
       : getUserImageSrc(user.avatar);
-
-  let backgroundSource =
-    user.background && typeof user.background == "object"
-      ? user.background.uri
-      : getUserBackgroundImageSrc(user.background);
 
   return (
     // <ScreenWrapper bg="white">

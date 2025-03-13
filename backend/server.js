@@ -64,12 +64,13 @@ const authRoutes = require("./routes/authRoutes");
 const imageRoutes = require('./routes/imageRoutes');
 const conversationRoutes = require("./routes/conversationRoutes");
 const userRoutes = require("./routes/userRoutes");
+const postRoutes = require("./routes/postRoutes");
 
 // Khởi tạo app và server
 const app = express();
 const server = http.createServer(app);
 const io = initSocket(server);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 
 // Cấu hình bodyParser để xử lý request lớn
@@ -90,6 +91,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/users", userRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/api', postRoutes);
 
 // Kiểm tra kết nối MariaDB
 app.get("/check-mariadb", async (req, res) => {

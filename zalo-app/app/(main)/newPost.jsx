@@ -22,6 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 import Button from "../../components/Button";
 import { Video } from "expo-av";
 import { getSupabaseFileUrl } from "../../api/image";
+import { createOrUpdatePost } from "../../api/post";
 
 const newPost = () => {
   const post = useLocalSearchParams();
@@ -96,23 +97,24 @@ const newPost = () => {
       body: bodyRef.current,
       userId: user?.id,
     };
+    console.log("data", data);
     if (post && post.id) data.id = post.id;
     // create post
     setLoading(true);
-    // let res = await createOrUpdatePost(data);
-    // setLoading(false);
-    // if (res.success) {
-    //   setFile(null);
-    //   bodyRef.current = "";
-    //   editorRef.current?.setContentHTML("");
-    //   router.back();
-    // } else {
-    //   Alert.alert("Post", res.msg);
-    // }
+    let res = await createOrUpdatePost(data);
+    setLoading(false);
+    if (res.success) {
+      setFile(null);
+      bodyRef.current = "";
+      editorRef.current?.setContentHTML("");
+      router.back();
+    } else {
+      Alert.alert("Post", res.msg);
+    }
   };
 
   return (
-    <ScreenWrapper bg="white">
+    <View style={{ flex: 1 }}>
       <View style={styles.container}>
         <Header title="New Post" />
         <ScrollView contentContainerStyle={{ gap: 20 }}>
@@ -155,7 +157,7 @@ const newPost = () => {
               )}
 
               <Pressable style={styles.closeIcon} onPress={() => setFile(null)}>
-                <Icon name="phone" size={20} color="white" />
+                <Icon name="delete" size={20} color="white" />
               </Pressable>
             </View>
           )}
@@ -164,10 +166,10 @@ const newPost = () => {
             <Text style={styles.addImageText}>Add to your post</Text>
             <View style={styles.mediaIcons}>
               <TouchableOpacity onPress={() => onPick(true)}>
-                <Icon name="phone" size={30} color={theme.colors.dark} />
+                <Icon name="imageFile" size={30} color={theme.colors.dark} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => onPick(false)}>
-                <Icon name="phone" size={33} color={theme.colors.dark} />
+                <Icon name="callVideoOn" size={33} color={theme.colors.dark} />
               </TouchableOpacity>
             </View>
           </View>
@@ -181,7 +183,7 @@ const newPost = () => {
           onPress={onSubmit}
         />
       </View>
-    </ScreenWrapper>
+    </View>
   );
 };
 
@@ -190,7 +192,6 @@ export default newPost;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor:'red',
     marginBottom: 30,
     paddingHorizontal: wp(4),
     gap: 15,

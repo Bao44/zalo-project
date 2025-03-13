@@ -96,11 +96,11 @@ const styles = StyleSheet.create({
   },
   header: {
     position: "absolute",
-    top: hp(1),
+    top: hp(2.5),
     width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: wp(3),
+    paddingHorizontal: wp(3.5),
     alignItems: "center",
   },
   avatarContainer: {

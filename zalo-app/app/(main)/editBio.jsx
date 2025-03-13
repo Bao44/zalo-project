@@ -12,6 +12,7 @@ import Input from "../../components/Input";
 import { updateUser } from "../../api/user";
 import { useRouter } from "expo-router";
 import BackButton from "../../components/BackButton";
+import ScreenWrapper from "../../components/ScreenWrapper";
 
 const editBio = () => {
   const { user: currentUser, setUserData } = useAuth();
@@ -45,7 +46,7 @@ const editBio = () => {
   };
 
   return (
-    <View>
+    <ScreenWrapper>
       <View style={styles.headerContainer}>
         <BackButton router={router} />
         <Text>Chỉnh sửa giới thiệu</Text>
@@ -62,7 +63,7 @@ const editBio = () => {
           containerStyle={styles.bio}
         />
       </View>
-    </View>
+    </ScreenWrapper>
   );
 };
 
