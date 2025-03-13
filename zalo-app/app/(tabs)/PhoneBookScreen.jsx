@@ -1,15 +1,18 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, SectionList, FlatList } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { hp, wp } from "../../helpers/common"
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
-import Users from "../../assets/dataLocals/UserLocal";
 import Groups from "../../assets/dataLocals/GroupLocal";
 import OfficialAccount from "../../assets/dataLocals/OfficialAccount";
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useRouter } from "expo-router";
-import friendRequest from "../../assets/dataLocals/FriendRequest";
+import { getFriendRequests, getFriends } from "../../api/friendshipAPI"
+import { useAuth } from "../../contexts/AuthContext";
+import Avatar from "../../components/Avatar";
+import socket from "../../utils/socket";
 
 const PhoneBookScreen = () => {
   const [typeContact, setTypeContact] = useState("friends");
@@ -38,21 +41,91 @@ const PhoneBookScreen = () => {
 
 export default PhoneBookScreen;
 
-// List friends
+// LIST FRIENDS
 const FriendsTabs = () => {
+  const [listFriendRequest, setListFriendRequest] = useState([])
+  const [listFriend, setListFriend] = useState([]);
+  const { user } = useAuth();
+
+  const [reload, setReload] = useState(0);
+
+  const handleReload = () => {
+    setReload(reload + 1);
+  }
+
+  //Lấy lời mời kết bạn
+  useEffect(() => {
+    const fetchFriendRequest = async () => {
+      try {
+        const response = await getFriendRequests(user.id);
+        if (response.success) {
+          setListFriendRequest(response.data);
+        } else {
+          alert("Lỗi lấy danh sách lời mời kết bạn!");
+        }
+      } catch (error) {
+        console.log("Lỗi lấy danh sách lời mời kết bạn:", error);
+      }
+    }
+    fetchFriendRequest();
+  }, []);
+
+
+  //Lấy danh sách bạn bè
+  useFocusEffect(
+    useCallback(() => {
+      const fetchFriends = async () => {
+        try {
+          const response = await getFriends(user.id);
+          if (response.success) {
+            setListFriend(response.data);
+          } else {
+            alert("Lỗi lấy danh sách bạn bè!");
+          }
+        } catch (error) {
+          console.log("Lỗi lấy danh sách bạn bè:", error);
+        }
+      }
+      fetchFriends();
+    }, [user, reload])
+  );
+
+  useEffect(() => {
+    // Báo cho server rằng user đang online
+    socket.emit("user-online", user.id);
+
+    //Lắng nghe sự kiện đồng ý
+    socket.on("friend-request-accepted", (data) => {
+      handleReload();
+    });
+
+    //Lắng nghe sự kiện từ chối
+    socket.on("friend-request-rejected", (data) => {
+      handleReload();
+    });
+
+    // Cleanup khi component unmount
+    return () => {
+      socket.off("friend-request-accepted");
+      socket.off("friend-request-rejected");
+    };
+  }, []);
+
+  // State để chọn loại danh sách bạn bè
   const [typeListFriend, setTypeListFriend] = useState("all");
-  const filterUsers = typeListFriend === "all" ? Users : Users.filter((user) => user.timeOnline > 0);
+
   const handelTypeListFriend = (type) => {
     setTypeListFriend(type);
   }
 
-  const groupUsersByFirstLetter = (users) => {
-    const grouped = users.reduce((acc, user) => {
-      const firstLetter = user.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
+  // Nhóm bạn bè theo chữ cái đầu tiên
+  const groupUsersByFirstLetter = (listFriend) => {
+    const grouped = listFriend.reduce((acc, friend) => {
+      const firstLetter = friend.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
       if (!acc[firstLetter]) {
         acc[firstLetter] = [];
       }
-      acc[firstLetter].push(user);
+      acc[firstLetter].push(friend);
       return acc;
     }, {});
 
@@ -64,7 +137,8 @@ const FriendsTabs = () => {
         data: grouped[letter],
       }));
   };
-  const groupedUsers = groupUsersByFirstLetter(filterUsers);
+  const friends = useMemo(() => groupUsersByFirstLetter(listFriend), [listFriend]);
+
 
   // Router
   const router = useRouter();
@@ -77,7 +151,7 @@ const FriendsTabs = () => {
             <View style={styles.boxIconFeature}>
               <Icon name="userMultiple" size={32} strokeWidth={1.6} color="#FFF" />
             </View>
-            <Text style={{ fontSize: 16 }}>Lời mời kết bạn ({friendRequest.length})</Text>
+            <Text style={{ fontSize: 16 }}>Lời mời kết bạn ({listFriendRequest.reduce((count, month) => count + month.data.length, 0)})</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.feature}>
             <View style={styles.boxIconFeature}>
@@ -100,22 +174,22 @@ const FriendsTabs = () => {
 
         <View style={styles.boxListFriend}>
           <TouchableOpacity onPress={() => handelTypeListFriend("all")} style={styles.typeList}>
-            <Text style={typeListFriend === 'all' ? styles.textTypeListActive : styles.textTypeListNoActive}>Tất cả ({Users.length})</Text>
+            <Text style={typeListFriend === 'all' ? styles.textTypeListActive : styles.textTypeListNoActive}>Tất cả ({listFriend?.length})</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => handelTypeListFriend("online")} style={styles.typeList}>
-            <Text style={typeListFriend === 'online' ? styles.textTypeListActive : styles.textTypeListNoActive}>Mới truy cập ({Users.filter((user) => user.timeOnline > 0).length})</Text>
+            <Text style={typeListFriend === 'online' ? styles.textTypeListActive : styles.textTypeListNoActive}>Mới truy cập ()</Text>
           </TouchableOpacity>
         </View>
 
         <SectionList
-          sections={groupedUsers}
+          sections={friends}
           scrollEnabled={false}
           keyExtractor={(item, index) => item + index}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.buttonFriend}>
               <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                <Avatar uri={item.avatar} size={hp(6)} rounded={theme.radius.xxl * 100} style={styles.avatar} />
                 <Text style={styles.textNameFriend}>{item.name}</Text>
               </View>
               <View style={styles.boxContactMethod}>
@@ -568,7 +642,7 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     width: "80%"
   },
-  textTitleOfficialed:{
+  textTitleOfficialed: {
     fontSize: 16,
     paddingHorizontal: 20,
     paddingVertical: 10,
