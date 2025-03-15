@@ -6,8 +6,12 @@ import { supabase } from "../../lib/supabase";
 import Header from "../../components/Header";
 import socket from "../../utils/socket";
 
+
 const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();
+
+  console.log("DiscoverScreen user: ", user);
+  
 
   const handleLogout = async () => {
     setAuth(null);

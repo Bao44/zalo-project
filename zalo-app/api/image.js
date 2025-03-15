@@ -3,7 +3,6 @@ import axios from "axios";
 import { supabaseUrl } from "../constants";
 import { BACKEND_URL } from '../constants/ip';
 
-
 const api = axios.create({
   baseURL: BACKEND_URL,
   headers: {
