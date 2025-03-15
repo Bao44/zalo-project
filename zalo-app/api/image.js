@@ -2,7 +2,7 @@ import * as FileSystem from "expo-file-system";
 import axios from "axios";
 import { supabaseUrl } from "../constants";
 
-const BACKEND_URL = "http://192.168.40.121:3000";
+const BACKEND_URL = "http://192.168.0.127:3000";
 
 const api = axios.create({
   baseURL: BACKEND_URL,
@@ -47,6 +47,16 @@ export const getSupabaseFileUrl = (filePath) => {
 };
 
 export const downloadFile = async (url) => {
+  // Trong hàm uploadFile ở frontend của bạn
+  console.log(
+    "Kích thước tệp trước khi base64:",
+    await FileSystem.getInfoAsync(url)
+  );
+  const fileBase64 = await FileSystem.readAsStringAsync(url, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  console.log("Độ dài chuỗi Base64:", fileBase64.length);
+
   try {
     const { uri } = await FileSystem.downloadAsync(url, getLocalFilePath(url));
     return uri;
@@ -69,7 +79,7 @@ export const uploadFile = async (folderName, fileUri, isImage = true) => {
     const fileBase64 = await FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-
+    
     const response = await api.post("/api/images/uploads", {
       folderName,
       fileBase64,

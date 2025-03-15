@@ -2,10 +2,6 @@ const express = require("express");
 const router = express.Router();
 const postController = require("../controllers/postController");
 
-// router.post('/posts', (req, res) => {
-//   postController.createOrUpdatePost(req, res);
-// });
-
 // POST - Tạo hoặc cập nhật bài đăng
 router.post("/posts", postController.createOrUpdatePost);
 

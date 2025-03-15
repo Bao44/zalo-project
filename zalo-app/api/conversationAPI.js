@@ -1,7 +1,7 @@
 // Description: Conversation API
 import axios from "axios";
 
-const BACKEND_URL = 'http://192.168.1.230:3000';
+const BACKEND_URL = "http://192.168.0.127:3000";
 
 const api = axios.create({
   baseURL: BACKEND_URL,

@@ -6,6 +6,14 @@ const imageController = {
   async uploadFile(req, res) {
     try {
       const { folderName, fileBase64, isImage } = req.body;
+
+      console.log("Độ dài chuỗi base64 nhận được:", fileBase64?.length);
+      if (!fileBase64 || fileBase64.length < 1000) { // Độ dài tối thiểu tùy ý cho một hình ảnh hợp lệ
+        return { 
+          success: false, 
+          msg: "Dữ liệu hình ảnh không hợp lệ: chuỗi base64 quá ngắn" 
+        };
+      }
       
       if (!folderName || !fileBase64) {
         return res.status(400).json({ 
