@@ -14,7 +14,6 @@ import Icon from "./assets/icons";
 import { theme } from "./constants/theme";
 import ScreenWrapper from "./components/ScreenWrapper";
 import { router, useRouter } from "expo-router";
-import { hp, wp } from "./helpers/common";
 
 const Tab = createBottomTabNavigator();
 

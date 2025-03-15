@@ -41,9 +41,6 @@ const FriendRequest = () => {
 
     // Khởi tạo Socket.IO
     useEffect(() => {
-        // Báo cho server rằng user đang online
-        socket.emit("user-online", user.id);
-
         // Lắng nghe thông báo lời mời kết bạn mới
         socket.on("friend-request-notification", (data) => {
             reloadRequest(); // Tải lại danh sách lời mời
@@ -138,10 +135,10 @@ const FriendRequest = () => {
                             }
                             <View style={styles.boxButton}>
                                 <TouchableOpacity style={styles.button}>
-                                    <Text style={styles.textDecline} onPress={() => handleRespondToFriendRequest(item.sender?.supabaseId, "rejected")}>Từ chối</Text>
+                                    <Text style={styles.textDecline} onPress={() => handleRespondToFriendRequest(item.sender?._id, "rejected")}>Từ chối</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.button}>
-                                    <Text style={styles.textAccept} onPress={() => handleRespondToFriendRequest(item.sender?.supabaseId, "accepted")}>Đồng ý</Text>
+                                    <Text style={styles.textAccept} onPress={() => handleRespondToFriendRequest(item.sender?._id, "accepted")}>Đồng ý</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

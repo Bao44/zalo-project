@@ -8,9 +8,8 @@ import { use } from "react";
 
 const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();
-
-  console.log("DiscoverScreen user: ", user);
   
+  console.log("user", user);
 
   const handleLogout = async () => {
     setAuth(null);

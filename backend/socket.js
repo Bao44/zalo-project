@@ -58,6 +58,18 @@ const initSocket = (server) => {
       console.log("A user disconnected:", socket.id);
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
+
+    // Tham gia và rời khỏi room
+    socket.on("join", (conversationId) => {
+      socket.join(conversationId);
+      console.log(`${socket.id} joined room ${conversationId}`);
+    });
+
+    // Rời khỏi room
+    socket.on("leave", (conversationId) => {
+      socket.leave(conversationId);
+      console.log(`${socket.id} left room ${conversationId}`);
+    });
   });
 
   // Gán onlineUsers vào io để truy cập từ controller
