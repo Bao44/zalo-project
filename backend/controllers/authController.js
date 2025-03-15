@@ -6,7 +6,7 @@ const authController = {
     try {
       const { email, password, name } = req.body;
 
-      // Kiểm tra nếu email đã tồn tại trong MongoDB
+      // Check if email already exists in MongoDB
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({
@@ -15,7 +15,7 @@ const authController = {
         });
       }
 
-      // Đăng ký người dùng với Supabase
+      // Sign up with Supabase
       const { data, error } = await authService.signUp(email, password, {
         name,
       });
@@ -24,25 +24,26 @@ const authController = {
         return res.status(400).json({ success: false, message: error.message });
       }
 
-      // Đồng bộ với MongoDB nếu đăng ký Supabase thành công
+      // Sync with MongoDB if Supabase signup successful
       if (data?.user) {
         try {
-          // Kiểm tra nếu người dùng đã tồn tại trong MongoDB
-          let mongoUser = await User.findOne({ email: data.user.email });
+          // Check if user already exists in MongoDB
+          let mongoUser = await User.findOne({ _id: data.user.id });
 
           if (!mongoUser) {
-            // Tạo người dùng mới trong MongoDB
+            // Create new user in MongoDB
             mongoUser = new User({
-              supabaseId: data.user.id,
+              _id: data.user.id,
               email: data.user.email,
               name: data.user.user_metadata?.name || "",
-              created_at: new Date(),
+              createdAt: new Date(),
+              updatedAt: new Date(),
             });
             await mongoUser.save();
           }
         } catch (dbError) {
           console.error("Error syncing to MongoDB:", dbError);
-          // Tiếp tục vì đăng ký Supabase đã thành công
+          // Continue since Supabase signup was successful
         }
       }
 
@@ -60,7 +61,7 @@ const authController = {
     try {
       const { email, password } = req.body;
 
-      // Đăng nhập với Supabase
+      // Sign in with Supabase
       const { data, error } = await authService.signInWithPassword(
         email,
         password
@@ -70,33 +71,33 @@ const authController = {
         return res.status(401).json({ success: false, message: error.message });
       }
 
-      // Đồng bộ với MongoDB nếu đăng nhập thành công
+      // Sync with MongoDB if login successful
       if (data?.user) {
         try {
-          // Kiểm tra nếu người dùng đã tồn tại trong MongoDB
-          let mongoUser = await User.findOne({ supabaseId: data.user.id });
+          // Check if user exists in MongoDB
+          let mongoUser = await User.findOne({ _id: data.user.id });
 
           if (!mongoUser) {
-            // Tạo người dùng mới trong MongoDB nếu chưa tồn tại
+            // Create new user in MongoDB if not exists
             mongoUser = new User({
-              supabaseId: data.user.id,
+              _id: data.user.id,
               email: data.user.email,
               name: data.user.user_metadata?.name || "",
-              created_at: new Date(),
+              createdAt: new Date(),
+              updatedAt: new Date(),
             });
             await mongoUser.save();
           }
         } catch (dbError) {
           console.error("Error syncing to MongoDB:", dbError);
-          // Tiếp tục vì đăng nhập Supabase đã thành công
+          // Continue since Supabase login was successful
         }
       }
-      return res
-        .status(200)
-        .json({
-          success: true,
-          data: { user: data.user, session: data.session },
-        });
+
+      return res.status(200).json({
+        success: true,
+        data: { user: data.user, session: data.session },
+      });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
     }

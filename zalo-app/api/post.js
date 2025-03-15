@@ -1,7 +1,7 @@
 // services/postApi.js
 import axios from "axios";
 
-const BACKEND_URL = "http://192.168.40.121:3000";
+const BACKEND_URL = "http://192.168.1.230:3000";
 
 const api = axios.create({
   baseURL: BACKEND_URL,

@@ -20,7 +20,7 @@ const BioUser = () => {
     const handleSendFriendRequest = async () => {
         try {
             const content = "Chào bạn, mình là " + user.name + ". Mình biết bạn qua số điện thoại. Kết bạn với mình nhé!";
-            const response = await sendFriendRequest(user.id, friend[0].supabaseId, content, type);
+            const response = await sendFriendRequest(user.id, friend[0]._id, content, type);
             if (response.success) {
                 alert("Đã gửi yêu cầu kết bạn!");
             } else {

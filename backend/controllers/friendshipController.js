@@ -102,7 +102,7 @@ const friendshipController = {
                     $lookup: {
                         from: "users",
                         localField: "sender_id",
-                        foreignField: "supabaseId",
+                        foreignField: "_id",
                         as: "sender",
                     },
                 },
@@ -113,7 +113,7 @@ const friendshipController = {
                         "sender.name": 1,
                         "sender.email": 1,
                         "sender.avatar": 1,
-                        "sender.supabaseId": 1,
+                        "sender._id": 1,
                         content: 1,
                         createdAt: 1,
                         type: 1,
@@ -188,7 +188,7 @@ const friendshipController = {
             );
 
             // Truy vấn thông tin người dùng từ collection users
-            const friends = await User.find({ supabaseId: { $in: friendIds } }).select("-password -__v");
+            const friends = await User.find({ _id: { $in: friendIds } }).select("-password -__v");
 
             return res.status(200).json({ success: true, data: friends });
         } catch (error) {

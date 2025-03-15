@@ -91,9 +91,6 @@ const FriendsTabs = () => {
   );
 
   useEffect(() => {
-    // Báo cho server rằng user đang online
-    socket.emit("user-online", user.id);
-
     //Lắng nghe sự kiện đồng ý
     socket.on("friend-request-accepted", (data) => {
       handleReload();
@@ -143,6 +140,11 @@ const FriendsTabs = () => {
   // Router
   const router = useRouter();
 
+  //Handle to chat detail
+  const handleChatDetail = (friend) => {
+    router.push({ pathname: "chatDetailScreen", params: { type: "private", data: JSON.stringify(friend) } });
+  }
+
   return (
     <ScrollView>
       <View style={styles.listFriendContainer}>
@@ -187,7 +189,7 @@ const FriendsTabs = () => {
           scrollEnabled={false}
           keyExtractor={(item, index) => item + index}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.buttonFriend}>
+            <TouchableOpacity style={styles.buttonFriend} onPress={() => handleChatDetail(item)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', }}>
                 <Avatar uri={item.avatar} size={hp(6)} rounded={theme.radius.xxl * 100} style={styles.avatar} />
                 <Text style={styles.textNameFriend}>{item.name}</Text>

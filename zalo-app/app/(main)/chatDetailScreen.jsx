@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
@@ -7,130 +7,196 @@ import users from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
-import { io } from "socket.io-client";
-import { getMessages } from "../../api/messageAPI";
-import { getConversation } from "../../api/conversationAPI";
+import { getConversationBetweenTwoUsers, createConversation1vs1 } from "../../api/conversationAPI";
+import { getMessages, sendMessage } from "../../api/messageAPI";
+import { useAuth } from "../../contexts/AuthContext";
+import { io } from "socket.io-client"; // Import Socket.io client
+
+const socket = io("http://your-server-url"); // Thay bằng URL server của bạn
 
 const ChatDetailScreen = () => {
-    const socket = io("http://192.168.2.143:3000");
-    const params = useLocalSearchParams();
-    const convarsationId = params.conversationId;
-    const [loading, setLoading] = useState(true);
-    //User
-    const [userId, setUserId] = useState("67b8cbdb2dd3b2334bd64726");
-    //Group
-    const [convarsation, setConvarsation] = useState({
-        _id: "",
-        name: "",
-        type: "",
-        members: [],
-        avatar: "",
-        admin: null,
-        lastMessage: null,
-        createdAt: "",
-        updatedAt: "",
-        __v: 0,
-    });
-
-    //Message
+    const { user } = useAuth();
+    const { type, data } = useLocalSearchParams();
+    const [conversation, setConversation] = useState(null);
+    const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
+    const [attachments, setAttachments] = useState([]); // Thêm state cho attachments
+    const [media, setMedia] = useState([]); // Thêm state cho media
+    const [files, setFiles] = useState([]); // Thêm state cho files
 
+    const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+    const recipient = type === "private" && !conversation ? parsedData : null;
 
-    //Format time
+    // Lấy conversation và tin nhắn ban đầu
+    useEffect(() => {
+        const fetchConversation = async () => {
+            try {
+                if (!user?.id || !parsedData?._id) return;
+
+                const response = await getConversationBetweenTwoUsers(user?.id, parsedData?._id);
+                if (response.success && response.data) {
+                    setConversation(response.data);
+                    const messagesResponse = await getMessages(response.data.id);
+                    if (messagesResponse.success) {
+                        setMessages(messagesResponse.data);
+                    }
+                } else if (response.status === 404) {
+                    setConversation(null);
+                }
+            } catch (error) {
+                console.log("Lỗi lấy cuộc trò chuyện:", error);
+            }
+        };
+        fetchConversation();
+    }, [user?.id, parsedData?._id]);
+
+    // Tham gia phòng Socket.io và lắng nghe tin nhắn mới
+    useEffect(() => {
+        if (conversation?.id) {
+            socket.emit("join", conversation.id);
+            socket.on("newMessage", (newMessage) => {
+                setMessages((prev) => [newMessage, ...prev]);
+            });
+            return () => {
+                socket.off("newMessage");
+                socket.emit("leave", conversation.id);
+            };
+        }
+    }, [conversation?.id]);
+
+    // Gửi tin nhắn
+    const handleSendMessage = async () => {
+        if (!message && attachments.length === 0 && media.length === 0 && files.length === 0) {
+            return;
+        }
+    
+        console.log("Sending message with data:", { userId: user?.id, receiverId: parsedData?._id });
+    
+        try {
+            if (!user?.id || !parsedData?._id) {
+                Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
+                return;
+            }
+    
+            let conversationId = conversation?._id;
+    
+            if (!conversation) {
+                console.log("Creating new conversation...");
+                const response = await createConversation1vs1(user.id, parsedData._id);
+                console.log("Create conversation response:", response);
+    
+                if (response.success && response.data) {
+                    setConversation(response.data);
+                    conversationId = response.data._id;
+                } else {
+                    const errorMsg = response.data?.message || "Không rõ nguyên nhân";
+                    Alert.alert("Lỗi", `Không thể tạo cuộc trò chuyện: ${errorMsg}`);
+                    return;
+                }
+            }
+    
+            if (!conversationId) {
+                Alert.alert("Lỗi", "Không thể xác định ID cuộc trò chuyện");
+                return;
+            }
+    
+            const messageData = {
+                senderId: user.id,
+                content: message,
+                attachments,
+                media,
+                files,
+                receiverId: parsedData._id
+            };
+    
+            console.log("Sending message to server with conversationId:", conversationId);
+            const response = await sendMessage(conversationId, messageData);
+            console.log("Send message response:", response);
+    
+            if (response.success) {
+                setMessages((prev) => [response.data, ...prev]);
+                setMessage("");
+                setAttachments([]);
+                setMedia([]);
+                setFiles([]);
+            } else {
+                Alert.alert("Lỗi", response.data?.message || "Không thể gửi tin nhắn (lỗi không xác định)");
+            }
+        } catch (error) {
+            console.error("Error in handleSendMessage:", error);
+            Alert.alert("Lỗi", "Không thể gửi tin nhắn: " + (error.message || "Lỗi không xác định"));
+        }
+    };
+
     const formatTime = (timestamp) => {
         const date = timestamp && new Date(timestamp);
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
 
-    //Get conversation
-    useEffect(() => {
-        const fetchConversation = async () => {
-            try {
-                const data = await getConversation(convarsationId);
-                setConvarsation(data);
-            } catch (error) {
-                console.error("Failed to fetch conversations:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchConversation();
-    }, [])
+    const renderMessage = ({ item, index }) => {
+        const isMyMessage = item.senderId === user?.id; // Sửa userId thành senderId
+        const isLastMessage = index === 0;
+        const isNextSameUser = index < messages.length - 1 && messages[index + 1].senderId === item.senderId;
+        const isPrevSameUser = index > 0 && messages[index - 1].senderId === item.senderId;
 
-    //Load message
-    // useEffect(() => {
-    //     socket.emit("loadMessage", { conversationId: convarsation.id });
-    //     socket.on("loadMessage", (data) => {
-    //         setConvarsation((prev) => ({
-    //             ...prev,
-    //             message: data,
-    //         }));
-    //     });
-
-    //     return () => {
-    //         socket.off("loadMessage");
-    //     };
-    // }, []);
-
-    // sort message by time when first render
-    useEffect(() => {
-        socket.on("receiveMessage", (data) => {
-            setConvarsation((prev) => ({
-                ...prev,
-                message: prev.message.sort((a, b) => new Date(b.time) - new Date(a.time)),
-            }));
-        });
-
-        return () => {
-            socket.off("receiveMessage");
-        };
-    }, [message]);
-
-    //send message
-    const sendMessage = () => {
-        if (message.trim() === "") {
-            socket.emit("sendMessage", {
-                id: convarsation.message.length + 1,
-                userId: userId,
-                content: message,
-                time: new Date().toISOString(),
-            });
-
+        if (isMyMessage) {
+            return (
+                <View style={[styles.messageOfMe, isNextSameUser && { marginTop: 5 }]}>
+                    <Text style={styles.textMessage}>{item.content}</Text>
+                    {(!isPrevSameUser || isLastMessage) && (
+                        <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text> // Sửa time thành createdAt
+                    )}
+                </View>
+            );
+        } else {
+            const sender = users.find(u => u.id === item.senderId);
+            return (
+                <View style={[styles.messageOfOther, isNextSameUser && { marginTop: 5 }]}>
+                    {!isNextSameUser ? (
+                        <Image source={{ uri: sender?.avatar }} style={styles.avatar} />
+                    ) : (
+                        <View style={styles.avatar} />
+                    )}
+                    <View style={styles.boxMessageContent}>
+                        {!isNextSameUser && (
+                            <Text style={styles.textNameOthers}>{sender?.name}</Text>
+                        )}
+                        <Text style={styles.textMessage}>{item.content}</Text>
+                        {(!isPrevSameUser || isLastMessage) && (
+                            <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                        )}
+                    </View>
+                </View>
+            );
         }
-        // const newMessage = {
-        //     id: convarsation.message.length + 1,
-        //     userId: user.id,
-        //     content: message,
-        //     time: new Date().toISOString(),
-        // };
-
-        // setConvarsation((prev) => ({
-        //     ...prev,
-        //     message: [...prev.message, newMessage],
-        // }));
-
-        setMessage(""); // Reset input
     };
 
     return (
         <ScreenWrapper>
             <View style={styles.container}>
-                {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.inFoHeader}>
                         <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
                             <Icon name="arrowLeft" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />
                         </TouchableOpacity>
-                        {convarsation.type === "private" ? (
+                        {type === "private" ? (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{(convarsation.members?.filter((u) => u._id !== userId))[0]?.name}</Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
+                                    {conversation ?
+                                        conversation.members?.find(member => member._id !== user?.id)?.name :
+                                        recipient?.name}
+                                </Text>
                             </View>
                         ) : (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{convarsation.name}</Text>
-                                <Text style={styles.textNumberMember}>{convarsation.members?.length} thành viên</Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
+                                    {conversation?.name}
+                                </Text>
+                                <Text style={styles.textNumberMember}>
+                                    {conversation?.members?.length} thành viên
+                                </Text>
                             </View>
-                        )}                                  
+                        )}
                     </View>
                     <View style={styles.boxFeatureHeader}>
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
@@ -139,122 +205,48 @@ const ChatDetailScreen = () => {
                     </View>
                 </View>
 
-                {/* Nội dung chat */}
                 <View style={styles.contentChat}>
-                    {
-                        // Nếu không có tin nhắn
-                        convarsation.message?.length === 0 &&
+                    {messages.length === 0 ? (
                         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                             <Text>Không có tin nhắn</Text>
                         </View>
-                    }
-                    <FlatList
-                        data={convarsation.message}
-                        keyExtractor={(item) => item.id.toString()}
-                        renderItem={({ item, index }) => (
-                            (item.userId === user?.id)
-                                ?
-                                ((index !== convarsation.message.length - 1 && item.userId === convarsation.message[index + 1].userId) ?
-                                    (
-                                        <View style={[styles.messageOfMe, { marginTop: 5 }]}>
-                                            <Text style={styles.textMessage}>{item.content}</Text>
-                                            {
-                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                                    :
-                                                    (item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                            }
-                                        </View>
-                                    )
-                                    :
-                                    (
-                                        <View style={styles.messageOfMe}>
-                                            <Text style={styles.textMessage}>{item.content}</Text>
-                                            {
-                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                                    :
-                                                    (item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                            }
-                                        </View>
-                                    ))
-                                :
-                                (index === convarsation.message.length - 1) ?
-                                    (
-                                        <View style={[styles.messageOfOther]}>
-                                            <Image source={{ uri: (users.filter((u) => u.id === item.userId))[0].avatar }} style={styles.avatar} />
-                                            <View style={styles.boxMessageContent}>
-                                                <Text style={styles.textNameOthers}>{(users.filter((u) => u.id === item.userId))[0].name}</Text>
-                                                <Text style={styles.textMessage}>{item.content}</Text>
-                                                <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                            </View>
-                                        </View>
-                                    )
-                                    :
-                                    (item.userId === convarsation.message[index + 1].userId) ?
-
-                                        (
-                                            <View style={[styles.messageOfOther, { marginTop: 5 }]}>
-                                                <Image style={styles.avatar} />
-                                                <View style={styles.boxMessageContent}>
-                                                    <Text style={styles.textMessage}>{item.content}</Text>
-                                                    {(index === convarsation.message.length - 1) ?
-                                                        ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
-                                                        :
-                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                                            :
-                                                            ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
-                                                    }
-                                                </View>
-                                            </View>
-                                        )
-                                        :
-                                        (
-                                            <View style={[styles.messageOfOther]}>
-                                                <Image source={{ uri: (users.filter((u) => u.id === item.userId))[0].avatar }} style={styles.avatar} />
-                                                <View style={styles.boxMessageContent}>
-                                                    <Text style={styles.textNameOthers}>{(users.filter((u) => u.id === item.userId))[0].name}</Text>
-                                                    <Text style={styles.textMessage}>{item.content}</Text>
-                                                    {(index === convarsation.message.length - 1) ?
-                                                        ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
-                                                        :
-                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
-                                                            :
-                                                            ((item.userId === convarsation.message[index - 1].userId) ? null : <Text style={styles.textTime}>{formatTime(item.time)}</Text>)
-                                                    }
-                                                </View>
-                                            </View>
-                                        )
-                        )}
-                        // Để hiển thị tin nhắn mới nhất
-                        inverted
-                        ListFooterComponent={<View style={{ height: 20 }} />}
-                        ListHeaderComponent={<View style={{ height: 20 }} />}
-                    />
+                    ) : (
+                        <FlatList
+                            data={messages}
+                            keyExtractor={(item) => item._id.toString()} // Sửa id thành _id
+                            renderItem={renderMessage}
+                            inverted
+                            ListFooterComponent={<View style={{ height: 20 }} />}
+                            ListHeaderComponent={<View style={{ height: 20 }} />}
+                        />
+                    )}
                 </View>
 
-                {/* Hộp nhập tin nhắn */}
                 <View style={styles.sendMessage}>
                     <View style={styles.boxSendMessage}>
                         <Icon name="emoji" size={28} color="gray" />
-                        <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
+                        <TextInput
+                            style={styles.textInputMessage}
+                            placeholder="Tin nhắn"
+                            value={message}
+                            onChangeText={(text) => setMessage(text)}
+                        />
                     </View>
-                    {message === "" ? (
+                    {message === "" && attachments.length === 0 && media.length === 0 && files.length === 0 ? (
                         <View style={styles.boxFeatureSendMessage}>
                             <TouchableOpacity><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
                             <TouchableOpacity><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
                             <TouchableOpacity><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
                         </View>
-                    )
-                        :
-                        (
-                            <View>
-                                <TouchableOpacity onPress={() => sendMessage()}><Icon name="sent" size={26} color={theme.colors.primary} /></TouchableOpacity>
-                            </View>
-                        )
-                    }
+                    ) : (
+                        <TouchableOpacity onPress={handleSendMessage}>
+                            <Icon name="sent" size={26} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
         </ScreenWrapper>
-    )
+    );
 };
 
 export default ChatDetailScreen;
@@ -317,7 +309,7 @@ const styles = StyleSheet.create({
         alignSelf: "flex-end",
         marginHorizontal: 15,
         marginTop: 10,
-        borwderWidth: 1,
+        borderWidth: 1,
         borderColor: "gray",
         maxWidth: wp(70),
     },

@@ -8,6 +8,8 @@ import Header from "../../components/Header";
 const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();
 
+  console.log("user", user);
+
   const handleLogout = async () => {
     setAuth(null);
     const { error } = await supabase.auth.signOut();

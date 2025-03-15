@@ -7,7 +7,7 @@ const MessageSchema = new mongoose.Schema({
     required: true
   },
   senderId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: "User",
     required: true
   },
@@ -29,7 +29,7 @@ const MessageSchema = new mongoose.Schema({
     fileUrl: String
   }],
   reactions: [{
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    userId: { type: String, ref: "User" },
     emoji: String
   }],
   replyTo: {
@@ -38,7 +38,7 @@ const MessageSchema = new mongoose.Schema({
     default: null
   },
   seen: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: "User"
   }]
 }, { timestamps: true });
