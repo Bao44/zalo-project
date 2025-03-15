@@ -11,75 +11,64 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useDispatch, useSelector } from "react-redux";
 import AddFriend from "../components/AddFriend";
 import Chat from "../components/Chat";
 import CreateGroup from "../components/CreateGroup";
 import ListFriend from "../components/ListFriend";
 import ListGroup from "../components/ListGroup";
 import RequestFriend from "../components/RequestFriend";
+import { createConversation } from "../redux/conversationSlice";
+import connectSocket from "../utils/socketConfig";
 
 const Contact = () => {
   const [show, setShow] = useState("ListFriend");
   const [conversation, setConversation] = useState(null);
+  const { conversations } = useSelector((state) => state.conversation);
+  const { user } = useSelector((state) => state.user);
+  const socket = connectSocket();
+  const dispatch = useDispatch();
 
-  // Mock data for friends, groups, and conversations
-  const mockFriends = [
-    { id: 1, name: "John Doe", avatarUrl: "avatar1.jpg" },
-    { id: 2, name: "Jane Smith", avatarUrl: "avatar2.jpg" },
-    { id: 3, name: "Alice Brown", avatarUrl: "avatar3.jpg" },
-  ];
+  useEffect(() => {
+    if (socket) {
+      socket.on("send_create_conversation", (data) => {
+        if (data.status === "success") {
+          dispatch(createConversation(data.data));
+          setConversation(data.data);
+          setShow("Chat");
+        }
+      });
+    }
+  }, [socket]);
 
-  const mockGroups = [
-    { id: 1, name: "Group 1", members: 5 },
-    { id: 2, name: "Group 2", members: 3 },
-  ];
-
-  const mockConversations = [
-    { id: 1, type: "FRIEND", members: [1, 2], admin: 1, messages: [] },
-    { id: 2, type: "GROUP", members: [1, 3], admin: 1, messages: [] },
-  ];
-
-  const navigate = useNavigate(); // Hook for navigation
-
-  const handleOpenFriendChat = (id) => {
-    // Find if there's an existing conversation with the friend
-    const conv = mockConversations.find((conver) =>
-      conver.type === "FRIEND" && conver.members.includes(id)
-    );
-    
+  const handleOpenFriendChat = async (id) => {
+    const conv = conversations.find((conver) => {
+      if (
+        conver.type === "FRIEND" &&
+        conver.members.find((mem) => mem.id === id)
+      ) {
+        return conver;
+      }
+    });
     if (conv) {
       setConversation(conv);
       setShow("Chat");
     } else {
       const newConver = {
         type: "FRIEND",
-        members: [1, id], // Assuming '1' is the logged-in user
-        admin: 1,
-        messages: [],
+        members: [user.id, id],
+        admin: user.id,
       };
-      mockConversations.push(newConver);
-      setConversation(newConver);
-      setShow("Chat");
+
+      if (socket) {
+        socket.emit("send_create_conversation", newConver);
+      }
     }
   };
 
-  const handleOpenGroupChat = (group) => {
-    setConversation(group);
+  const handleOpenGroupChat = (conver) => {
+    setConversation(conver);
     setShow("Chat");
-  };
-
-  // Navigate to the corresponding page when user clicks on ListFriend, ListGroup, or RequestFriend
-  const handleNavigateToListFriend = () => {
-    navigate("/list-friend"); // Example route for ListFriend
-  };
-
-  const handleNavigateToListGroup = () => {
-    navigate("/list-group"); // Example route for ListGroup
-  };
-
-  const handleNavigateToRequestFriend = () => {
-    navigate("/request-friend"); // Example route for RequestFriend
   };
 
   return (
@@ -107,10 +96,10 @@ const Contact = () => {
             fullWidth
           />
           <Box sx={{ marginLeft: "5px" }}>
-            <AddFriend socket={null} /> {/* Pass mock data instead of socket */}
+            <AddFriend socket={socket} />
           </Box>
           <Box sx={{ marginLeft: "5px" }}>
-            <CreateGroup socket={null} /> {/* Pass mock data instead of socket */}
+            <CreateGroup socket={socket} />
           </Box>
         </Box>
         <Box sx={{ width: "100%", marginTop: "10px" }}>
@@ -124,7 +113,7 @@ const Contact = () => {
               textTransform: "none",
             }}
             fullWidth
-            onClick={handleNavigateToListFriend} // Navigate to ListFriend page
+            onClick={() => setShow("ListFriend")}
           >
             <PersonOutlineOutlinedIcon />
             <Typography fontSize={16} fontWeight="bold" marginLeft={3}>
@@ -141,7 +130,7 @@ const Contact = () => {
               textTransform: "none",
             }}
             fullWidth
-            onClick={handleNavigateToListGroup} // Navigate to ListGroup page
+            onClick={() => setShow("ListGroup")}
           >
             <PeopleAltOutlinedIcon />
             <Typography fontSize={16} fontWeight="bold" marginLeft={3}>
@@ -158,7 +147,7 @@ const Contact = () => {
               textTransform: "none",
             }}
             fullWidth
-            onClick={handleNavigateToRequestFriend} // Navigate to RequestFriend page
+            onClick={() => setShow("RequestFriend")}
           >
             <DraftsOutlinedIcon />
             <Typography fontSize={16} fontWeight="bold" marginLeft={3}>
@@ -179,25 +168,16 @@ const Contact = () => {
         }}
       >
         {show === "ListFriend" && (
-          <ListFriend
-            handleOpenChat={handleOpenFriendChat}
-            friends={mockFriends} // Pass mock data here
-          />
+          <ListFriend handleOpenChat={handleOpenFriendChat} />
         )}
         {show === "ListGroup" && (
-          <ListGroup
-            handleOpenChat={handleOpenGroupChat}
-            groups={mockGroups} // Pass mock data here
-          />
+          <ListGroup handleOpenChat={handleOpenGroupChat} />
         )}
         {show === "RequestFriend" && (
           <RequestFriend handleOpenChat={handleOpenFriendChat} />
         )}
         {show === "Chat" && (
-          <Chat
-            conversation={conversation}
-            setConversation={setConversation}
-          />
+          <Chat conversation={conversation} setConversation={setConversation} />
         )}
       </Grid>
     </Grid>
