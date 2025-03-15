@@ -21,7 +21,7 @@ import Icon from "../../assets/icons";
 import * as ImagePicker from "expo-image-picker";
 import Button from "../../components/Button";
 import { Video } from "expo-av";
-import { getSupabaseFileUrl } from "../../api/image";
+import { getSupabaseFileUrl, uploadFile } from "../../api/image";
 import { createOrUpdatePost } from "../../api/post";
 
 const newPost = () => {
@@ -32,6 +32,7 @@ const newPost = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(file);
+
 
   useEffect(() => {
     if (post && post.id) {
@@ -69,22 +70,22 @@ const newPost = () => {
   };
 
   const getFileType = (file) => {
-      if (!file) return null;
-      if (isLocalFile(file)) {
-        return file.type;
-      }
-      // check image or video for remote file
-      if (file.includes("postImages")) {
-        return "image";
-      }
-      return "video";
-    };
-    const getFileUri = (file) => {
-      if (!file) return null;
-      if (isLocalFile(file)) {
-        return file.uri;
-      }
-      return getSupabaseFileUrl(file)?.uri;
+    if (!file) return null;
+    if (isLocalFile(file)) {
+      return file.type;
+    }
+
+    if (file.includes("postImages")) {
+      return "image";
+    }
+    return "video";
+  };
+  const getFileUri = (file) => {
+    if (!file) return null;
+    if (isLocalFile(file)) {
+      return file.uri;
+    }
+    return getSupabaseFileUrl(file)?.uri;
   };
 
   const onSubmit = async () => {
@@ -92,17 +93,22 @@ const newPost = () => {
       Alert.alert("Post", "Please add some content or media to post");
       return;
     }
+    
     let data = {
       file,
       body: bodyRef.current,
       userId: user?.id,
     };
-    console.log("data", data);
+  
     if (post && post.id) data.id = post.id;
+    
     // create post
     setLoading(true);
     let res = await createOrUpdatePost(data);
     setLoading(false);
+
+    console.log("Post response:", res);
+    
     if (res.success) {
       setFile(null);
       bodyRef.current = "";

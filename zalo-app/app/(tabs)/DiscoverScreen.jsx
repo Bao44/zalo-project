@@ -1,9 +1,10 @@
 import { View, Text, Button } from "react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import Header from "../../components/Header";
+import { use } from "react";
 
 const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();

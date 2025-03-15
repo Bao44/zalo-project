@@ -8,34 +8,57 @@ const supabaseKey = process.env.SUPABASE_ANOKEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const postController = {
-  // Tạo hoặc cập nhật bài đăng
+
   async createOrUpdatePost(req, res) {
     try {
+      // Lấy token từ header
+      const token = req.headers.authorization?.replace("Bearer ", "");
+      if (!token) {
+        return res.status(401).json({ success: false, msg: "Authorization token is missing" });
+      }
+
+      // Tạo một supabase client mới với token
+      const authSupabase = createClient(supabaseUrl, supabaseKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      });
+
+      // Log session để kiểm tra
+      // const { data: session } = await authSupabase.auth.getSession();
+      // console.log("Session token:", session?.access_token);
+
       const post = req.body;
-      console.log("Post data received:", post);
 
       // Xử lý file nếu có
-      if (post.file && typeof post.file == "object") {
-        let isImage = post?.file?.type == "image";
+      if (post.file && typeof post.file === "object") {
+        let isImage = post?.file?.type === "image";
         let folderName = isImage ? "postImages" : "postVideos";
-        let fileResult = await imageService.uploadFile(
-          folderName,
-          post?.file?.uri,
-          isImage
-        );
-        if (fileResult.success) post.file = fileResult.data;
-        else {
-          return res.status(400).json({
-            success: false,
-            msg: "Could not upload file",
-            error: fileResult,
-          });
+
+        const fileBase64 = post.file.base64;
+        if (!fileBase64) {
+          return res.status(400).json({ success: false, msg: "File data is missing" });
+        }
+
+        console.log("Uploading file to Supabase:", folderName, isImage);
+        console.log("Base64 length:", fileBase64.length);
+
+        let fileResult = await imageService.uploadFile(folderName, fileBase64, isImage);
+        if (fileResult.success) {
+          post.file = fileResult.data.path; // Chỉ lưu path
+        } else {
+          return res.status(400).json({ success: false, msg: "Could not upload file", error: fileResult });
         }
       }
 
-      console.log("Post data being sent:", post);
+      // Kiểm tra user hiện tại
+      // const { data: { user } } = await authSupabase.auth.getUser();
+      // console.log("Current user ID in backend:", user?.id);
+      // console.log("Post userId:", post.userId);
 
-      const { data, error } = await supabase
+      const { data, error } = await authSupabase
         .from("posts")
         .upsert(post)
         .select()
@@ -43,62 +66,72 @@ const postController = {
 
       if (error) {
         console.log("createPost error: ", error);
-        return res.status(400).json({
-          success: false,
-          msg: "Could not create your post",
-          error,
-        });
+        return res.status(400).json({ success: false, msg: "Could not create your post", error });
       }
 
       return res.status(200).json({ success: true, data: data });
     } catch (error) {
       console.log("createPost error: ", error);
-      return res.status(500).json({
-        success: false,
-        msg: "Could not create your post",
-        error: error.message,
-      });
+      return res.status(500).json({ success: false, msg: "Could not create your post", error: error.message });
     }
   },
 
-  // Lấy danh sách bài đăng
   async getPosts(req, res) {
     try {
+      // Lấy token từ header
+      const token = req.headers.authorization?.replace("Bearer ", "");
+      if (!token) {
+        console.log("Error: Authorization token is missing in request header");
+        return res.status(401).json({ success: false, msg: "Authorization token is missing" });
+      }
+  
+      // Tạo supabase client với token
+      const authSupabase = createClient(supabaseUrl, supabaseKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      });
+  
       const limit = parseInt(req.query.limit) || 10;
       const userId = req.query.userId;
-
-      let query = supabase
+  
+      let query = authSupabase
         .from("posts")
-        .select(
-          `
-        *,
-        user: users (id, name, image),
-        postLikes (*),
-        comments (count)
-      `
-        )
+        .select(`
+          id,
+          created_at,
+          body,
+          file,
+          userId,
+          user:users(id, name, avatar),
+          postLikes(id, postId, userId),
+          comments(count)
+        `)
         .order("created_at", { ascending: false })
         .limit(limit);
-
+  
       // Nếu có userId, lọc theo userId
       if (userId) {
         query = query.eq("userId", userId);
       }
-
+  
       const { data, error } = await query;
-
+  
       if (error) {
-        console.log("fetchPosts error: ", error);
+        console.log("fetchPosts error: ", error.message);
         return res.status(400).json({
           success: false,
           msg: "Could not fetch posts",
-          error,
+          error: error.message,
         });
       }
-
-      return res.status(200).json({ success: true, data: data });
+  
+      console.log("Fetched posts data:", data);
+      return res.status(200).json({ success: true, data: data || [] });
     } catch (error) {
-      console.log("fetchPosts error: ", error);
+      console.log("fetchPosts error: ", error.message);
       return res.status(500).json({
         success: false,
         msg: "Could not fetch posts",
@@ -117,9 +150,9 @@ const postController = {
         .select(
           `
         *,
-        user: users (id, name, image),
+        user: users (id, name, avatar),
         postLikes (*),
-        comments (*, user: users (id, name, image))
+        comments (*, user: users (id, name, avatar))
       `
         )
         .eq("id", postId)

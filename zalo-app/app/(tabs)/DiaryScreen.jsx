@@ -1,6 +1,7 @@
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,13 +15,123 @@ import Icon from "../../assets/icons";
 import Avatar from "../../components/Avatar";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
+import { getUserData } from "../../api/user";
+import { fetchPosts } from "../../api/post";
+import Loading from "../../components/Loading";
+import PostCard from "../../components/PostCard";
 
+var limit = 0;
 const DiaryScreen = () => {
   const router = useRouter();
   const { user, setAuth } = useAuth();
 
+  const [posts, setPosts] = useState([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  const handlePostEvent = async (payload) => {
+    if (payload.eventType === "INSERT" && payload?.new?.id) {
+      let newPost = { ...payload.new };
+      let res = await getUserData(newPost.userId);
+      newPost.postLikes = [];
+      newPost.comments = [{ count: 0 }];
+      newPost.user = res.success ? res.data : {};
+      setPosts((prevPosts) => [newPost, ...prevPosts]);
+    }
+
+    if (payload.eventType == "DELETE" && payload.old.id) {
+      setPosts((prevPosts) => {
+        let updatedPosts = prevPosts.filter(
+          (post) => post.id !== payload.old.id
+        );
+        return updatedPosts;
+      });
+    }
+
+    if (payload.eventType == "UPDATE" && payload?.new?.id) {
+      setPosts((prevPosts) => {
+        let updatedPosts = prevPosts.map((post) => {
+          if (post.id == payload.new.id) {
+            post.body = payload.new.body;
+            post.file = payload.new.file;
+          }
+          return post;
+        });
+        return updatedPosts;
+      });
+    }
+  };
+
+  const handleNewNotification = async (payload) => {
+    if (payload.eventType === "INSERT" && payload.new.id) {
+      setNotificationCount((prevCount) => prevCount + 1);
+    }
+  };
+
+  // laod realtime
+  useEffect(() => {
+    let postChannel = supabase
+      .channel("posts")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "posts" },
+        handlePostEvent
+      )
+      .subscribe();
+
+    // getPosts();
+
+    let notificationChannel = supabase
+      .channel("notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `receiverId=eq.${user.id}`,
+        },
+        handleNewNotification
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(postChannel);
+      supabase.removeChannel(notificationChannel);
+    };
+  }, []);
+
+  useEffect(() => {
+    getPosts();
+  }, []);
+
+  const getPosts = async () => {
+    if (!hasMore) return;
+
+    limit += 10;
+
+    let res = await fetchPosts(limit);
+    console.log("fetchPosts response:", res);
+
+    if (res.success) {
+      if (res.data.length < limit) {
+        setHasMore(false); // Không còn dữ liệu để tải thêm
+      }
+      setPosts((prevPosts) => {
+        // Loại bỏ các bài post trùng lặp dựa trên id
+        const newPosts = res.data.filter(
+          (newPost) => !prevPosts.some((post) => post.id === newPost.id)
+        );
+        return [...prevPosts, ...newPosts];
+      });
+    } else {
+      console.log("Error fetching posts:", res.msg);
+    }
+  };
+
   return (
-    <View>
+    <ScrollView>
       {/* Header */}
       <View style={styles.container}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -81,8 +192,34 @@ const DiaryScreen = () => {
       <View style={styles.grayLine}></View>
 
       {/* Post */}
-      <View style={styles.container}></View>
-    </View>
+      <View style={styles.container}>
+        <FlatList
+          scrollEnabled={false}
+          data={posts}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listStyle}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <PostCard item={item} currentUser={user} router={router} />
+          )}
+          onEndReached={() => {
+            getPosts();
+          }}
+          onEndReachedThreshold={0}
+          ListFooterComponent={
+            hasMore ? (
+              <View style={{ marginVertical: posts.length == 0 ? 200 : 30 }}>
+                <Loading />
+              </View>
+            ) : (
+              <View style={{ marginVertical: 30 }}>
+                <Text style={styles.noPosts}>No more posts</Text>
+              </View>
+            )
+          }
+        />
+      </View>
+    </ScrollView>
   );
 };
 
