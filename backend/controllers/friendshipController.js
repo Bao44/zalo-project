@@ -163,7 +163,11 @@ const friendshipController = {
         try {
             const { phone } = req.params;
             const friend = await User.find({ phone: phone });
-            return res.status(200).json({ success: true, data: friend });
+            if (friend.length === 0) {
+                return res.status(404).json({ success: false, message: "User not found" });
+            }else{
+                return res.status(200).json({ success: true, data: friend });
+            }
         } catch (error) {
             return res.status(500).json({ success: false, message: error.message });
         }

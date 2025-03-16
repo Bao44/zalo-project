@@ -4,16 +4,15 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import Header from "../../components/Header";
-import { use } from "react";
+import socket from "../../utils/socket";
 
 const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();
 
-  console.log("user", user);
-
   const handleLogout = async () => {
     setAuth(null);
     const { error } = await supabase.auth.signOut();
+    socket.emit("user-offline", user.id);
     if (error) {
       console.log("Error logging out:", error.message);
     }

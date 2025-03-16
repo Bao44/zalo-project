@@ -1,8 +1,8 @@
 import * as FileSystem from "expo-file-system";
 import axios from "axios";
 import { supabaseUrl } from "../constants";
+import { BACKEND_URL } from '../constants/ip';
 
-const BACKEND_URL = "http://192.168.1.230:3000";
 
 const api = axios.create({
   baseURL: BACKEND_URL,

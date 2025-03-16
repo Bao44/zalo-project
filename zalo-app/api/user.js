@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const BACKEND_URL = 'http://192.168.1.230:3000'; // Chú ý dấu hai chấm trước cổng // Thay đổi IP nếu chạy trên thiết bị thực
+import { BACKEND_URL } from '../constants/ip';
 
 const api = axios.create({
   baseURL: BACKEND_URL,

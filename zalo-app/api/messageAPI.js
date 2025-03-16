@@ -1,9 +1,10 @@
 import axios from "axios";
+import { BACKEND_URL } from '../constants/ip';
 
 export const getMessages = async (conversationId) => {
     try {
-        const res = await axios.get(`http://192.168.1.230:3000/api/messages/get-message/${conversationId}`);
-        return res.data;
+        const res = await axios.get(BACKEND_URL + `/api/messages/get-messages/${conversationId}`);
+        return { success: true, data: res.data };
     }
     catch (error) {
         console.error("Get Messages Error:", error.response?.data || error);
@@ -13,21 +14,19 @@ export const getMessages = async (conversationId) => {
 
 export const sendMessage = async (conversationId, messageData) => {
     try {
-        const response = await axios.post("http://192.168.1.230:3000/api/messages/send-message", {
+        const response = await axios.post(BACKEND_URL + "/api/messages/send-message", {
             conversationId,
-            senderId: messageData.senderId, // Lấy từ AuthContext
+            senderId: messageData.senderId,
             content: messageData.content,
             attachments: messageData.attachments,
             media: messageData.media,
             files: messageData.files,
             replyTo: messageData.replyTo,
-            receiverId: messageData.receiverId // Dùng khi tạo conversation mới
+            receiverId: messageData.receiverId
         });
         return { success: true, data: response.data };
     } catch (error) {
-        return { 
-            success: false, 
-            data: error.response?.data?.error || "Không thể gửi tin nhắn" 
-        };
+        console.error("Send Message Error:", error.response?.data || error);
+        throw error;
     }
 };
