@@ -2,11 +2,12 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react
 import React, { useState, useEffect } from "react";
 import { hp, wp } from "../../helpers/common";
 import { theme } from "../../constants/theme";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getConversations } from "../../api/conversationAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import Avatar from "../../components/Avatar";
 import socket from "../../utils/socket";
+import { useCallback } from "react";
 
 const MessageScreen = () => {
   const { user } = useAuth();
@@ -28,21 +29,23 @@ const MessageScreen = () => {
   };
 
   // Load conversations
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const data = await getConversations(user?.id);
-        setConversations(data);
-      } catch (error) {
-        console.error("Failed to fetch conversations:", error);
-        setConversations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  useFocusEffect(
+    useCallback(() => {
+      const fetchConversations = async () => {
+        try {
+          const data = await getConversations(user?.id);
+          setConversations(data);
+        } catch (error) {
+          console.error("Failed to fetch conversations:", error);
+          setConversations([]);
+        } finally {
+          setLoading(false);
+        }
+      };
 
-    fetchConversations();
-  }, [user?.id]);
+      fetchConversations();
+    }, [user?.id])
+  );
 
   //Nhận conversation mới
   useEffect(() => {

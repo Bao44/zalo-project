@@ -214,7 +214,7 @@ const ChatDetailScreen = () => {
                                                             {(index === messages.length - 1) ?
                                                                 ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
                                                                 :
-                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
                                                                     :
                                                                     ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
                                                             }
@@ -346,6 +346,8 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginHorizontal: 15,
         marginTop: 10,
+        minWidth: wp(15),
+        minHeight: hp(5),
     },
     boxMessageContent: {
         backgroundColor: '#FFF',
@@ -356,6 +358,8 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         borderColor: theme.colors.darkLight,
         borderWidth: 0.5,
+        minWidth: wp(15),
+        minHeight: hp(5),
     },
     textMessage: {
         fontSize: 14,
