@@ -3,7 +3,6 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, A
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
-import users from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
@@ -12,6 +11,7 @@ import { getMessages, sendMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
 import Loading from "../../components/Loading";
+import Avatar from "../../components/Avatar";
 
 const ChatDetailScreen = () => {
     const { user } = useAuth();
@@ -25,7 +25,6 @@ const ChatDetailScreen = () => {
     const [loading, setLoading] = useState(true);
 
     const parsedData = typeof data === "string" ? JSON.parse(data) : data;
-    const recipient = type === "private" && !conversation ? parsedData : null;
 
     // Tham gia room và lắng nghe tin nhắn mới
     useEffect(() => {
@@ -129,57 +128,10 @@ const ChatDetailScreen = () => {
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
 
-    const renderMessage = ({ item, index }) => {
-        const isMyMessage = item.senderId === user?.id;
-        const isLastMessage = index === 0;
-        const isNextSameUser = index < messages.length - 1 && messages[index + 1].senderId === item.senderId;
-        const isPrevSameUser = index > 0 && messages[index - 1].senderId === item.senderId;
-
-        const currentDate = new Date(item.createdAt).toDateString();
-        const prevDate = index < messages.length - 1 ? new Date(messages[index + 1].createdAt).toDateString() : null;
-        const showDateSeparator = prevDate && currentDate !== prevDate;
-
-        const sender = users.find((u) => u.id === item.senderId);
-
-        return (
-            <>
-                {showDateSeparator && (
-                    <View style={styles.dateSeparator}>
-                        <Text style={styles.dateSeparatorText}>{currentDate}</Text>
-                    </View>
-                )}
-                {isMyMessage ? (
-                    <View style={[styles.messageOfMe, isNextSameUser && { marginTop: 5 }]}>
-                        <Text style={styles.textMessage}>{item.content}</Text>
-                        {isLastMessage || !isNextSameUser ? (
-                            <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
-                        ) : null}
-                    </View>
-                ) : (
-                    <View style={[styles.messageOfOther, isNextSameUser && { marginTop: 5 }]}>
-                        {!isNextSameUser ? (
-                            <Image source={{ uri: sender?.avatar }} style={styles.avatar} />
-                        ) : (
-                            <View style={[styles.avatar, { backgroundColor: "transparent" }]} />
-                        )}
-                        <View style={styles.boxMessageContent}>
-                            {!isNextSameUser && (
-                                <Text style={styles.textNameOthers}>{sender?.name}</Text>
-                            )}
-                            <Text style={styles.textMessage}>{item.content}</Text>
-                            {isLastMessage || !isNextSameUser ? (
-                                <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
-                            ) : null}
-                        </View>
-                    </View>
-                )}
-            </>
-        );
-    };
-
     return (
         <ScreenWrapper>
             <View style={styles.container}>
+                {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.inFoHeader}>
                         <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
@@ -187,84 +139,139 @@ const ChatDetailScreen = () => {
                         </TouchableOpacity>
                         {type === "private" ? (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
-                                    {conversation
-                                        ? conversation.members?.find((member) => member._id !== user?.id)?.name
-                                        : recipient?.name}
-                                </Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{parsedData?.name}</Text>
                             </View>
                         ) : (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
-                                    {conversation?.name}
-                                </Text>
-                                <Text style={styles.textNumberMember}>{conversation?.members?.length} thành viên</Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{conversation.name}</Text>
+                                <Text style={styles.textNumberMember}>{conversation.members?.length} thành viên</Text>
                             </View>
                         )}
                     </View>
                     <View style={styles.boxFeatureHeader}>
-                        <TouchableOpacity>
-                            <Icon name="callVideoOn" size={26} color="#FFF" />
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                            <Icon name="search" size={26} color="#FFF" />
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                            <Icon name="menu" size={26} color="#FFF" />
-                        </TouchableOpacity>
+                        <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
+                        <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>
+                        <TouchableOpacity><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
                     </View>
                 </View>
 
+                {/* Nội dung chat */}
                 <View style={styles.contentChat}>
-                    {loading ? (
-                        <Loading style={{ flex: 1, justifyContent: "center", alignItems: "center",  marginTop: 200 }} ></Loading>
-                    ) : messages.length === 0 ? (
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center"}}>
-                            <Text>Không có tin nhắn</Text>
-                        </View>
-                    ) : (
-                        <FlatList
-                            data={messages}
-                            keyExtractor={(item) => item._id}
-                            renderItem={renderMessage}
-                            inverted
-                            ListFooterComponent={<View style={{ height: 20 }} />}
-                            ListHeaderComponent={<View style={{ height: 20 }} />}
-                        />
-                    )}
+                    {
+                        loading ? (<Loading />) : messages.length === 0 ? (
+                            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                                <Text>Không có tin nhắn</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={messages}
+                                keyExtractor={(item) => item?._id.toString()}
+                                renderItem={({ item, index }) => (
+                                    (item?.senderId._id === user?.id)
+                                        ?
+                                        ((index !== messages.length - 1 && item.userId === messages[index + 1].senderId._id) ?
+                                            (
+                                                <View style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    {
+                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                            :
+                                                            (item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                    }
+                                                </View>
+                                            )
+                                            :
+                                            (
+                                                <View style={styles.messageOfMe}>
+                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    {
+                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                            :
+                                                            (item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                    }
+                                                </View>
+                                            ))
+                                        :
+                                        (index === messages.length - 1) ?
+                                            (
+                                                <View style={[styles.messageOfOther]}>
+                                                    <Avatar uri={item.senderId.avatar} style={styles.avatar} />
+                                                    <View style={styles.boxMessageContent}>
+                                                        <Text style={styles.textNameOthers}>{item.senderId.name}</Text>
+                                                        <Text style={styles.textMessage}>{item.content}</Text>
+                                                        <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                    </View>
+                                                </View>
+                                            )
+                                            :
+                                            (item.senderId._id === messages[index + 1].senderId._id) ?
+
+                                                (
+                                                    <View style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                        <Image style={styles.avatar} />
+                                                        <View style={styles.boxMessageContent}>
+                                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                                            {(index === messages.length - 1) ?
+                                                                ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                                :
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.time)}</Text>
+                                                                    :
+                                                                    ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                            }
+                                                        </View>
+                                                    </View>
+                                                )
+                                                :
+                                                (
+                                                    <View style={[styles.messageOfOther]}>
+                                                        <Avatar uri={item.senderId.avatar} style={styles.avatar} />
+                                                        <View style={styles.boxMessageContent}>
+                                                            <Text style={styles.textNameOthers}>{item.senderId.name}</Text>
+                                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                                            {(index === messages.length - 1) ?
+                                                                ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                                :
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                                    :
+                                                                    ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                            }
+                                                        </View>
+                                                    </View>
+                                                )
+                                )}
+                                // Để hiển thị tin nhắn mới nhất
+                                inverted
+                                ListFooterComponent={<View style={{ height: 20 }} />}
+                                ListHeaderComponent={<View style={{ height: 20 }} />}
+                            />
+                        )
+                    }
                 </View>
 
+                {/* Hộp nhập tin nhắn */}
                 <View style={styles.sendMessage}>
                     <View style={styles.boxSendMessage}>
                         <Icon name="emoji" size={28} color="gray" />
-                        <TextInput
-                            style={styles.textInputMessage}
-                            placeholder="Tin nhắn"
-                            value={message}
-                            onChangeText={(text) => setMessage(text)}
-                        />
+                        <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
                     </View>
-                    {message === "" && attachments.length === 0 && media.length === 0 && files.length === 0 ? (
+                    {message === "" ? (
                         <View style={styles.boxFeatureSendMessage}>
-                            <TouchableOpacity>
-                                <Icon name="moreHorizontal" size={26} color="gray" />
-                            </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Icon name="microOn" size={26} color="gray" />
-                            </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Icon name="imageFile" size={26} color="gray" />
-                            </TouchableOpacity>
+                            <TouchableOpacity><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
+                            <TouchableOpacity><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
+                            <TouchableOpacity><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
                         </View>
-                    ) : (
-                        <TouchableOpacity onPress={handleSendMessage}>
-                            <Icon name="sent" size={26} color={theme.colors.primary} />
-                        </TouchableOpacity>
-                    )}
+                    )
+                        :
+                        (
+                            <View>
+                                <TouchableOpacity onPress={handleSendMessage}><Icon name="sent" size={26} color={theme.colors.primary} /></TouchableOpacity>
+                            </View>
+                        )
+                    }
                 </View>
             </View>
         </ScreenWrapper>
-    );
+    )
 };
 
 export default ChatDetailScreen;
@@ -312,10 +319,12 @@ const styles = StyleSheet.create({
         height: 30,
         borderRadius: 15,
     },
+
+    // Nội dung chat
     contentChat: {
-        flex: 1,
-        marginTop: 50,
-        marginBottom: hp(6),
+        flex: 1, // Đảm bảo nội dung mở rộng giữa header và sendMessage
+        marginTop: 50, // Đẩy nội dung xuống dưới header
+        marginBottom: hp(6), // Đẩy nội dung lên trên sendMessage
     },
     messageOfMe: {
         backgroundColor: theme.colors.skyBlue,
@@ -325,10 +334,11 @@ const styles = StyleSheet.create({
         alignSelf: "flex-end",
         marginHorizontal: 15,
         marginTop: 10,
-        borderWidth: 1,
+        borwderWidth: 1,
         borderColor: "gray",
         maxWidth: wp(70),
-        borderTopRightRadius: 2,
+        minWidth: wp(15),
+        minHeight: hp(5),
     },
     messageOfOther: {
         alignSelf: "flex-start",
@@ -338,43 +348,30 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     boxMessageContent: {
-        backgroundColor: "#FFF",
+        backgroundColor: '#FFF',
         borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 4,
         maxWidth: wp(70),
         marginLeft: 10,
-        borderColor: theme.colors.primaryLight,
+        borderColor: theme.colors.darkLight,
         borderWidth: 0.5,
-        borderTopLeftRadius: 2,
     },
     textMessage: {
         fontSize: 14,
-        color: "black",
+        color: "black"
     },
     textTime: {
         fontSize: 10,
         color: "gray",
-        alignSelf: "flex-end",
-        marginTop: 2,
     },
     textNameOthers: {
         fontSize: 11,
         color: theme.colors.yellow,
         marginBottom: 5,
     },
-    dateSeparator: {
-        alignItems: "center",
-        marginVertical: 10,
-    },
-    dateSeparatorText: {
-        fontSize: 12,
-        color: "gray",
-        backgroundColor: "#FFF",
-        paddingHorizontal: 10,
-        paddingVertical: 2,
-        borderRadius: 10,
-    },
+
+    // Ô nhập tin nhắn
     sendMessage: {
         position: "absolute",
         bottom: 0,
