@@ -9,20 +9,18 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
-// Remove ConversationAPI import
+import ConversationAPI from "../api/ConversationAPI";
 import AddFriend from "../components/AddFriend";
 import CardItemGroup from "../components/CardItemGroup";
 import CardItemUser from "../components/CardItemUser";
 import Chat from "../components/Chat";
 import CreateGroup from "../components/CreateGroup";
-// Replace API-based action with mock data actions
 import { getAllConversations } from "../redux/conversationSlice";
 import connectSocket from "../utils/socketConfig";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -55,37 +53,21 @@ const Messager = () => {
   const [conversation, setConversation] = useState(null);
   const dispatch = useDispatch();
   const socket = connectSocket();
-  const navigate = useNavigate(); // Hook để điều hướng
-
-  // Mock data for conversations
-  const mockConversations = [
-    {
-      id: 1,
-      type: "FRIEND",
-      members: ["John", "Doe"],
-      messages: ["Hello!", "How are you?"],
-    },
-    {
-      id: 2,
-      type: "GROUP",
-      members: ["John", "Doe", "Alice"],
-      messages: ["Welcome to the group!", "Let's chat."],
-    },
-  ];
-
-  useEffect(() => {
-    // Dispatch mock conversations directly instead of fetching from API
-    dispatch(getAllConversations(mockConversations));
-  }, [dispatch]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
-  const handleConversationClick = (conver) => {
-    // Điều hướng đến trang chi tiết cuộc trò chuyện
-    navigate(`/chat/${conver.id}`); // Giả sử bạn muốn chuyển đến trang chi tiết cuộc trò chuyện
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await ConversationAPI.getAllConversationForUser();
+      if (data) {
+        dispatch(getAllConversations(data));
+      }
+    };
+
+    fetchData();
+  }, [dispatch]);
 
   return (
     <Grid container item xs={11.3}>
@@ -142,7 +124,6 @@ const Messager = () => {
                       key={conver.id}
                       conver={conver}
                       setConversation={setConversation}
-                      onClick={() => handleConversationClick(conver)} // Thêm sự kiện nhấn vào cuộc trò chuyện
                     />
                   );
                 } else {
@@ -151,7 +132,6 @@ const Messager = () => {
                       key={conver.id}
                       conver={conver}
                       setConversation={setConversation}
-                      onClick={() => handleConversationClick(conver)} // Thêm sự kiện nhấn vào cuộc trò chuyện
                     />
                   );
                 }

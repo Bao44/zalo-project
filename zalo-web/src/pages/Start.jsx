@@ -64,7 +64,7 @@ const a11yProps = (index) => {
 const Start = () => {
   const [value, setValue] = useState(0);
   const dispatch = useDispatch();
-  const navigate = useNavigate(); // Hook để điều hướng
+  const navigate = useNavigate();
   const [user, setUser] = useState({});
   const socket = connectSocket();
 
@@ -74,13 +74,12 @@ const Start = () => {
 
   const [otp, setOtp] = useState("");
   const [key, setKey] = useState(0);
-  const [otpSent, setOtpSent] = useState(false); // Track OTP sent status
 
   useEffect(() => {
     if (TokenAPI.getAccessToken() && TokenAPI.getRefreshToken()) {
       navigate("/home");
     }
-  }, [navigate]);
+  }, []);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -111,7 +110,6 @@ const Start = () => {
       socket.emit("login", data.user.id);
       dispatch(login(data));
 
-      // Điều hướng đến trang Home sau khi đăng nhập thành công
       navigate("/home");
     } else {
       toast.error("Số điện thoại hoặc mật khẩu không đúng!");
@@ -188,7 +186,6 @@ const Start = () => {
     const data = await UserAPI.signup(user?.email, user?.phoneNumber);
     if (data) {
       setKey((prevKey) => prevKey + 1);
-      setOtpSent(true);
       toast.success(
         "Gửi lại mã OTP thành công! Vui lòng kiểm tra email của bạn!"
       );
@@ -221,7 +218,7 @@ const Start = () => {
       handleClose();
       socket.emit("login", data.user.id);
       dispatch(signup(data));
-      navigate("/home"); // Chuyển hướng đến trang Home sau khi OTP hợp lệ
+      navigate("/home");
     } else {
       toast.error("Mã OTP không đúng!");
     }
@@ -240,11 +237,7 @@ const Start = () => {
           component="div"
           sx={{ textAlign: "center", marginRight: "150px", marginTop: "100px" }}
         >
-          <img
-            src="https://res.cloudinary.com/dthusmigo/image/upload/v1713187622/Chat_App_Logo_g4fw7f.png"
-            width="500"
-            height="500"
-          />
+    
         </Box>
         <Box sx={{ marginTop: "50px" }}>
           <Typography
@@ -253,14 +246,14 @@ const Start = () => {
             fontWeight={"bold"}
             fontSize={24}
           >
-            Đăng nhập tài khoản Jahoo!
+            Đăng nhập tài khoản Zalo!
           </Typography>
           <Typography
             textAlign="center"
             marginBottom="20px"
             fontStyle={"italic"}
           >
-            Để kết nối với ứng dụng Jahoo!
+            Để kết nối với ứng dụng Zalo!
           </Typography>
           <Box sx={{ width: "500px", boxShadow: "0px 0px 5px #ccc" }}>
             <Box
@@ -323,6 +316,7 @@ const Start = () => {
               colorsTime={[20, 10, 5, 0]}
               strokeWidth={5}
               size={80}
+              st
             >
               {({ remainingTime }) => remainingTime}
             </CountdownCircleTimer>
@@ -343,7 +337,6 @@ const Start = () => {
             color="inherit"
             fullWidth
             onClick={handleSendOtp}
-            disabled={otpSent}
           >
             Gửi lại mã OTP
           </Button>
