@@ -15,6 +15,7 @@ export const getMessages = async (conversationId) => {
 export const sendMessage = async (conversationId, messageData) => {
     try {
         const response = await axios.post(BACKEND_URL + "/api/messages/send-message", {
+            idTemp: messageData.idTemp,
             conversationId,
             senderId: messageData.senderId,
             content: messageData.content,
