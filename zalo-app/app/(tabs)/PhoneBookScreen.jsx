@@ -44,7 +44,7 @@ export default PhoneBookScreen;
 // LIST FRIENDS
 const FriendsTabs = () => {
   const [listFriendRequest, setListFriendRequest] = useState([])
-  const [listFriend, setListFriend] = useState([]);
+  const [listFriends, setListFriends] = useState([]);
   const { user } = useAuth();
 
   const [reload, setReload] = useState(0);
@@ -57,7 +57,7 @@ const FriendsTabs = () => {
   useEffect(() => {
     const fetchFriendRequest = async () => {
       try {
-        const response = await getFriendRequests(user.id);
+        const response = await getFriendRequests(user?.id);
         if (response.success) {
           setListFriendRequest(response.data);
         } else {
@@ -76,9 +76,9 @@ const FriendsTabs = () => {
     useCallback(() => {
       const fetchFriends = async () => {
         try {
-          const response = await getFriends(user.id);
+          const response = await getFriends(user?.id);
           if (response.success) {
-            setListFriend(response.data);
+            setListFriends(response.data);
           } else {
             alert("Lỗi lấy danh sách bạn bè!");
           }
@@ -116,8 +116,8 @@ const FriendsTabs = () => {
   }
 
   // Nhóm bạn bè theo chữ cái đầu tiên
-  const groupUsersByFirstLetter = (listFriend) => {
-    const grouped = listFriend.reduce((acc, friend) => {
+  const groupUsersByFirstLetter = (listFriends) => {
+    const grouped = listFriends.reduce((acc, friend) => {
       const firstLetter = friend.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
       if (!acc[firstLetter]) {
         acc[firstLetter] = [];
@@ -134,7 +134,7 @@ const FriendsTabs = () => {
         data: grouped[letter],
       }));
   };
-  const friends = useMemo(() => groupUsersByFirstLetter(listFriend), [listFriend]);
+  const friends = useMemo(() => groupUsersByFirstLetter(listFriends), [listFriends]);
 
 
   // Router
@@ -176,7 +176,7 @@ const FriendsTabs = () => {
 
         <View style={styles.boxListFriend}>
           <TouchableOpacity onPress={() => handelTypeListFriend("all")} style={styles.typeList}>
-            <Text style={typeListFriend === 'all' ? styles.textTypeListActive : styles.textTypeListNoActive}>Tất cả ({listFriend?.length})</Text>
+            <Text style={typeListFriend === 'all' ? styles.textTypeListActive : styles.textTypeListNoActive}>Tất cả ({listFriends?.length})</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => handelTypeListFriend("online")} style={styles.typeList}>

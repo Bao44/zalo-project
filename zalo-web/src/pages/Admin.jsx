@@ -21,6 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
+
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import LockResetIcon from "@mui/icons-material/LockReset";
@@ -28,43 +29,18 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import PersonIcon from "@mui/icons-material/Person";
 import SearchIcon from "@mui/icons-material/Search";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";  // Import useNavigate for routing
+import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import UserAPI from "../api/UserAPI";
+import AddUser from "../components/AddUser";
+import UpdateUser from "../components/UpdateUser";
 import { logout } from "../redux/userSlice";
 import { convertToDate } from "../utils/handler";
-
-// Mock data
-const mockUserList = [
-  {
-    id: 1,
-    fullName: "John Doe",
-    isAdmin: true,
-    gender: true,
-    dateOfBirth: "1990-01-01",
-    phoneNumber: "123456789",
-    email: "john.doe@example.com",
-  },
-  {
-    id: 2,
-    fullName: "Jane Doe",
-    isAdmin: false,
-    gender: false,
-    dateOfBirth: "1992-02-02",
-    phoneNumber: "987654321",
-    email: "jane.doe@example.com",
-  },
-  // Add more mock users as needed
-];
 
 const Admin = () => {
   const [selectedContent, setSelectedContent] = useState("Quản lí người dùng");
   const { user } = useSelector((state) => state.user);
-  const navigate = useNavigate();  // Initialize navigate for routing
-
-  const handleNavigate = (route) => {
-    navigate(route);  // Redirect to the corresponding route
-  };
 
   return (
     <Box
@@ -78,7 +54,7 @@ const Admin = () => {
           item
           sx={{ borderRight: "1px solid rgba(0,0,0,0.3)", width: "230px" }}
         >
-          <SideBar setSelectedContent={setSelectedContent} user={user} handleNavigate={handleNavigate} />
+          <SideBar setSelectedContent={setSelectedContent} user={user} />
         </Grid>
         <Grid item xs sx={{ textAlign: "center" }}>
           <MainContent selectedContent={selectedContent} />
@@ -88,13 +64,14 @@ const Admin = () => {
     </Box>
   );
 };
-
-const SideBar = ({ setSelectedContent, user, handleNavigate }) => {
+const SideBar = ({ setSelectedContent, user }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await UserAPI.logout();
     dispatch(logout());
-    handleNavigate("/");  // Navigate to the home page after logout
+    navigate("/");
   };
 
   return (
@@ -138,7 +115,6 @@ const SideBar = ({ setSelectedContent, user, handleNavigate }) => {
           <Tab
             setSelectedContent={setSelectedContent}
             Title={"Quản lí người dùng"}
-            handleNavigate={() => handleNavigate("/admin")} // Navigate to admin page
           />
         </List>
         <Box
@@ -172,27 +148,38 @@ const SideBar = ({ setSelectedContent, user, handleNavigate }) => {
 };
 
 const MainContent = ({ selectedContent }) => {
-  const [userList, setUserList] = useState(mockUserList); // Use mock data here
+  const [userList, setUserList] = useState([]);
   const [userDetail, setUserDetail] = useState(null);
   const [phone, setPhone] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [openUpdate, setOpenUpdate] = useState(false);
 
-  const handleCreateUser = (user) => {
-    const newUser = { id: Date.now(), ...user }; // Mock user ID generation
-    setUserList([...userList, newUser]);
-    toast.success("Thêm người dùng thành công!");
-    setOpenCreate(false);
+  const handleCreateUser = async (user) => {
+    const data = await UserAPI.createUser(user);
+    if (data) {
+      setUserList([...userList, data]);
+      toast.success("Thêm người dùng thành công!");
+      setOpenCreate(false);
+    } else {
+      toast.error("Số điện thoại hoặc email đã tồn tại!");
+    }
   };
 
-  const handleUpdateUser = (user) => {
-    const updatedUser = { ...userDetail, ...user };
-    const updatedList = userList.map((usr) =>
-      usr.id === userDetail.id ? updatedUser : usr
-    );
-    setUserList(updatedList);
-    toast.success("Cập nhật người dùng thành công!");
-    setOpenUpdate(false);
+  const handleUpdateUser = async (user) => {
+    const data = await UserAPI.updateUser(userDetail.id, user);
+    if (data) {
+      const newUserList = userList.map((usr) => {
+        if (usr.id === data.id) {
+          return data;
+        }
+        return usr;
+      });
+      setUserList(newUserList);
+      toast.success("Cập nhật người dùng thành công!");
+      setOpenUpdate(false);
+    } else {
+      toast.error("Số điện thoại hoặc email đã tồn tại!");
+    }
   };
 
   const handleOpenUpdate = (id) => {
@@ -203,22 +190,37 @@ const MainContent = ({ selectedContent }) => {
     }
   };
 
-  const handleDeleteUser = (id) => {
-    const updatedList = userList.filter((usr) => usr.id !== id);
-    setUserList(updatedList);
-    toast.success("Xoá người dùng thành công!");
+  const handleDeleteUser = async (id) => {
+    const data = await UserAPI.deleteUser(id);
+
+    if (data.status === "success") {
+      const newUserList = userList.filter((usr) => usr.id !== id);
+      setUserList(newUserList);
+      toast.success("Xoá người dùng thành công!");
+    } else {
+      toast.error("Xoá người dùng thất bại!");
+    }
   };
 
-  const handleReset = () => {
-    setUserList(mockUserList); // Reset to mock data
+  const fetchData = async () => {
+    const data = await UserAPI.getAllUsers();
+    if (data) {
+      setUserList(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleReset = async () => {
+    fetchData();
     setPhone("");
   };
 
   const handleSearch = () => {
-    const filteredList = userList.filter(
-      (user) => user.phoneNumber === phone
-    );
-    setUserList(filteredList);
+    const data = userList.filter((user) => user.phoneNumber === phone);
+    setUserList(data);
   };
 
   return (
@@ -233,7 +235,9 @@ const MainContent = ({ selectedContent }) => {
           height: "100%",
         }}
       >
-        <Box sx={{ marginLeft: "10px", marginRight: "10px", marginTop: "10px" }}>
+        <Box
+          sx={{ marginLeft: "10px", marginRight: "10px", marginTop: "10px" }}
+        >
           <Stack direction={"row"} spacing={1}>
             <Stack direction={"row"}>
               <TextField
@@ -277,7 +281,9 @@ const MainContent = ({ selectedContent }) => {
           </Stack>
         </Box>
 
-        <Box sx={{ marginLeft: "10px", marginRight: "10px", marginTop: "20px" }}>
+        <Box
+          sx={{ marginLeft: "10px", marginRight: "10px", marginTop: "20px" }}
+        >
           <TableContainer>
             <Table>
               <TableHead sx={{ backgroundColor: "lightgrey" }}>
@@ -292,62 +298,75 @@ const MainContent = ({ selectedContent }) => {
                 <TableCell>Xoá</TableCell>
               </TableHead>
               <TableBody>
-                {userList.map((usr, index) => (
-                  <TableRow key={usr.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>
-                      {usr.isAdmin
-                        ? `${usr.fullName}(Admin)`
-                        : usr.fullName}
-                    </TableCell>
-                    <TableCell>{usr.gender ? "Nam" : "Nữ"}</TableCell>
-                    <TableCell>{convertToDate(usr.dateOfBirth)}</TableCell>
-                    <TableCell>{usr.phoneNumber}</TableCell>
-                    <TableCell>{usr.email}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="warning"
-                        sx={{ fontSize: "12px" }}
-                      >
-                        <LockResetIcon />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="info"
-                        sx={{ fontSize: "12px" }}
-                        onClick={() => handleOpenUpdate(usr.id)}
-                      >
-                        <EditIcon />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        sx={{ fontSize: "12px" }}
-                        onClick={() => handleDeleteUser(usr.id)}
-                      >
-                        <DeleteOutlineIcon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {userList.length > 0 &&
+                  userList.map((usr, index) => {
+                    return (
+                      <TableRow key={usr.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>
+                          {usr.isAdmin
+                            ? `${usr.fullName}(Admin)`
+                            : usr.fullName}
+                        </TableCell>
+                        <TableCell>{usr.gender ? "Nam" : "Nữ"}</TableCell>
+                        <TableCell>{convertToDate(usr.dateOfBirth)}</TableCell>
+                        <TableCell>{usr.phoneNumber}</TableCell>
+                        <TableCell>{usr.email}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="warning"
+                            sx={{ fontSize: "12px" }}
+                          >
+                            <LockResetIcon />
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="info"
+                            sx={{ fontSize: "12px" }}
+                            onClick={() => handleOpenUpdate(usr.id)}
+                          >
+                            <EditIcon />
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            sx={{ fontSize: "12px" }}
+                            onClick={() => handleDeleteUser(usr.id)}
+                          >
+                            <DeleteOutlineIcon />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
           </TableContainer>
         </Box>
       </Stack>
+      <AddUser
+        open={openCreate}
+        setOpen={setOpenCreate}
+        handleCreateUser={handleCreateUser}
+      />
+      <UpdateUser
+        open={openUpdate}
+        setOpen={setOpenUpdate}
+        user={userDetail}
+        handleUpdateUser={handleUpdateUser}
+      />
     </Stack>
   );
 };
 
-const Tab = ({ setSelectedContent, Title, handleNavigate }) => {
+const Tab = ({ setSelectedContent, Title }) => {
   const handleClick = () => {
     setSelectedContent(Title);
-    handleNavigate("/admin");  // Navigate to the admin page when clicked
   };
 
   return (

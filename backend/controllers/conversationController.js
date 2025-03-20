@@ -1,6 +1,4 @@
 const Conversation = require("../models/Conversation");
-const User = require("../models/User");
-const Message = require("../models/Message");
 
 // 📌 Tạo cuộc trò chuyện 1-1
 const create1vs1 = async (req, res) => {

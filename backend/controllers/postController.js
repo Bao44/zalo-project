@@ -128,7 +128,6 @@ const postController = {
         });
       }
   
-      console.log("Fetched posts data:", data);
       return res.status(200).json({ success: true, data: data || [] });
     } catch (error) {
       console.log("fetchPosts error: ", error.message);

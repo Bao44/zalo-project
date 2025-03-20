@@ -4,17 +4,21 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 import Icon from "../../assets/icons";
 import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
-import UserLocal from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
 import { searchFriends } from "../../api/friendshipAPI";
+import { useAuth } from "../../contexts/AuthContext";
 
 const AddFriend = () => {
+    const { user } = useAuth();
     const [phone, setPhone] = React.useState("");
+    
+    // console.log("User", user);
 
     //Tìm kiếm bạn bè
     const handleSearch = async (phone) => {
         try {
             const response = await searchFriends(phone);
+            console.log("Kết quả tìm kiếm bạn bè:", response);
             if (response.success) {
                 router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(response.data), type: "phone"}});
             } else {
@@ -36,8 +40,8 @@ const AddFriend = () => {
                 </View>
                 <View style={styles.myQR}>
                     <View style={styles.boxInfoQR}>
-                        <Text style={styles.textName}>{UserLocal[1].name}</Text>
-                        <Image style={styles.imgQR} source={{ uri: UserLocal[1].avatar }} />
+                        <Text style={styles.textName}>{user?.name}</Text>
+                        <Image style={styles.imgQR} source={{ uri: user?.avatar }} />
                         <Text style={styles.textQR}>Quét mã để thêm bạn Yalo với tôi</Text>
                     </View>
                 </View>

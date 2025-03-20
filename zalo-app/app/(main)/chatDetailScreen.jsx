@@ -3,29 +3,75 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, A
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
-import users from "../../assets/dataLocals/UserLocal";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { getConversationBetweenTwoUsers, createConversation1vs1 } from "../../api/conversationAPI";
 import { getMessages, sendMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
-import { io } from "socket.io-client"; // Import Socket.io client
-
-const socket = io("http://your-server-url"); // Thay bằng URL server của bạn
+import socket from "../../utils/socket";
+import Loading from "../../components/Loading";
+import Avatar from "../../components/Avatar";
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as MediaLibrary from "expo-media-library";
+import RadioButton from "../../components/RadioButton";
+import * as FileSystem from "expo-file-system";
+import RenderImageMessage from "../../components/RenderImageMessage";
 
 const ChatDetailScreen = () => {
     const { user } = useAuth();
-    const { type, data } = useLocalSearchParams();
+    const { type, data, conver } = useLocalSearchParams();
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
-    const [attachments, setAttachments] = useState([]); // Thêm state cho attachments
-    const [media, setMedia] = useState([]); // Thêm state cho media
-    const [files, setFiles] = useState([]); // Thêm state cho files
+    const [attachments, setAttachments] = useState([]);
+    const [media, setMedia] = useState([]);
+    const [files, setFiles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [photos, setPhotos] = useState([]);
+    const [permission, requestPermission] = MediaLibrary.usePermissions();
+    const [showGallery, setShowGallery] = useState(false);
+    const [stempId, setStempId] = useState("");
 
-    const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-    const recipient = type === "private" && !conversation ? parsedData : null;
+    const compressImage = async (uri) => {
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 800 } }], // Giảm kích thước xuống 800px chiều rộng
+            { compress: 0.7, format: 'jpeg' } // Nén chất lượng 70%
+        );
+        return manipulatedImage.uri;
+    };
+
+    const parsedData = typeof data === "string" ? JSON.parse(data) : data;
+
+    // Tham gia room và lắng nghe tin nhắn mới
+    useEffect(() => {
+        if (conversation?._id) {
+            socket.emit("join", conversation._id); // Tham gia room dựa trên conversationId
+        }
+
+        socket.on("newMessage", (message, tempId) => {
+            if (message.conversationId === conversation?._id) {
+                setMessages((prev) => {
+                    const index = prev.findIndex((msg) => msg._id === tempId);
+                    if (index !== -1) {
+                        const updatedMessages = [...prev];
+                        updatedMessages[index] = message;
+                        return updatedMessages;
+                    } else {
+                        return [message, ...prev];
+                    }
+                })
+            }
+        });
+
+        return () => {
+            socket.off("newMessage");
+            if (conversation?._id) {
+                socket.emit("leave", conversation._id); // Rời room khi thoát
+            }
+        };
+    }, [conversation?._id]);
 
     // Lấy conversation và tin nhắn ban đầu
     useEffect(() => {
@@ -36,7 +82,7 @@ const ChatDetailScreen = () => {
                 const response = await getConversationBetweenTwoUsers(user?.id, parsedData?._id);
                 if (response.success && response.data) {
                     setConversation(response.data);
-                    const messagesResponse = await getMessages(response.data.id);
+                    const messagesResponse = await getMessages(response.data._id);
                     if (messagesResponse.success) {
                         setMessages(messagesResponse.data);
                     }
@@ -45,46 +91,28 @@ const ChatDetailScreen = () => {
                 }
             } catch (error) {
                 console.log("Lỗi lấy cuộc trò chuyện:", error);
+            } finally {
+                setLoading(false);
             }
         };
         fetchConversation();
     }, [user?.id, parsedData?._id]);
-
-    // Tham gia phòng Socket.io và lắng nghe tin nhắn mới
-    useEffect(() => {
-        if (conversation?.id) {
-            socket.emit("join", conversation.id);
-            socket.on("newMessage", (newMessage) => {
-                setMessages((prev) => [newMessage, ...prev]);
-            });
-            return () => {
-                socket.off("newMessage");
-                socket.emit("leave", conversation.id);
-            };
-        }
-    }, [conversation?.id]);
 
     // Gửi tin nhắn
     const handleSendMessage = async () => {
         if (!message && attachments.length === 0 && media.length === 0 && files.length === 0) {
             return;
         }
-    
-        console.log("Sending message with data:", { userId: user?.id, receiverId: parsedData?._id });
-    
         try {
             if (!user?.id || !parsedData?._id) {
                 Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
                 return;
             }
-    
+
             let conversationId = conversation?._id;
-    
+
             if (!conversation) {
-                console.log("Creating new conversation...");
                 const response = await createConversation1vs1(user.id, parsedData._id);
-                console.log("Create conversation response:", response);
-    
                 if (response.success && response.data) {
                     setConversation(response.data);
                     conversationId = response.data._id;
@@ -94,33 +122,66 @@ const ChatDetailScreen = () => {
                     return;
                 }
             }
-    
+
             if (!conversationId) {
                 Alert.alert("Lỗi", "Không thể xác định ID cuộc trò chuyện");
                 return;
             }
-    
+
+            let images = [];
+            if (attachments.length > 0) {
+                images = await Promise.all(
+                    attachments.map(async (attachment) => {
+                        const compressedUri = await compressImage(attachment.uri);
+                        const fileBase64 = await FileSystem.readAsStringAsync(compressedUri, {
+                            encoding: FileSystem.EncodingType.Base64,
+                        });
+                        return {
+                            folderName: "messages",
+                            fileUri: fileBase64,
+                            isImage: true,
+                        };
+                    })
+                );
+            }
+
+            let t = Date.now().toString();
+            setStempId(t);
+
             const messageData = {
+                idTemp: t,
                 senderId: user.id,
                 content: message,
-                attachments,
+                attachments: images,
                 media,
                 files,
-                receiverId: parsedData._id
+                receiverId: parsedData._id,
             };
-    
-            console.log("Sending message to server with conversationId:", conversationId);
+
+            // set tam tin nhan
+            setMessages((prev) => [
+                {
+                    _id: t,
+                    senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+                    content: message,
+                    attachments: attachments.map((img) => img.uri),
+                    media,
+                    files,
+                    createdAt: new Date().toISOString(),
+                },
+                ...prev,
+            ]);
+
+            setMessage("");
+            setAttachments([]);
+            setMedia([]);
+            setFiles([]);
+            setShowGallery(false);
+
+            // Gửi tin nhắn
             const response = await sendMessage(conversationId, messageData);
-            console.log("Send message response:", response);
-    
-            if (response.success) {
-                setMessages((prev) => [response.data, ...prev]);
-                setMessage("");
-                setAttachments([]);
-                setMedia([]);
-                setFiles([]);
-            } else {
-                Alert.alert("Lỗi", response.data?.message || "Không thể gửi tin nhắn (lỗi không xác định)");
+            if (!response.success) {
+                Alert.alert("Lỗi", `Không thể gửi tin nhắn: ${response.data?.message || "Lỗi không xác định"}`);
             }
         } catch (error) {
             console.error("Error in handleSendMessage:", error);
@@ -133,47 +194,47 @@ const ChatDetailScreen = () => {
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
 
-    const renderMessage = ({ item, index }) => {
-        const isMyMessage = item.senderId === user?.id; // Sửa userId thành senderId
-        const isLastMessage = index === 0;
-        const isNextSameUser = index < messages.length - 1 && messages[index + 1].senderId === item.senderId;
-        const isPrevSameUser = index > 0 && messages[index - 1].senderId === item.senderId;
+    useEffect(() => {
+        if (!permission) {
+            requestPermission();
+        } else if (permission.granted) {
+            getPhotos();
+        }
+    }, [permission]);
 
-        if (isMyMessage) {
-            return (
-                <View style={[styles.messageOfMe, isNextSameUser && { marginTop: 5 }]}>
-                    <Text style={styles.textMessage}>{item.content}</Text>
-                    {(!isPrevSameUser || isLastMessage) && (
-                        <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text> // Sửa time thành createdAt
-                    )}
-                </View>
-            );
+    const getPhotos = async () => {
+        let allPhotos = [];
+        let hasNextPage = true;
+        let after = null;
+
+        while (hasNextPage) {
+            const album = await MediaLibrary.getAssetsAsync({
+                mediaType: MediaLibrary.MediaType.photo,
+                first: 100, // Lấy mỗi lần 100 ảnh (tăng nếu muốn nhanh hơn)
+                after: after, // Tiếp tục từ ảnh trước đó
+            });
+
+            allPhotos = [...allPhotos, ...album.assets]; // Thêm vào danh sách
+            hasNextPage = album.hasNextPage; // Kiểm tra còn dữ liệu không
+            after = album.endCursor; // Cập nhật con trỏ để lấy trang tiếp theo
+        }
+
+        setPhotos(allPhotos);
+    };
+
+    // Chức năng chọn ảnh
+    const selectImage = (uri) => {
+        if (attachments.includes(uri)) {
+            setAttachments((prev) => prev.filter((img) => img.id !== uri.id));
         } else {
-            const sender = users.find(u => u.id === item.senderId);
-            return (
-                <View style={[styles.messageOfOther, isNextSameUser && { marginTop: 5 }]}>
-                    {!isNextSameUser ? (
-                        <Image source={{ uri: sender?.avatar }} style={styles.avatar} />
-                    ) : (
-                        <View style={styles.avatar} />
-                    )}
-                    <View style={styles.boxMessageContent}>
-                        {!isNextSameUser && (
-                            <Text style={styles.textNameOthers}>{sender?.name}</Text>
-                        )}
-                        <Text style={styles.textMessage}>{item.content}</Text>
-                        {(!isPrevSameUser || isLastMessage) && (
-                            <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
-                        )}
-                    </View>
-                </View>
-            );
+            setAttachments((prev) => [...prev, uri]);
         }
     };
 
     return (
         <ScreenWrapper>
             <View style={styles.container}>
+                {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.inFoHeader}>
                         <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
@@ -181,20 +242,12 @@ const ChatDetailScreen = () => {
                         </TouchableOpacity>
                         {type === "private" ? (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
-                                    {conversation ?
-                                        conversation.members?.find(member => member._id !== user?.id)?.name :
-                                        recipient?.name}
-                                </Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{parsedData?.name}</Text>
                             </View>
                         ) : (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
-                                    {conversation?.name}
-                                </Text>
-                                <Text style={styles.textNumberMember}>
-                                    {conversation?.members?.length} thành viên
-                                </Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{conversation.name}</Text>
+                                <Text style={styles.textNumberMember}>{conversation.members?.length} thành viên</Text>
                             </View>
                         )}
                     </View>
@@ -205,48 +258,155 @@ const ChatDetailScreen = () => {
                     </View>
                 </View>
 
+                {/* Nội dung chat */}
                 <View style={styles.contentChat}>
-                    {messages.length === 0 ? (
-                        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                            <Text>Không có tin nhắn</Text>
-                        </View>
-                    ) : (
-                        <FlatList
-                            data={messages}
-                            keyExtractor={(item) => item._id.toString()} // Sửa id thành _id
-                            renderItem={renderMessage}
-                            inverted
-                            ListFooterComponent={<View style={{ height: 20 }} />}
-                            ListHeaderComponent={<View style={{ height: 20 }} />}
-                        />
-                    )}
-                </View>
+                    {
+                        loading ? (<Loading />) : messages.length === 0 ? (
+                            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                                <Text>Không có tin nhắn</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={messages}
+                                keyExtractor={(item) => item?._id.toString()}
+                                renderItem={({ item, index }) => (
+                                    (item?.senderId._id === user?.id)
+                                        ?
+                                        ((index !== messages.length - 1 && item.userId === messages[index + 1].senderId._id) ?
+                                            (
+                                                <View style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                    {item.attachments.length > 0 && (
+                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                    )}
+                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    {
+                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                            :
+                                                            (item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                    }
+                                                </View>
+                                            )
+                                            :
+                                            (
+                                                <View style={styles.messageOfMe}>
+                                                    {item.attachments.length > 0 && (
+                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                    )}
+                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    {
+                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                            :
+                                                            (item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                    }
+                                                </View>
+                                            ))
+                                        :
+                                        (index === messages.length - 1) ?
+                                            (
+                                                <View style={[styles.messageOfOther]}>
+                                                    <Avatar uri={item.senderId.avatar} style={styles.avatar} />
+                                                    <View style={styles.boxMessageContent}>
+                                                        {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
+                                                        {item.attachments.length > 0 && (
+                                                            <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                        )}
+                                                        <Text style={styles.textMessage}>{item.content}</Text>
+                                                        <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                    </View>
+                                                </View>
+                                            )
+                                            :
+                                            (item.senderId._id === messages[index + 1].senderId._id) ?
 
-                <View style={styles.sendMessage}>
-                    <View style={styles.boxSendMessage}>
-                        <Icon name="emoji" size={28} color="gray" />
-                        <TextInput
-                            style={styles.textInputMessage}
-                            placeholder="Tin nhắn"
-                            value={message}
-                            onChangeText={(text) => setMessage(text)}
-                        />
-                    </View>
-                    {message === "" && attachments.length === 0 && media.length === 0 && files.length === 0 ? (
-                        <View style={styles.boxFeatureSendMessage}>
-                            <TouchableOpacity><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
-                            <TouchableOpacity><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
-                            <TouchableOpacity><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
+                                                (
+                                                    <View style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                        <Image style={styles.avatar} />
+                                                        <View style={styles.boxMessageContent}>
+                                                            {item.attachments.length > 0 && (
+                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                            )}
+                                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                                            {(index === messages.length - 1) ?
+                                                                ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                                :
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                                    :
+                                                                    ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                            }
+                                                        </View>
+                                                    </View>
+                                                )
+                                                :
+                                                (
+                                                    <View style={[styles.messageOfOther]}>
+                                                        <Avatar uri={item.senderId.avatar} style={styles.avatar} />
+                                                        <View style={styles.boxMessageContent}>
+                                                            {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
+                                                            {item.attachments.length > 0 && (
+                                                                <RenderImageMessage images={item?.attachments} wh={wb(70)}/>
+                                                            )}
+                                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                                            {(index === messages.length - 1) ?
+                                                                ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                                :
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                                    :
+                                                                    ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                            }
+                                                        </View>
+                                                    </View>
+                                                )
+                                )}
+                                // Để hiển thị tin nhắn mới nhất
+                                inverted
+                                ListFooterComponent={<View style={{ height: 20 }} />}
+                                ListHeaderComponent={<View style={{ height: 20 }} />}
+                            />
+                        )
+                    }
+                </View>
+                <View style={styles.inputContainer}>
+                    {/* Hộp nhập tin nhắn */}
+                    <View style={styles.sendMessage}>
+                        <View style={styles.boxSendMessage}>
+                            <Icon name="emoji" size={28} color="gray" />
+                            <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
                         </View>
-                    ) : (
-                        <TouchableOpacity onPress={handleSendMessage}>
-                            <Icon name="sent" size={26} color={theme.colors.primary} />
-                        </TouchableOpacity>
+                        {message === "" && attachments.length === 0 ? (
+                            <View style={styles.boxFeatureSendMessage}>
+                                <TouchableOpacity><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
+                                <TouchableOpacity><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
+                                <TouchableOpacity onPress={() => setShowGallery(!showGallery)}><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity onPress={handleSendMessage}>
+                                <Icon name="sent" size={26} color={theme.colors.primary} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {/* Hiển thị thư viện ảnh phía dưới ô nhập tin nhắn */}
+                    {showGallery && (
+                        <View style={styles.galleryContainer}>
+                            <FlatList
+                                data={photos}
+                                numColumns={3}
+                                keyExtractor={(item) => item.id}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity onPress={() => selectImage(item)} style={{ position: "relative" }}>
+                                        <View style={{ position: "absolute", top: 7, right: 7, zIndex: 50 }}>
+                                            <RadioButton isSelect={attachments.includes(item)} size={20} color={theme.colors.primary} onPress={() => selectImage(item)} />
+                                        </View>
+                                        <Image source={{ uri: item.uri }} style={styles.galleryImage} />
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </View>
                     )}
                 </View>
             </View>
         </ScreenWrapper>
-    );
+    )
 };
 
 export default ChatDetailScreen;
@@ -299,7 +459,7 @@ const styles = StyleSheet.create({
     contentChat: {
         flex: 1, // Đảm bảo nội dung mở rộng giữa header và sendMessage
         marginTop: 50, // Đẩy nội dung xuống dưới header
-        marginBottom: hp(6), // Đẩy nội dung lên trên sendMessage
+        // marginBottom: hp(6), // Đẩy nội dung lên trên sendMessage
     },
     messageOfMe: {
         backgroundColor: theme.colors.skyBlue,
@@ -309,9 +469,11 @@ const styles = StyleSheet.create({
         alignSelf: "flex-end",
         marginHorizontal: 15,
         marginTop: 10,
-        borderWidth: 1,
+        borwderWidth: 1,
         borderColor: "gray",
-        maxWidth: wp(70),
+        maxWidth: wp(80),
+        minWidth: wp(15),
+        minHeight: hp(5),
     },
     messageOfOther: {
         alignSelf: "flex-start",
@@ -319,16 +481,20 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginHorizontal: 15,
         marginTop: 10,
+        minWidth: wp(15),
+        minHeight: hp(5),
     },
     boxMessageContent: {
         backgroundColor: '#FFF',
         borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 4,
-        maxWidth: wp(70),
+        maxWidth: wp(75),
         marginLeft: 10,
-        borderColor: theme.colors.primaryLight,
+        borderColor: theme.colors.darkLight,
         borderWidth: 0.5,
+        minWidth: wp(15),
+        minHeight: hp(5),
     },
     textMessage: {
         fontSize: 14,
@@ -346,10 +512,6 @@ const styles = StyleSheet.create({
 
     // Ô nhập tin nhắn
     sendMessage: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
         backgroundColor: "#FFF",
         height: hp(6),
         flexDirection: "row",
@@ -372,5 +534,31 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         width: wp(30),
+    },
+
+    // Gallery
+    inputContainer: {
+        width: "100%",
+    },
+    galleryContainer: {
+        backgroundColor: "#FFF",
+        paddingVertical: 10,
+        borderTopWidth: 1,
+        borderColor: "#ddd",
+        maxHeight: hp(35),
+        minHeight: hp(35), // Giới hạn chiều cao
+        alignItems: "center",
+        position: "relative"
+    },
+    galleryImage: {
+        width: wp(30),
+        height: hp(15),
+        margin: 2,
+        borderRadius: 10,
+    },
+    selectImage: {
+        position: "absolute",
+        top: 5,
+        right: 5,
     },
 });

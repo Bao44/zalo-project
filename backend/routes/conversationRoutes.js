@@ -12,6 +12,6 @@ router.get("/:userId", getUserConversations);
 router.get("/conversationId/:conversationId", getConversation);
 
 // API: Lấy thông tin cuộc trò chuyện 1-1
-router.get("/get-conversation1vs1:user_id/:friend_id", getConversation1vs1);
+router.get("/get-conversation1vs1/:user_id/:friend_id", getConversation1vs1);
 
 module.exports = router;

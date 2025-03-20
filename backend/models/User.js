@@ -2,13 +2,13 @@ const e = require("express");
 const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema({
-  _id: { type: String, required: true, unique: true },
+  _id: { type: String, required: true },
   name: { type: String, },
   phone: { type: String, },
   address: { type: String, },
   avatar: { type: String, default: "" },
   background: { type: String, default: "" },
-  gender: { type: Number, default: "" },
+  gender: { type: Number, default: 0 },
   dob: { type: Date, default: null },
   email: { type: String, required: true, unique: true },
   albums: { type: Array, default: [] },

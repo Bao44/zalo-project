@@ -24,26 +24,13 @@ const initSocket = (server) => {
         return;
       }
       onlineUsers.set(userId, socket.id);
-      console.log(`User ${userId} is online with socket ID: ${socket.id}`);
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
-    // Lắng nghe và gửi tin nhắn real-time
-    socket.on("send-message", (message) => {
-      console.log("New message:", message);
-      if (!message || !message.members) {
-        console.error("Invalid message format:", message);
-        return;
-      }
-      message.members.forEach((member) => {
-        const receiverSocketId = onlineUsers.get(member);
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit("receive-message", message);
-          console.log(`Message sent to ${member} (socket: ${receiverSocketId})`);
-        } else {
-          console.log(`User ${member} is offline or not found`);
-        }
-      });
+    // Khi user offline, xóa khỏi danh sách
+    socket.on("user-offline", (userId) => {
+      onlineUsers.delete(userId);
+      io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
     // Khi user rời đi, xóa khỏi danh sách online
@@ -55,20 +42,17 @@ const initSocket = (server) => {
           break;
         }
       }
-      console.log("A user disconnected:", socket.id);
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
     // Tham gia và rời khỏi room
     socket.on("join", (conversationId) => {
       socket.join(conversationId);
-      console.log(`${socket.id} joined room ${conversationId}`);
     });
 
     // Rời khỏi room
     socket.on("leave", (conversationId) => {
       socket.leave(conversationId);
-      console.log(`${socket.id} left room ${conversationId}`);
     });
   });
 

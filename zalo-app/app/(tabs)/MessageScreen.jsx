@@ -1,15 +1,20 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { hp, wp } from "../../helpers/common";
 import { theme } from "../../constants/theme";
-import Groups from "../../assets/dataLocals/GroupLocal";
-import Icon from "../../assets/icons";
-import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
-import { Path } from "react-native-svg";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getConversations } from "../../api/conversationAPI";
+import { useAuth } from "../../contexts/AuthContext";
+import Avatar from "../../components/Avatar";
+import socket from "../../utils/socket";
+import { useCallback } from "react";
 
 const MessageScreen = () => {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [conversations, setConversations] = useState([]);
+
   // Format time
   const formatTime = (messageTime) => {
     const diff = (Date.now() - new Date(messageTime)) / 1000;
@@ -23,29 +28,59 @@ const MessageScreen = () => {
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
-  //get conversations
-  const [userId, setUserId] = useState("67b8cbdb2dd3b2334bd64726");
-  const [loading, setLoading] = useState(true);
-  const [conversations, setConversations] = useState([]);
-
   // Load conversations
+  useFocusEffect(
+    useCallback(() => {
+      const fetchConversations = async () => {
+        try {
+          const data = await getConversations(user?.id);
+          setConversations(data);
+        } catch (error) {
+          console.error("Failed to fetch conversations:", error);
+          setConversations([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchConversations();
+    }, [user?.id])
+  );
+
+  //Nhận conversation mới
   useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const data = await getConversations(userId);
-        setConversations(data);
-      } catch (error) {
-        console.error("Failed to fetch conversations:", error);
-      } finally {
-        setLoading(false);
+    socket.on("newConversation", (conversation) => {
+      if (conversation.members.some((member) => member?._id === user?.id)) {
+        setConversations((prev) => {
+          // Kiểm tra xem conversation đã tồn tại trong danh sách chưa
+          const existingConversation = prev.find((c) => c._id === conversation._id);
+
+          if (!existingConversation) {
+            // Nếu chưa có, thêm conversation mới vào đầu danh sách
+            return [conversation, ...prev];
+          } else {
+            // Nếu đã có, cập nhật lastMessage của conversation đó
+            return prev.map((c) =>
+              c._id === conversation._id ? { ...c, lastMessage: conversation.lastMessage } : c
+            );
+          }
+        });
       }
+    });
+
+    return () => {
+      socket.off("newConversation");
     };
+  }, [user?.id, conversations]); // Thêm conversations vào dependency nếu cần
 
-    fetchConversations();
-  }, [userId]);
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
-  // Router
-  const router = useRouter();
   return (
     <View>
       <FlatList
@@ -53,73 +88,100 @@ const MessageScreen = () => {
         keyExtractor={(item) => item._id.toString()}
         scrollEnabled={true}
         renderItem={({ item }) => (
-          (item.type === "private") ? (
-            <TouchableOpacity style={styles.buttonMessage} onPress={() => router.push({ pathname: "chatDetailScreen", params: { conversationId: item._id } })}>
-              <Image style={styles.avatarConversation} source={{ uri: (item.members.filter((u) => u._id !== userId))[0].avatar }} />
+          item.type === "private" ? (
+            <TouchableOpacity
+              style={styles.buttonMessage}
+              onPress={() =>
+                router.push({ pathname: "chatDetailScreen", params: { type: "private", data: JSON.stringify(item.members.filter((f) => f._id !== user?.id)[0]) } })
+              }
+            >
+              {(() => {
+                const otherMember = item.members.find((u) => u._id !== user?.id);
+                return (
+                  <Avatar uri={otherMember.avatar} style={styles.avatarConversation} />
+                );
+              })()}
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
-                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{(item.members.filter((u) => u._id !== userId))[0].name}</Text>
-                  <Text style={styles.textTimeConversation}>20:00</Text>
+                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
+                    {item.members.find((u) => u._id !== user?.id)?.name || "Unknown User"}
+                  </Text>
+                  <Text style={styles.textTimeConversation}>
+                    {item?.lastMessage ? formatTime(item.lastMessage.createdAt) : formatTime(item.createdAt)}
+                  </Text>
                 </View>
-                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{item.lastMessage}</Text>
+                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
+                  {item?.lastMessage?.content || "No messages yet"}
+                </Text>
               </View>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.buttonMessage} onPress={() => router.push({ pathname: "chatDetailScreen", params: { conversationId: item._id } })}>
-              {item.avatar === null ?
-                (item.members.length === 3 ?
+            <TouchableOpacity
+              style={styles.buttonMessage}
+              onPress={() =>
+                router.push({ pathname: "chatDetailScreen", params: { conversationId: item._id } })
+              }
+            >
+              {item.avatar === null || item.avatar === "" ? (
+                item.members.length === 3 ? (
                   <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>
-                    {/* Ảnh 1 - Góc trên */}
-                    <Image style={[styles.avatar3, styles.top3]} source={{ uri: item.members[0].avatar }} />
-
-                    {/* Ảnh 2 - Góc dưới trái */}
-                    <Image style={[styles.avatar3, styles.bottomLeft3]} source={{ uri: item.members[1].avatar }} />
-
-                    {/* Ảnh 3 - Góc dưới phải */}
-                    <Image style={[styles.avatar3, styles.bottomRight3]} source={{ uri: item.members[2].avatar }} />
+                    <Image
+                      style={[styles.avatar3, styles.top3]}
+                      source={{ uri: item.members[0].avatar || "https://via.placeholder.com/32" }}
+                    />
+                    <Image
+                      style={[styles.avatar3, styles.bottomLeft3]}
+                      source={{ uri: item.members[1].avatar || "https://via.placeholder.com/32" }}
+                    />
+                    <Image
+                      style={[styles.avatar3, styles.bottomRight3]}
+                      source={{ uri: item.members[2].avatar || "https://via.placeholder.com/32" }}
+                    />
                   </View>
-                  :
+                ) : (
                   <View style={[styles.containerAvatar4, { width: 60, height: 60 }]}>
-                    {/* Ảnh 1 - Trên trái (dịch vào trung tâm) */}
-                    <Image style={[styles.avatar4, styles.topLeft4]} source={{ uri: item.members[0].avatar }} />
-
-                    {/* Ảnh 2 - Trên phải (dịch vào trung tâm) */}
-                    <Image style={[styles.avatar4, styles.topRight4]} source={{ uri: item.members[1].avatar }} />
-
-                    {/* Ảnh 3 - Dưới trái (dịch vào trung tâm) */}
-                    <Image style={[styles.avatar4, styles.bottomLeft4]} source={{ uri: item.members[2].avatar }} />
-
-                    {/* Ảnh 4 - Dưới phải hoặc +N */}
+                    <Image
+                      style={[styles.avatar4, styles.topLeft4]}
+                      source={{ uri: item.members[0].avatar || "https://via.placeholder.com/32" }}
+                    />
+                    <Image
+                      style={[styles.avatar4, styles.topRight4]}
+                      source={{ uri: item.members[1].avatar || "https://via.placeholder.com/32" }}
+                    />
+                    <Image
+                      style={[styles.avatar4, styles.bottomLeft4]}
+                      source={{ uri: item.members[2].avatar || "https://via.placeholder.com/32" }}
+                    />
                     {item.members.length > 4 ? (
                       <View style={styles.moreContainer4}>
                         <Text style={styles.moreText4}>+{item.members.length - 3}</Text>
                       </View>
                     ) : (
-                      <Image style={[styles.avatar4, styles.bottomRight4]} source={{ uri: item.members[3].avatar }} />
+                      <Image
+                        style={[styles.avatar4, styles.bottomRight4]}
+                        source={{ uri: item.members[3]?.avatar || "https://via.placeholder.com/32" }}
+                      />
                     )}
                   </View>
                 )
-                :
-                <Image style={styles.avatarConversation} source={{ uri: item.avatar }} />
-              }
+              ) : (
+                <Image
+                  style={styles.avatarConversation}
+                  source={{ uri: item.avatar || "https://via.placeholder.com/60" }}
+                />
+              )}
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
-                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-                  {
-                    item?.lastMessage ? (
-                      <Text style={styles.textTimeConversation}>{formatTime(item.lastMessage.at(-1).createdAt)}</Text>
-                    ) : (
-                      <Text style={styles.textTimeConversation}>{formatTime(item.createdAt)}</Text>
-                    )
-                  }
+                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
+                    {item.name || "Unnamed Group"}
+                  </Text>
+                  <Text style={styles.textTimeConversation}>
+                    {item.lastMessage ? formatTime(item.lastMessage.createdAt) : formatTime(item.createdAt)}
+                  </Text>
                 </View>
-                {
-                  item?.lastMessage ? (
-                    <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{(item.lastMessage.content)}</Text>
-                  ) : (
-                    <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">Bạn hãy là người mở đầu cuộc trò chuyện</Text>
-                  )
-                }
+                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
+                  {item.lastMessage?.content || "Bạn hãy là người mở đầu cuộc trò chuyện"}
+                </Text>
               </View>
             </TouchableOpacity>
           )
@@ -127,23 +189,37 @@ const MessageScreen = () => {
         ListHeaderComponent={() => (
           <View>
             <TouchableOpacity style={styles.buttonMessage}>
-              <Image style={styles.avatarConversation} source={{ uri: "https://cdn-icons-png.flaticon.com/512/5179/5179930.png" }} />
+              <Image
+                style={styles.avatarConversation}
+                source={{ uri: "https://cdn-icons-png.flaticon.com/512/5179/5179930.png" }}
+              />
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
-                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">Cloud của tôi</Text>
+                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
+                    Cloud của tôi
+                  </Text>
                   <Text style={styles.textTimeConversation}>T2</Text>
                 </View>
-                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">Chào bạn!</Text>
+                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
+                  Chào bạn!
+                </Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.buttonMessage}>
-              <Image style={styles.avatarConversation} source={{ uri: "https://files.oaiusercontent.com/file-S29GAhgtK2jZq8CjjV1y1X?se=2025-02-14T17%3A04%3A04Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D35a8de2a-ee44-465f-844c-c6e30361e857.webp&sig=giMVwSi5xB4xYrJquNWFYjIJwk8MOM2PVTo9RXGmheY%3D" }} />
+              <Image
+                style={[styles.avatarConversation, { resizeMode: 'cover' }]}
+                source={require("../../assets/images/yalo-ai.png")}
+              />
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
-                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">Tâm sự cùng AI Yalo</Text>
+                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
+                    Tâm sự cùng AI Yalo
+                  </Text>
                   <Text style={styles.textTimeConversation}>T2</Text>
                 </View>
-                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">Chào bạn!</Text>
+                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
+                  Chào bạn!
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -151,12 +227,14 @@ const MessageScreen = () => {
         ListFooterComponent={() => (
           <View style={styles.footer}>
             <Text>Dễ dàng tìm kiếm và trò chuyện với bạn bè</Text>
-            <TouchableOpacity style={styles.buttonSearchFiendFooter} onPress={() => router.navigate("SearchFriend")}>
+            <TouchableOpacity
+              style={styles.buttonSearchFiendFooter}
+              onPress={() => router.navigate("SearchFriend")}
+            >
               <Text style={styles.textButtonSearchFriendFooter}>Tìm thêm bạn</Text>
             </TouchableOpacity>
           </View>
-        )
-        }
+        )}
       />
     </View>
   );

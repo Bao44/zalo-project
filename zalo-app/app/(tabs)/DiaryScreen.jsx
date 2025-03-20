@@ -112,7 +112,10 @@ const DiaryScreen = () => {
     limit += 10;
 
     let res = await fetchPosts(limit);
+<<<<<<< HEAD
     console.log("fetchPosts response:", res);
+=======
+>>>>>>> fc8481e38b1c5d504e6859a1d84de57517a2c5cf
 
     if (res.success) {
       if (res.data.length < limit) {
