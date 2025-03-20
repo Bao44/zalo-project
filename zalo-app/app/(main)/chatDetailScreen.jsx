@@ -276,7 +276,7 @@ const ChatDetailScreen = () => {
                                             (
                                                 <View style={[styles.messageOfMe, { marginTop: 5 }]}>
                                                     {item.attachments.length > 0 && (
-                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
                                                     <Text style={styles.textMessage}>{item.content}</Text>
                                                     {
@@ -343,7 +343,7 @@ const ChatDetailScreen = () => {
                                                         <View style={styles.boxMessageContent}>
                                                             {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
                                                             {item.attachments.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wb(70)}/>
+                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
                                                             )}
                                                             <Text style={styles.textMessage}>{item.content}</Text>
                                                             {(index === messages.length - 1) ?
