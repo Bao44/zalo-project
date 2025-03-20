@@ -13,15 +13,6 @@ const mariadb = mysql.createPool({
     queueLimit: 0
 });
 
-// mongoose.connect(process.env.MONGO_URI, {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true,
-//   serverSelectionTimeoutMS: 30000, 
-//   socketTimeoutMS: 45000,
-// })
-//   .then(() => console.log("✅ MongoDB connected successfully"))
-//   .catch(err => console.error("❌ MongoDB Connection Error:", err));
-
 mongoose.connect(process.env.MONGO_URI);
 
 

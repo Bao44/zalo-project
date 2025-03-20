@@ -26,10 +26,6 @@ const postController = {
         },
       });
 
-      // Log session để kiểm tra
-      // const { data: session } = await authSupabase.auth.getSession();
-      // console.log("Session token:", session?.access_token);
-
       const post = req.body;
 
       // Xử lý file nếu có
