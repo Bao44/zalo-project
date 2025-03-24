@@ -22,7 +22,7 @@ const ConversationSchema = new mongoose.Schema(
       default: "",
     },
     admin: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User",
     },
     lastMessage: {

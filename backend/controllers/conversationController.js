@@ -1,4 +1,5 @@
 const Conversation = require("../models/Conversation");
+const cloudinary = require("../config/cloudinary");
 
 // 📌 Tạo cuộc trò chuyện 1-1
 const create1vs1 = async (req, res) => {
@@ -26,6 +27,56 @@ const create1vs1 = async (req, res) => {
     });
 
     const savedConversation = await newConversation.save();
+    res.status(201).json(savedConversation);
+  } catch (error) {
+    console.error("Error creating conversation:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 📌 API: Tạo cuộc trò chuyện group
+const createGroup = async (req, res) => {
+  const { admin, nameGroup, avatar, members } = req.body;
+  try {
+    //Kiểm tra dữ liệu có tồn tại
+    if (!admin || members.length < 2) {
+      return res.status(400).json({ message: "Nhóm phải có ít nhất 2 thành viên và cần có tên nhóm." });
+    }
+    //loadAvatar
+    const uploadPromises = async () => {
+      if (!avatar) throw new Error("Thiếu dữ liệu fileBase64");
+
+      const resourceType = avatar.isImage ? "image" : "raw";
+      const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
+        folder: avatar.folderName || "uploads",
+        resource_type: resourceType,
+      });
+      return result.secure_url;
+    };
+
+    // Tải ảnh lên và lấy URL (nếu có avatar)
+    let avatarUrl = null;
+    if (avatar) {
+      avatarUrl = await uploadPromises(); // Chờ Promise hoàn thành
+    }
+
+    let mb = members.map((u) => u?._id);
+    mb.push(admin);
+
+    const newGroup = new Conversation({
+      admin: admin,
+      name: nameGroup,
+      type: "group",
+      members: mb,
+      avatar: avatarUrl,
+      lastMessage: null,
+    });
+
+    const savedConversation = await newGroup.save();
+
+    // Gửi socket đến tất cả members
+    // io.to(members.map((u) => u?._id).concat(admin)).emit("newConversation", savedConversation);
+
     res.status(201).json(savedConversation);
   } catch (error) {
     console.error("Error creating conversation:", error);
@@ -68,7 +119,7 @@ const getConversation = async (req, res) => {
   }
 };
 
-//Lấy thông tin cuộc trò chuyện 1-1
+// 📌 Lấy thông tin cuộc trò chuyện 1-1
 const getConversation1vs1 = async (req, res) => {
   try {
     const { user_id, friend_id } = req.params;
@@ -87,4 +138,20 @@ const getConversation1vs1 = async (req, res) => {
   }
 };
 
-module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1 };
+// 📌 Lấy tất cả các cuộc trò chuyện group của người dùng
+const getConversationsGroup = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const conversations = await Conversation.find({ type: "group", members: userId })
+      .populate("members", "name avatar")
+      .populate("lastMessage", "type content createdAt")
+      .sort({ updatedAt: -1 });
+      
+    res.status(200).json(conversations);
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup };

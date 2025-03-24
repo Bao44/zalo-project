@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { hp, wp } from "../../helpers/common"
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
-import Groups from "../../assets/dataLocals/GroupLocal";
+import { getConversations, getConversationsGroup } from "../../api/conversationAPI";
 import OfficialAccount from "../../assets/dataLocals/OfficialAccount";
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -215,6 +215,8 @@ const FriendsTabs = () => {
 
 // List groups
 const GroupsTabs = () => {
+  const { user } = useAuth();
+  const [groups, setGroups] = useState([]);
 
   // Format time
   const formatTime = (messageTime) => {
@@ -229,6 +231,30 @@ const GroupsTabs = () => {
     return `${date.getDate()}/${date.getMonth() + 1}`;
   };
 
+  // Lấy danh sách nhóm
+  useFocusEffect(
+    useCallback(() => {
+      const fecthGroups = async () => {
+        try {
+          const response = await getConversationsGroup(user?.id);
+          if (response.success) {
+            setGroups(response.data);
+          } else {
+            console.log("Lỗi lấy danh sách nhóm!");
+          }
+        } catch (error) {
+          console.log("Lỗi lấy danh sách nhóm:", error);
+        }
+      }
+      fecthGroups();
+    }, [user])
+  );
+
+  // Tạo nhóm chat
+  const handleGroup = (item) => {
+    router.push({ pathname: "chatDetailScreen", params: { type: "group", converId: item } })
+  }
+
   // Router
   const router = useRouter();
 
@@ -242,53 +268,57 @@ const GroupsTabs = () => {
       </TouchableOpacity>
 
       <FlatList
-        data={Groups}
-        keyExtractor={(item) => item.id.toString()}
+        data={groups}
+        keyExtractor={(item) => item._id.toString()}
         scrollEnabled={false}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.buttonGroup}>
-            {item.avatar === "" ?
-              (item.users.length === 3 ?
+          <TouchableOpacity style={styles.buttonGroup} onPress={() => handleGroup(item?._id)}>
+            {item.avatar === null || item.avatar === "" ?
+              (item.members.length === 3 ?
                 <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>
-                  {/* Ảnh 1 - Góc trên */}
-                  <Image style={[styles.avatar3, styles.top3]} source={{ uri: item.users[0].avatar }} />
-
-                  {/* Ảnh 2 - Góc dưới trái */}
-                  <Image style={[styles.avatar3, styles.bottomLeft3]} source={{ uri: item.users[1].avatar }} />
-
-                  {/* Ảnh 3 - Góc dưới phải */}
-                  <Image style={[styles.avatar3, styles.bottomRight3]} source={{ uri: item.users[2].avatar }} />
+                  <Avatar
+                    style={[styles.avatar3, styles.top3]}
+                    uri={item?.members[0].avatar} />
+                  <Avatar
+                    style={[styles.avatar3, styles.bottomLeft3]}
+                    uri={item?.members[1].avatar} />
+                  <Avatar
+                    style={[styles.avatar3, styles.bottomRight3]}
+                    uri={item?.members[2].avatar} />
                 </View>
                 :
                 <View style={[styles.containerAvatar4, { width: 60, height: 60 }]}>
-                  {/* Ảnh 1 - Trên trái (dịch vào trung tâm) */}
-                  <Image style={[styles.avatar4, styles.topLeft4]} source={{ uri: item.users[0].avatar }} />
-
-                  {/* Ảnh 2 - Trên phải (dịch vào trung tâm) */}
-                  <Image style={[styles.avatar4, styles.topRight4]} source={{ uri: item.users[1].avatar }} />
-
-                  {/* Ảnh 3 - Dưới trái (dịch vào trung tâm) */}
-                  <Image style={[styles.avatar4, styles.bottomLeft4]} source={{ uri: item.users[2].avatar }} />
-
-                  {/* Ảnh 4 - Dưới phải hoặc +N */}
-                  {item.users.length > 4 ? (
+                  <Avatar
+                    style={[styles.avatar4, styles.topLeft4]}
+                    uri={item.members[0].avatar} />
+                  <Avatar
+                    style={[styles.avatar4, styles.topRight4]}
+                    uri={item.members[1].avatar} />
+                  <Avatar
+                    style={[styles.avatar4, styles.bottomLeft4]}
+                    uri={item.members[2].avatar} />
+                  {item.members.length > 4 ? (
                     <View style={styles.moreContainer4}>
-                      <Text style={styles.moreText4}>+{item.users.length - 3}</Text>
+                      <Text style={styles.moreText4}>+{item.members.length - 3}</Text>
                     </View>
                   ) : (
-                    <Image style={[styles.avatar4, styles.bottomRight4]} source={{ uri: item.users[3].avatar }} />
+                    <Avatar
+                      style={[styles.avatar4, styles.bottomRight4]}
+                      uri={item.members[3].avatar} />
                   )}
                 </View>
-              )
-              :
-              <Image style={styles.avatarGroup} source={{ uri: item.avatar }} />
-            }
+              ) : (
+                <Image
+                  style={styles.avatarGroup}
+                  source={{ uri: item.avatar }}
+                />
+              )}
             <View style={styles.boxContentButton}>
               <View style={styles.boxNameGroup}>
                 <Text style={styles.textNameGroup} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-                <Text style={styles.textTimeGroup}>{formatTime(item.message.at(-1).time)}</Text>
+                {!item.lastMessage ? <Text style={styles.textTimeGroup}>{formatTime(item?.createdAt)}</Text> : <Text style={styles.textTimeGroup}>{formatTime(item?.lastMessage?.createdAt)}</Text>}
               </View>
-              <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{(item.message[item.message.length - 1].content)}</Text>
+              <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">{(item?.lastMessage?.content)}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -296,7 +326,7 @@ const GroupsTabs = () => {
           <View>
             <View style={{ height: hp(1.5), backgroundColor: theme.colors.gray }} />
             <View style={styles.headerListComponent}>
-              <Text style={styles.textHeaderListGroup}>Nhóm đang tham gia ({Groups.length})</Text>
+              <Text style={styles.textHeaderListGroup}>Nhóm đang tham gia ({groups.length})</Text>
               <TouchableOpacity style={styles.featureSort}>
                 <Icon name="sort" size={24} strokeWidth={1.6} color="gray" />
                 <Text style={styles.textFeatureSort}>Sắp xếp</Text>

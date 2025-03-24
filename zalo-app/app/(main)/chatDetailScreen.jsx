@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert, Keyboard } from "react-native";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
-import { getConversationBetweenTwoUsers, createConversation1vs1 } from "../../api/conversationAPI";
+import { getConversationBetweenTwoUsers, createConversation1vs1, getConversationsGroup, getConversation } from "../../api/conversationAPI";
 import { getMessages, sendMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
 import Loading from "../../components/Loading";
 import Avatar from "../../components/Avatar";
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as MediaLibrary from "expo-media-library";
 import RadioButton from "../../components/RadioButton";
 import * as FileSystem from "expo-file-system";
 import RenderImageMessage from "../../components/RenderImageMessage";
+import * as MediaLibrary from "expo-media-library";
 
 const ChatDetailScreen = () => {
     const { user } = useAuth();
-    const { type, data, conver } = useLocalSearchParams();
+    const { type, data, converId } = useLocalSearchParams();
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
@@ -29,9 +29,44 @@ const ChatDetailScreen = () => {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [photos, setPhotos] = useState([]);
-    const [permission, requestPermission] = MediaLibrary.usePermissions();
     const [showGallery, setShowGallery] = useState(false);
     const [stempId, setStempId] = useState("");
+    const [option, setOption] = useState("emoji");
+
+    useEffect(() => {
+        const getPhotos = async () => {
+            // Kiểm tra quyền
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== "granted") {
+                Alert.alert("Quyền truy cập thư viện ảnh", "Vui lòng cấp quyền truy cập thư viện ảnh để chọn ảnh.");
+                return;
+            } else {
+                console.log("🔓 Permission granted");
+            }
+
+            let allPhotos = [];
+            let hasNextPage = true;
+            let after = null;
+
+            while (hasNextPage) {
+                const photos = await MediaLibrary.getAssetsAsync({
+                    mediaType: MediaLibrary.MediaType.photo,
+                    first: 50,
+                    after: after,
+                });
+                if (photos.assets.length === 0) {
+                    console.warn("⚠️ Không tìm thấy ảnh nào trong thư viện.");
+                }
+
+                allPhotos = [...allPhotos, ...photos.assets];
+                hasNextPage = photos.hasNextPage;
+                after = photos.endCursor;
+            }
+            setPhotos(allPhotos);
+        };
+
+        getPhotos();
+    }, []);
 
     const compressImage = async (uri) => {
         const manipulatedImage = await ImageManipulator.manipulateAsync(
@@ -77,17 +112,30 @@ const ChatDetailScreen = () => {
     useEffect(() => {
         const fetchConversation = async () => {
             try {
-                if (!user?.id || !parsedData?._id) return;
-
-                const response = await getConversationBetweenTwoUsers(user?.id, parsedData?._id);
-                if (response.success && response.data) {
-                    setConversation(response.data);
-                    const messagesResponse = await getMessages(response.data._id);
-                    if (messagesResponse.success) {
-                        setMessages(messagesResponse.data);
+                if (type === "private") {
+                    if (!user?.id || !parsedData?._id) return;
+                    const response = await getConversationBetweenTwoUsers(user?.id, parsedData?._id);
+                    if (response.success && response.data) {
+                        setConversation(response.data);
+                        const messagesResponse = await getMessages(response.data?._id);
+                        if (messagesResponse.success) {
+                            setMessages(messagesResponse.data);
+                        }
+                    } else if (response.status === 404) {
+                        setConversation(null);
                     }
-                } else if (response.status === 404) {
-                    setConversation(null);
+                } else {
+                    if (!user?.id || !converId) return;
+                    const response = await getConversation(converId);
+                    if (response.success && response.data) {
+                        setConversation(response.data);
+                        const messagesResponse = await getMessages(response.data._id);
+                        if (messagesResponse.success) {
+                            setMessages(messagesResponse.data);
+                        }
+                    } else if (response.status === 404) {
+                        setConversation(null);
+                    }
                 }
             } catch (error) {
                 console.log("Lỗi lấy cuộc trò chuyện:", error);
@@ -104,9 +152,11 @@ const ChatDetailScreen = () => {
             return;
         }
         try {
-            if (!user?.id || !parsedData?._id) {
-                Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
-                return;
+            if (!converId) {
+                if (!user?.id || !parsedData?._id) {
+                    Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
+                    return;
+                }
             }
 
             let conversationId = conversation?._id;
@@ -155,7 +205,7 @@ const ChatDetailScreen = () => {
                 attachments: images,
                 media,
                 files,
-                receiverId: parsedData._id,
+                receiverId: parsedData?._id,
             };
 
             // set tam tin nhan
@@ -194,33 +244,6 @@ const ChatDetailScreen = () => {
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
 
-    useEffect(() => {
-        if (!permission) {
-            requestPermission();
-        } else if (permission.granted) {
-            getPhotos();
-        }
-    }, [permission]);
-
-    const getPhotos = async () => {
-        let allPhotos = [];
-        let hasNextPage = true;
-        let after = null;
-
-        while (hasNextPage) {
-            const album = await MediaLibrary.getAssetsAsync({
-                mediaType: MediaLibrary.MediaType.photo,
-                first: 100, // Lấy mỗi lần 100 ảnh (tăng nếu muốn nhanh hơn)
-                after: after, // Tiếp tục từ ảnh trước đó
-            });
-
-            allPhotos = [...allPhotos, ...album.assets]; // Thêm vào danh sách
-            hasNextPage = album.hasNextPage; // Kiểm tra còn dữ liệu không
-            after = album.endCursor; // Cập nhật con trỏ để lấy trang tiếp theo
-        }
-
-        setPhotos(allPhotos);
-    };
 
     // Chức năng chọn ảnh
     const selectImage = (uri) => {
@@ -228,6 +251,36 @@ const ChatDetailScreen = () => {
             setAttachments((prev) => prev.filter((img) => img.id !== uri.id));
         } else {
             setAttachments((prev) => [...prev, uri]);
+        }
+    };
+
+    // Đóng / mở thư viện ảnh
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener("keyboardDidShow", () => {
+            if (showGallery) {
+                setShowGallery(false); // Đóng thư viện ảnh khi bàn phím mở
+            }
+        });
+
+        // Dọn dẹp listener khi component unmount
+        return () => {
+            keyboardDidShowListener.remove();
+        };
+    }, [showGallery]);
+
+    const toggleGallery = (ot) => {
+        setOption(ot);
+        if (option === "" || ot === option) {
+            setShowGallery((prev) => {
+                const newValue = !prev;
+                if (newValue) {
+                    Keyboard.dismiss(); // Ẩn bàn phím khi mở thư viện ảnh
+                }
+                return newValue;
+            });
+        } else {
+            setShowGallery(true);
+            Keyboard.dismiss();
         }
     };
 
@@ -246,14 +299,15 @@ const ChatDetailScreen = () => {
                             </View>
                         ) : (
                             <View style={styles.boxInfoConversation}>
-                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{conversation.name}</Text>
-                                <Text style={styles.textNumberMember}>{conversation.members?.length} thành viên</Text>
+                                <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{conversation?.name}</Text>
+                                <Text style={styles.textNumberMember}>{conversation?.members.length} thành viên</Text>
                             </View>
                         )}
                     </View>
                     <View style={styles.boxFeatureHeader}>
+                        {type === "private" && <TouchableOpacity><Icon name="phone" size={26} color="#FFF" /></TouchableOpacity>}
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
-                        <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>
+                        {type === "group" && <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>}
                         <TouchableOpacity><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
                     </View>
                 </View>
@@ -290,7 +344,7 @@ const ChatDetailScreen = () => {
                                             (
                                                 <View style={styles.messageOfMe}>
                                                     {item.attachments.length > 0 && (
-                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
                                                     <Text style={styles.textMessage}>{item.content}</Text>
                                                     {
@@ -308,7 +362,7 @@ const ChatDetailScreen = () => {
                                                     <View style={styles.boxMessageContent}>
                                                         {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
                                                         {item.attachments.length > 0 && (
-                                                            <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                            <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                         )}
                                                         <Text style={styles.textMessage}>{item.content}</Text>
                                                         <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
@@ -323,7 +377,7 @@ const ChatDetailScreen = () => {
                                                         <Image style={styles.avatar} />
                                                         <View style={styles.boxMessageContent}>
                                                             {item.attachments.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
                                                             <Text style={styles.textMessage}>{item.content}</Text>
                                                             {(index === messages.length - 1) ?
@@ -343,7 +397,7 @@ const ChatDetailScreen = () => {
                                                         <View style={styles.boxMessageContent}>
                                                             {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
                                                             {item.attachments.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)}/>
+                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
                                                             <Text style={styles.textMessage}>{item.content}</Text>
                                                             {(index === messages.length - 1) ?
@@ -369,14 +423,16 @@ const ChatDetailScreen = () => {
                     {/* Hộp nhập tin nhắn */}
                     <View style={styles.sendMessage}>
                         <View style={styles.boxSendMessage}>
-                            <Icon name="emoji" size={28} color="gray" />
+                            <TouchableOpacity onPress={() => toggleGallery("emoji")}>
+                                <Icon name="emoji" size={28} color="gray" />
+                            </TouchableOpacity>
                             <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
                         </View>
                         {message === "" && attachments.length === 0 ? (
                             <View style={styles.boxFeatureSendMessage}>
                                 <TouchableOpacity><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
-                                <TouchableOpacity><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
-                                <TouchableOpacity onPress={() => setShowGallery(!showGallery)}><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
+                                <TouchableOpacity onPress={() => toggleGallery("")}><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
+                                <TouchableOpacity onPress={() => toggleGallery("image")}><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
                             </View>
                         ) : (
                             <TouchableOpacity onPress={handleSendMessage}>
@@ -388,19 +444,25 @@ const ChatDetailScreen = () => {
                     {/* Hiển thị thư viện ảnh phía dưới ô nhập tin nhắn */}
                     {showGallery && (
                         <View style={styles.galleryContainer}>
-                            <FlatList
-                                data={photos}
-                                numColumns={3}
-                                keyExtractor={(item) => item.id}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity onPress={() => selectImage(item)} style={{ position: "relative" }}>
-                                        <View style={{ position: "absolute", top: 7, right: 7, zIndex: 50 }}>
-                                            <RadioButton isSelect={attachments.includes(item)} size={20} color={theme.colors.primary} onPress={() => selectImage(item)} />
-                                        </View>
-                                        <Image source={{ uri: item.uri }} style={styles.galleryImage} />
-                                    </TouchableOpacity>
-                                )}
-                            />
+                            {option === "emoji" ?
+                                (<Text>Emoji</Text>)
+                                :
+                                (
+                                    <FlatList
+                                        data={photos}
+                                        numColumns={3}
+                                        keyExtractor={(item) => item.uri}
+                                        renderItem={({ item }) => (
+                                            <TouchableOpacity onPress={() => selectImage(item)} style={{ position: "relative" }}>
+                                                <View style={{ position: "absolute", top: 7, right: 7, zIndex: 50 }}>
+                                                    <RadioButton isSelect={attachments.includes(item)} size={20} color={theme.colors.primary} onPress={() => selectImage(item)} />
+                                                </View>
+                                                <Image source={{ uri: item.uri }} style={styles.galleryImage} />
+                                            </TouchableOpacity>
+                                        )}
+                                    />
+                                )
+                            }
                         </View>
                     )}
                 </View>
