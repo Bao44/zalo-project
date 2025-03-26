@@ -142,8 +142,8 @@ const PostCard = ({
         {showMoreIcon && (
           <TouchableOpacity onPress={openPostDetails}>
             <Icon
-              name="delete"
-              size={hp(3.4)}
+              name="moreHorizontal"
+              size={hp(3)}
               strokeWidth={3}
               color={theme.colors.text}
             />
@@ -153,7 +153,7 @@ const PostCard = ({
         {showDelete && currentUser.id == item?.userId && (
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => onEdit(item)}>
-              <Icon name="delete" size={hp(2.5)} color={theme.colors.text} />
+              <Icon name="edit" size={hp(2.5)} color={theme.colors.text} />
             </TouchableOpacity>
             <TouchableOpacity onPress={handlePostDelete}>
               <Icon name="delete" size={hp(2.5)} color={theme.colors.rose} />
@@ -202,7 +202,7 @@ const PostCard = ({
         <View style={styles.footerButton}>
           <TouchableOpacity onPress={onLike}>
             <Icon
-              name="delete"
+              name="heart"
               size={24}
               fill={liked ? theme.colors.rose : theme.colors.textLight}
             />
@@ -211,16 +211,16 @@ const PostCard = ({
         </View>
         <View style={styles.footerButton}>
           <TouchableOpacity onPress={openPostDetails}>
-            <Icon name="delete" size={24} color={theme.colors.textLight} />
+            <Icon name="comment" size={24} color={theme.colors.textLight} />
           </TouchableOpacity>
           <Text style={styles.count}>{item?.comments[0]?.count}</Text>
         </View>
         <View style={styles.footerButton}>
           {loading ? (
-            <Loading size="delete" />
+            <Loading size="small" />
           ) : (
             <TouchableOpacity onPress={onShare}>
-              <Icon name="delete" size={24} color={theme.colors.textLight} />
+              <Icon name="forward" size={24} color={theme.colors.textLight} />
             </TouchableOpacity>
           )}
         </View>
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   container: {
     gap: 10,
     marginBottom: 15,
-    borderRadius: theme.radius.xxl * 1.1,
+    borderRadius: theme.radius.xl,
     borderCurve: "continuous",
     padding: 10,
     paddingVertical: 12,

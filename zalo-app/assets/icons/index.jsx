@@ -58,6 +58,8 @@ import Computer from "./Computer";
 import Emoji from "./emoji";
 import Sent from "./Sent";
 import Mail from "./Mail";
+import Comment from "./Comment";
+import Heart from "./Heart";
 
 
 const icons = {
@@ -118,7 +120,9 @@ const icons = {
   computer : Computer,
   emoji : Emoji,
   sent : Sent,
-  mail : Mail
+  mail : Mail,
+  comment: Comment,
+  heart: Heart
 };
 
 const Icon = ({ name, ...props }) => {
