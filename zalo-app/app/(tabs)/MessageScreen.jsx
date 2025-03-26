@@ -34,7 +34,11 @@ const MessageScreen = () => {
       const fetchConversations = async () => {
         try {
           const data = await getConversations(user?.id);
-          setConversations(data);
+          if (data.success) {
+            setConversations(data.data)
+          } else {
+            console.log("Không tìm thấy cuộc hội thoại nào!")
+          }
         } catch (error) {
           console.error("Failed to fetch conversations:", error);
           setConversations([]);
@@ -119,47 +123,47 @@ const MessageScreen = () => {
             <TouchableOpacity
               style={styles.buttonMessage}
               onPress={() =>
-                router.push({ pathname: "chatDetailScreen", params: { conversationId: item._id } })
+                router.push({ pathname: "chatDetailScreen", params: { type: item?.type, converId: item?._id } })
               }
             >
               {item.avatar === null || item.avatar === "" ? (
                 item.members.length === 3 ? (
                   <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>
-                    <Image
+                    <Avatar
                       style={[styles.avatar3, styles.top3]}
-                      source={{ uri: item.members[0].avatar || "https://via.placeholder.com/32" }}
+                      uri={item.members[0].avatar}
                     />
-                    <Image
+                    <Avatar
                       style={[styles.avatar3, styles.bottomLeft3]}
-                      source={{ uri: item.members[1].avatar || "https://via.placeholder.com/32" }}
+                      uri={item.members[1].avatar}
                     />
-                    <Image
+                    <Avatar
                       style={[styles.avatar3, styles.bottomRight3]}
-                      source={{ uri: item.members[2].avatar || "https://via.placeholder.com/32" }}
+                      uri={item.members[2].avatar}
                     />
                   </View>
                 ) : (
                   <View style={[styles.containerAvatar4, { width: 60, height: 60 }]}>
-                    <Image
+                    <Avatar
                       style={[styles.avatar4, styles.topLeft4]}
-                      source={{ uri: item.members[0].avatar || "https://via.placeholder.com/32" }}
+                      uri={item.members[0].avatar}
                     />
-                    <Image
+                    <Avatar
                       style={[styles.avatar4, styles.topRight4]}
-                      source={{ uri: item.members[1].avatar || "https://via.placeholder.com/32" }}
+                      uri={item.members[1].avatar}
                     />
-                    <Image
+                    <Avatar
                       style={[styles.avatar4, styles.bottomLeft4]}
-                      source={{ uri: item.members[2].avatar || "https://via.placeholder.com/32" }}
+                      uri={item.members[2].avatar}
                     />
                     {item.members.length > 4 ? (
                       <View style={styles.moreContainer4}>
                         <Text style={styles.moreText4}>+{item.members.length - 3}</Text>
                       </View>
                     ) : (
-                      <Image
+                      <Avatar
                         style={[styles.avatar4, styles.bottomRight4]}
-                        source={{ uri: item.members[3]?.avatar || "https://via.placeholder.com/32" }}
+                        uri={item.members[3].avatar}
                       />
                     )}
                   </View>
@@ -167,7 +171,7 @@ const MessageScreen = () => {
               ) : (
                 <Image
                   style={styles.avatarConversation}
-                  source={{ uri: item.avatar || "https://via.placeholder.com/60" }}
+                  source={{ uri: item.avatar}}
                 />
               )}
               <View style={styles.boxContentButton}>
@@ -229,7 +233,7 @@ const MessageScreen = () => {
             <Text>Dễ dàng tìm kiếm và trò chuyện với bạn bè</Text>
             <TouchableOpacity
               style={styles.buttonSearchFiendFooter}
-              onPress={() => router.navigate("SearchFriend")}
+              onPress={() => router.push("addFriend")}
             >
               <Text style={styles.textButtonSearchFriendFooter}>Tìm thêm bạn</Text>
             </TouchableOpacity>

@@ -4,24 +4,68 @@ import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
 import Icon from "../../assets/icons";
-import { useState } from "react";
-import users from "../../assets/dataLocals/UserLocal";
+import { useState, useMemo } from "react";
+// import users from "../../assets/dataLocals/UserLocal";
 import RadioButton from "../../components/RadioButton";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { getConversations } from "../../api/conversationAPI";
+import { useAuth } from "../../contexts/AuthContext";
+import Avatar from "../../components/Avatar";
+import * as ImagePicker from "expo-image-picker";
+import { createConversationGroupChat } from "../../api/conversationAPI";
+import * as FileSystem from "expo-file-system";
+import { getFriends } from "../../api/friendshipAPI";
 
 
 const NewGroup = () => {
-    const [amount, setAmount] = useState(0);
+    const { user } = useAuth();
     const [isFocused, setIsFocused] = useState(false);
     const [selected, setSelected] = useState("recent");
-    const [recent, setRecent] = useState(users);
-    const [selectedIds, setSelectedIds] = useState([]);
+    const [recent, setRecent] = useState([]);
+    const [contact, setContact] = useState([])
     const [userSelecteds, setUserSelecteds] = useState([]);
     const [nameGroup, setNameGroup] = useState("");
+    const [avatarGroup, setAvatarGroup] = useState("");
     const [search, setSearch] = useState("");
 
-    //back to previous screen
+    // console.log(recent);
+
+    // Lấy danh sách người dùng gần đây và danh bạ
+    useEffect(() => {
+        const fetchRecent = async () => {
+            try {
+                // Lấy danh sách bạn bè
+                const resContact = await getFriends(user?.id);
+                setContact(resContact.data); // Lưu danh sách bạn bè vào state
+
+                // Lấy danh sách hội thoại
+                const response = await getConversations(user?.id);
+                if (response.success) {
+                    let ds = response.data;
+
+                    // Sắp xếp theo thời gian lastMessage
+                    ds.sort((a, b) => {
+                        const timeA = new Date(a.lastMessage.createdAt);
+                        const timeB = new Date(b.lastMessage.createdAt);
+                        return timeB - timeA;
+                    });
+
+                    // Lọc các hội thoại private
+                    let temp = ds.filter((u) => u.type === "private");
+
+                    setRecent(temp);
+                } else {
+                    console.log("Không có dữ liệu hoặc lỗi từ server!");
+                }
+            } catch (error) {
+                console.log("Lỗi lấy danh sách:", error);
+            }
+        };
+        fetchRecent();
+    }, []);
+
+    //Back to previous screen
     const handleBackPress = () => {
         if (userSelecteds.length > 0 || nameGroup !== "") {
             Alert.alert(
@@ -52,26 +96,22 @@ const NewGroup = () => {
 
 
     // Chức năng chọn người dùng
-    const toggleSelection = (id) => {
-        setSelectedIds((prevSelected) =>
-            prevSelected.includes(id) ? prevSelected.filter((item) => item !== id) : [...prevSelected, id]
-        );
-        setUserSelecteds((prevUserSelected) =>
-            prevUserSelected.some((item) => item.id === id)
-                ? prevUserSelected.filter((item) => item.id !== id)
-                : [...prevUserSelected, users.find((item) => item.id === id)]
-        );
-        setAmount((prevAmount) => (selectedIds.includes(id) ? prevAmount - 1 : prevAmount + 1));
+    const toggleSelection = (item) => {
+        if (userSelecteds.includes(item)) {
+            setUserSelecteds((prev) => prev.filter((us) => us._id !== item._id));
+        } else {
+            setUserSelecteds((prev) => [...prev, item]);
+        }
     };
 
-    // Nhóm người dùng theo chữ cái đầu tiên
-    const groupUsersByFirstLetter = (users) => {
-        const grouped = users.reduce((acc, user) => {
-            const firstLetter = user.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
+    // Nhóm bạn bè theo chữ cái đầu tiên
+    const groupUsersByFirstLetter = (listFriends) => {
+        const grouped = listFriends.reduce((acc, friend) => {
+            const firstLetter = friend.name[0].toUpperCase(); // Lấy chữ cái đầu tiên
             if (!acc[firstLetter]) {
                 acc[firstLetter] = [];
             }
-            acc[firstLetter].push(user);
+            acc[firstLetter].push(friend);
             return acc;
         }, {});
 
@@ -83,9 +123,7 @@ const NewGroup = () => {
                 data: grouped[letter],
             }));
     };
-
-    // Lấy danh sách người dùng đã nhóm theo chữ cái đầu tiên
-    const groupedUsers = groupUsersByFirstLetter(users);
+    const conTact = useMemo(() => groupUsersByFirstLetter(contact), [contact]);
 
     // Animation hiển thị danh sách user đã chọn
     const slideAnim = useRef(new Animated.Value(100)).current; // Giá trị ban đầu ở ngoài màn hình
@@ -106,15 +144,82 @@ const NewGroup = () => {
     }, [userSelecteds]);
 
     //Tạo nhóm
-    const handleCreateGroup = () => {
-        //Xử lý back end
-        Alert.alert(
-            "Thông báo!",
-            "Thêm thành công!",
-            [
-                {text: "OK", onPress: () => router.back()}
-            ]
-        );
+    const handleCreateGroup = async () => {
+        // Kiểm tra số lượng thành viên đủ 2 chưa
+        try {
+            if (userSelecteds.length < 2) {
+                Alert.alert(
+                    "Thông báo!",
+                    "Chưa đủ số lượng thành viên để tạo nhóm. Vui lòng chọn thêm thành viên để tạo nhóm!",
+                    [
+                        { text: "OK" }
+                    ]
+                );
+            }
+
+            //Kiểm tra tên nhóm
+            if (nameGroup === "") {
+                setNameGroup(userSelecteds.map(user => user.name).join(", "));
+            }
+
+            const fileBase64 = await FileSystem.readAsStringAsync(avatarGroup, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+
+            const av = {
+                folderName: "group",
+                fileUri: fileBase64,
+                isImage: true,
+            }
+
+            //Tạo data cuộc hội thoại nhóm
+            const groupChat = {
+                nameGroup: nameGroup,
+                admin: user?.id,
+                members: userSelecteds,
+                avatar: av,
+            }
+
+            // Gọi API thêm nhóm
+            const res = await createConversationGroupChat(groupChat);
+            if (res.success) {
+                router.push({ pathname: "chatDetailScreen", params: { type: "group", converId: res.data?._id } })
+            } else {
+                console.log("Thêm thất bại!");
+            }
+        } catch (error) {
+            console.error("Error in handleSendMessage:", error);
+        }
+    }
+
+    // Formatime
+    const formatTime = (messageTime) => {
+        const diff = (Date.now() - new Date(messageTime)) / 1000;
+
+        if (diff < 60) return "Vừa xong";
+        if (diff < 3600) return `${Math.floor(diff / 60)} phút`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} giờ`;
+        if (diff < 604800) {
+            const daysDiff = Math.floor(diff / 86400); // 86400 giây = 1 ngày
+            return daysDiff === 0 ? "Hôm nay" : `${daysDiff} ngày trước`;
+        }
+
+        const date = new Date(messageTime);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+    };
+
+    // Chọn ảnh đại điện
+    const handleAvatar = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.7,
+        });
+
+        if (!result.canceled) {
+            setAvatarGroup(result.assets[0].uri)
+        }
     }
 
     return (
@@ -125,13 +230,13 @@ const NewGroup = () => {
                 </TouchableOpacity>
                 <View>
                     <Text style={styles.textNameGroup}>Nhóm mới</Text>
-                    <Text style={{ color: theme.colors.textLight }}>Đã chọn: {amount}</Text>
+                    <Text style={{ color: theme.colors.textLight }}>Đã chọn: {userSelecteds.length}</Text>
                 </View>
             </View>
             <View>
                 <View style={styles.boxInfoGroup}>
-                    <TouchableOpacity style={styles.selectAvatar}>
-                        <Icon name="camera" size={32} strokeWidth={1.6} color="black" />
+                    <TouchableOpacity style={styles.selectAvatar} onPress={handleAvatar}>
+                        {avatarGroup !== "" ? <Image source={{ uri: avatarGroup }} style={styles.avatar} /> : <Icon name="camera" size={32} strokeWidth={1.6} color="black" />}
                     </TouchableOpacity>
                     <TextInput
                         style={[styles.inputNameGroup, isFocused && styles.inputFocused]}
@@ -160,23 +265,22 @@ const NewGroup = () => {
                 {selected === "recent" ?
                     <FlatList
                         data={recent}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item?._id}
                         renderItem={({ item }) => {
-                            const isSelected = selectedIds.includes(item.id);
                             return (
-                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.id)}>
+                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                        <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                                        <Avatar uri={item.avatar} style={styles.avatar} />
                                         <View>
-                                            <Text style={styles.textName}>{item.name}</Text>
-                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>1 day ago</Text>
+                                            <Text style={styles.textName}>{item.members.filter((u) => u._id !== user?.id)[0]?.name}</Text>
+                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{formatTime(item.lastMessage.createdAt)}</Text>
                                         </View>
                                     </View>
                                     <RadioButton
-                                        isSelect={isSelected}
+                                        isSelect={userSelecteds.includes(item.members.filter((u) => u._id !== user?.id)[0])}
                                         size={20}
                                         color={theme.colors.primaryDark}
-                                        onPress={() => toggleSelection(item.id)}
+                                        onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}
                                     />
                                 </TouchableOpacity>
                             )
@@ -189,21 +293,19 @@ const NewGroup = () => {
                     />
                     :
                     <SectionList
-                        sections={groupedUsers}
+                        sections={conTact}
                         keyExtractor={(item, index) => item + index}
                         renderItem={({ item }) => {
-                            const isSelected = selectedIds.includes(item.id);
                             return (
-                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.id)}>
+                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                        <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                                        <Avatar style={styles.avatar} uri={item.avatar} />
                                         <View>
                                             <Text style={styles.textName}>{item.name}</Text>
-                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>1 day ago</Text>
+                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{ }</Text>
                                         </View>
                                     </View>
                                     <RadioButton
-                                        isSelect={isSelected}
                                         size={20}
                                         color={theme.colors.primaryDark}
                                         onPress={() => toggleSelection(item.id)}
@@ -216,7 +318,7 @@ const NewGroup = () => {
                         )}
                         ListFooterComponent={() => (
                             <View style={styles.listFooterComponent}>
-                                <Text style={{ color: theme.colors.textLight }}>{groupedUsers.length} bạn</Text>
+                                <Text style={{ color: theme.colors.textLight }}> bạn</Text>
                             </View>
                         )}
                     />
@@ -227,12 +329,12 @@ const NewGroup = () => {
                 <Animated.View style={[styles.boxUsersSelected, { transform: [{ translateY: slideAnim }] }]}>
                     <FlatList
                         data={userSelecteds}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => item?._id}
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         renderItem={({ item }) => (
-                            <TouchableOpacity onPress={() => toggleSelection(item.id)}>
-                                <Image style={styles.avatar} source={{ uri: item.avatar }} />
+                            <TouchableOpacity onPress={() => toggleSelection(item)}>
+                                <Avatar uri={item.avatar} style={styles.avatar} />
                                 <View style={styles.cancel}>
                                     <Icon name="cancel" size={12} strokeWidth={2.6} color="white" />
                                 </View>

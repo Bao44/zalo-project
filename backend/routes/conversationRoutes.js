@@ -1,9 +1,12 @@
 const express = require("express");
-const { create1vs1, getUserConversations, getConversation, getConversation1vs1 } = require("../controllers/conversationController");
+const { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup } = require("../controllers/conversationController");
 const router = express.Router();
 
 // API: Tạo cuộc trò chuyện 1-1
 router.post("/create1vs1", create1vs1);
+
+// API: Tạo cuộc trò chuyện nhóm
+router.post("/createGroup", createGroup);
 
 // API: Lấy danh sách cuộc trò chuyện của người dùng
 router.get("/:userId", getUserConversations);
@@ -13,5 +16,8 @@ router.get("/conversationId/:conversationId", getConversation);
 
 // API: Lấy thông tin cuộc trò chuyện 1-1
 router.get("/get-conversation1vs1/:user_id/:friend_id", getConversation1vs1);
+
+// API: Lấy danh sách cuộc trò chuyện group
+router.get("/group/:userId", getConversationsGroup);
 
 module.exports = router;
