@@ -27,8 +27,8 @@ const optionsUser = () => {
         </TouchableOpacity>
       </View>
       <View>
-        <TouchableOpacity onPress={() => router.push("changePassword")}>
-          <Text>Change Password</Text>
+        <TouchableOpacity onPress={() => router.push("updatePassword")}>
+          <Text>Update Password</Text>
         </TouchableOpacity>
       </View>
     </ScreenWrapper>

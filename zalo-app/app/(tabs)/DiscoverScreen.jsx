@@ -9,7 +9,6 @@ import socket from "../../utils/socket";
 const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();
 
-
   const handleLogout = async () => {
     setAuth(null);
     const { error } = await supabase.auth.signOut();
