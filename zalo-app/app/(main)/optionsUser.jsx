@@ -26,6 +26,11 @@ const optionsUser = () => {
           <Text>Update Profile</Text>
         </TouchableOpacity>
       </View>
+      <View>
+        <TouchableOpacity onPress={() => router.push("changePassword")}>
+          <Text>Change Password</Text>
+        </TouchableOpacity>
+      </View>
     </ScreenWrapper>
   );
 };

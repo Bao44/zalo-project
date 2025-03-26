@@ -86,7 +86,9 @@ const Login = () => {
             secureTextEntry
             onChangeText={(value) => (passwordRef.current = value)}
           />
-          <Text style={styles.forgotPassword}>Lấy lại mật khẩu</Text>
+          <Pressable onPress={() => router.push("forgotPassword")}>
+            <Text style={styles.forgotPassword}>Lấy lại mật khẩu</Text>
+          </Pressable>
 
           {/* button */}
           <Button title={"Login"} loading={loading} onPress={onSubmit} />

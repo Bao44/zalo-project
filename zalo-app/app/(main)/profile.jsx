@@ -63,7 +63,7 @@ const UserHeader = ({ user, router }) => {
           {/* username and bio */}
           <View style={{ alignItems: "center", gap: 4, marginTop: 10 }}>
             <Text style={styles.userName}>{user && user.name}</Text>
-            {user.bio == null || user.bio == "" ? (
+            {user?.bio == null || user?.bio == "" ? (
               <View>
                 <Pressable
                   style={styles.editIcon}
