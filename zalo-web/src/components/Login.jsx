@@ -12,52 +12,51 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { toast } from "react-toastify";
-import UserAPI from "../api/UserAPI";
 
 const Login = ({ handleLogin }) => {
-  const [phoneNumber, setPhoneNumber] = useState("0123456789");
-  const [password, setPassword] = useState("hoangnguyen@123");
+  // const [phoneNumber, setPhoneNumber] = useState("0123456789");
+  const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState("password");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    handleLogin(phoneNumber, password);
-    setPhoneNumber("");
+    handleLogin(email, password);
+    setEmail("");
     setPassword("");
   };
 
-  const handleResetPassword = async () => {
-    if (email.trim() === "") {
-      toast.error("Vui lòng nhập email");
-      return;
-    }
+  // const handleResetPassword = async () => {
+  //   if (email.trim() === "") {
+  //     toast.error("Vui lòng nhập email");
+  //     return;
+  //   }
 
-    if (!email.match(/.+@gmail.com/)) {
-      toast.error("Email không hợp lệ");
-      return;
-    }
+  //   if (!email.match(/.+@gmail.com/)) {
+  //     toast.error("Email không hợp lệ");
+  //     return;
+  //   }
 
-    const data = await UserAPI.forgotPassword(email);
-    if (data) {
-      toast.success("Kiểm tra email của bạn để đặt lại mật khẩu");
-    } else {
-      toast.error("Email không tồn tại trong hệ thống!");
-    }
-  };
+  //   const data = await UserAPI.forgotPassword(email);
+  //   if (data) {
+  //     toast.success("Kiểm tra email của bạn để đặt lại mật khẩu");
+  //   } else {
+  //     toast.error("Email không tồn tại trong hệ thống!");
+  //   }
+  // };
 
   return (
     <Box>
       <Box>
         <Typography fontSize="14px">
-          Số điện thoại<span style={{ color: "red" }}>*</span>
+          Email<span style={{ color: "red" }}>*</span>
         </Typography>
         <TextField
-          id="phoneNumber"
-          placeholder="Nhập số điện thoại"
+          id="email"
+          placeholder="Nhập email"
           variant="standard"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           fullWidth
           style={{ marginBottom: "20px" }}
         />
@@ -132,7 +131,7 @@ const Login = ({ handleLogin }) => {
               variant="contained"
               fullWidth
               style={{ margin: "20px 0" }}
-              onClick={handleResetPassword}
+              // onClick={handleResetPassword}
             >
               Làm mới mật khẩu
             </Button>

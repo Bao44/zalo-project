@@ -3,7 +3,6 @@ import ContactsIcon from "@mui/icons-material/Contacts";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
-  Avatar,
   Box,
   Grid,
   List,
@@ -13,6 +12,7 @@ import {
   ListItemIcon,
   Popover,
   Typography,
+  Avatar as MuiAvatar
 } from "@mui/material";
 import * as React from "react";
 import { Suspense, lazy, useEffect, useState } from "react";
@@ -33,148 +33,158 @@ import {
 } from "../redux/conversationSlice";
 import { logout, setUser } from "../redux/userSlice";
 import connectSocket from "../utils/socketConfig";
+import { supabase } from "../../lib/supabase";
+import { getUserData } from "../../api/user";
+import { getUserImageSrc } from "../../api/image";
+import { useAuth } from "../../contexts/AuthContext";
+import { BACKEND_URL } from "../../constants/ip";
+import Avatar from "../components/Avatar";
 
 const Messager = lazy(() => import("./Messager"));
 const Contact = lazy(() => import("./Contact"));
 
 const Home = () => {
-  const { user } = useSelector((state) => state.user);
+  // const { user } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const socket = connectSocket();
+  // const socket = connectSocket();
 
   const [showMess, setShowMess] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
 
-  useEffect(() => {
-    if (!user) {
-      const fetchData = async () => {
-        const data = await UserAPI.getMe();
-        if (data) {
-          dispatch(setUser(data));
-        }
-      };
+  const { user, setAuth } = useAuth();
 
-      fetchData();
-    } else {
-      if (user.isAdmin) {
-        navigate("/admin");
-      }
-    }
-  }, [user]);
+  console.log("User in Home:", user?.data?.avatar);
 
-  useEffect(() => {
-    if (socket && socket.disconnected) {
-      socket.connect();
-    }
-  }, [socket]);
+  // useEffect(() => {
+  //   if (!user) {
+  //     const fetchData = async () => {
+  //       const data = await UserAPI.getMe();
+  //       if (data) {
+  //         dispatch(setUser(data));
+  //       }
+  //     };
 
-  useEffect(() => {
-    if (socket && user) {
-      socket.on(user.id, (data) => {
-        console.log("data", data);
-        if (data.code === "receive_request_friend") {
-          dispatch(setUser(data.data));
-          toast.info(`${data.sender} đã gửi lời mời kết bạn`);
-          return;
-        }
+  //     fetchData();
+  //   } else {
+  //     if (user.isAdmin) {
+  //       navigate("/admin");
+  //     }
+  //   }
+  // }, [user]);
 
-        if (data.code === "receive_accept_friend") {
-          dispatch(setUser(data.data));
-          toast.info(`${data.sender} đã chấp nhận lời mời kết bạn`);
-          return;
-        }
+  // useEffect(() => {
+  //   if (socket && socket.disconnected) {
+  //     socket.connect();
+  //   }
+  // }, [socket]);
 
-        if (data.code === "receive_revoke_friend") {
-          dispatch(setUser(data.data));
-          toast.info(`${data.sender} đã hủy yêu cầu kết bạn`);
-          return;
-        }
+  // useEffect(() => {
+  //   if (socket && user) {
+  //     socket.on(user.id, (data) => {
+  //       console.log("data", data);
+  //       if (data.code === "receive_request_friend") {
+  //         dispatch(setUser(data.data));
+  //         toast.info(`${data.sender} đã gửi lời mời kết bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_delete_accept_friend") {
-          dispatch(setUser(data.data));
-          toast.info(`${data.sender} đã từ chối lời mời kết bạn`);
-          return;
-        }
+  //       if (data.code === "receive_accept_friend") {
+  //         dispatch(setUser(data.data));
+  //         toast.info(`${data.sender} đã chấp nhận lời mời kết bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_delete_friend") {
-          dispatch(setUser(data.data));
-          toast.info(`${data.sender} đã xóa bạn khỏi danh sách bạn bè`);
-          return;
-        }
+  //       if (data.code === "receive_revoke_friend") {
+  //         dispatch(setUser(data.data));
+  //         toast.info(`${data.sender} đã hủy yêu cầu kết bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_create_conversation") {
-          dispatch(createConversation(data.data));
-          toast.info(`${data.sender} đã tạo cuộc hội thoại với bạn`);
-          return;
-        }
+  //       if (data.code === "receive_delete_accept_friend") {
+  //         dispatch(setUser(data.data));
+  //         toast.info(`${data.sender} đã từ chối lời mời kết bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_create_group") {
-          dispatch(createConversation(data.data));
-          toast.info(`${data.sender} đã tạo nhóm ${data.name} với bạn`);
-          return;
-        }
+  //       if (data.code === "receive_delete_friend") {
+  //         dispatch(setUser(data.data));
+  //         toast.info(`${data.sender} đã xóa bạn khỏi danh sách bạn bè`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_delete_conversation") {
-          dispatch(deleteConversation(data.data));
-          toast.info(`${data.sender} đã xoá cuộc hội thoại với bạn`);
-          return;
-        }
+  //       if (data.code === "receive_create_conversation") {
+  //         dispatch(createConversation(data.data));
+  //         toast.info(`${data.sender} đã tạo cuộc hội thoại với bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_delete_group") {
-          dispatch(deleteConversation(data.data));
-          toast.info(`${data.sender} đã giải tán nhóm ${data.name} với bạn`);
-          return;
-        }
+  //       if (data.code === "receive_create_group") {
+  //         dispatch(createConversation(data.data));
+  //         toast.info(`${data.sender} đã tạo nhóm ${data.name} với bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_remove_yourself") {
-          dispatch(removeUser(data.data));
-          toast.info(`${data.sender} đã rời khỏi nhóm ${data.name}`);
-          return;
-        }
+  //       if (data.code === "receive_delete_conversation") {
+  //         dispatch(deleteConversation(data.data));
+  //         toast.info(`${data.sender} đã xoá cuộc hội thoại với bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_assign_admin") {
-          dispatch(assignAdmin(data.data));
-          toast.info(
-            `Trưởng nhóm đã trao cho ${data.member} làm trưởng nhóm của nhóm ${data.name}`
-          );
-          return;
-        }
+  //       if (data.code === "receive_delete_group") {
+  //         dispatch(deleteConversation(data.data));
+  //         toast.info(`${data.sender} đã giải tán nhóm ${data.name} với bạn`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_remove_member") {
-          dispatch(removeUser(data.data));
-          toast.info(
-            `Trưởng nhóm đã xóa ${data.member} khỏi nhóm ${data.name}`
-          );
-        }
+  //       if (data.code === "receive_remove_yourself") {
+  //         dispatch(removeUser(data.data));
+  //         toast.info(`${data.sender} đã rời khỏi nhóm ${data.name}`);
+  //         return;
+  //       }
 
-        if (data.code === "receive_leave_group") {
-          dispatch(deleteConversation(data.data));
-          toast.info(`Trưởng nhóm đã xoá bạn khỏi nhóm ${data.name}`);
-        }
+  //       if (data.code === "receive_assign_admin") {
+  //         dispatch(assignAdmin(data.data));
+  //         toast.info(
+  //           `Trưởng nhóm đã trao cho ${data.member} làm trưởng nhóm của nhóm ${data.name}`
+  //         );
+  //         return;
+  //       }
 
-        if (data.code === "receive_add_member") {
-          dispatch(addUser(data.data));
-          toast.info(
-            `${data.sender} đã thêm ${data.member} vào nhóm ${data.name}`
-          );
-        }
+  //       if (data.code === "receive_remove_member") {
+  //         dispatch(removeUser(data.data));
+  //         toast.info(
+  //           `Trưởng nhóm đã xóa ${data.member} khỏi nhóm ${data.name}`
+  //         );
+  //       }
 
-        if (data.code === "receive_join_group") {
-          dispatch(createConversation(data.data));
-          toast.info(`${data.sender} đã mời bạn tham gia nhóm ${data.name}`);
-        }
-      });
-    }
+  //       if (data.code === "receive_leave_group") {
+  //         dispatch(deleteConversation(data.data));
+  //         toast.info(`Trưởng nhóm đã xoá bạn khỏi nhóm ${data.name}`);
+  //       }
 
-    return () => {
-      if (socket) {
-        socket.off(user?.id);
-      }
-    };
-  }, [socket]);
+  //       if (data.code === "receive_add_member") {
+  //         dispatch(addUser(data.data));
+  //         toast.info(
+  //           `${data.sender} đã thêm ${data.member} vào nhóm ${data.name}`
+  //         );
+  //       }
+
+  //       if (data.code === "receive_join_group") {
+  //         dispatch(createConversation(data.data));
+  //         toast.info(`${data.sender} đã mời bạn tham gia nhóm ${data.name}`);
+  //       }
+  //     });
+  //   }
+
+  //   return () => {
+  //     if (socket) {
+  //       socket.off(user?.id);
+  //     }
+  //   };
+  // }, [socket]);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -185,12 +195,20 @@ const Home = () => {
   };
 
   const handleLogout = async () => {
-    await UserAPI.logout();
-    dispatch(logout());
-    if (socket) {
-      socket.emit("logout", user.id);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error logging out:", error.message);
+        return;
+      }
+
+      setAuth(null);
+      dispatch(logout());
+      socket.emit("user-offline", user.id);
+      navigate("/");
+    } catch (error) {
+      console.error("Unexpected error during logout:", error);
     }
-    navigate("/");
   };
 
   return (
@@ -216,11 +234,12 @@ const Home = () => {
               >
                 <ListItemAvatar>
                   <Box>
-                    <Avatar
+                    {/* <Avatar
                       sx={{ margin: "0 auto" }}
                       alt="avatar"
-                      src={user?.avatarUrl}
-                    />
+                      src={user?.data?.avatar}
+                    /> */}
+                    {/* <MuiAvatar src={getUserImageSrc(uri)} /> */}
                   </Box>
                 </ListItemAvatar>
               </ListItem>

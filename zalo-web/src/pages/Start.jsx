@@ -14,12 +14,9 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import TokenAPI from "../api/TokenAPI";
-import UserAPI from "../api/UserAPI";
+// import TokenAPI from "../api/TokenAPI";
 import Login from "../components/Login";
-import Signup from "../components/Signup";
-import { login, signup } from "../redux/userSlice";
-import connectSocket from "../utils/socketConfig";
+import { supabase } from "../../lib/supabase";
 
 const style = {
   position: "absolute",
@@ -62,11 +59,11 @@ const a11yProps = (index) => {
 };
 
 const Start = () => {
+  console.log("Start");
   const [value, setValue] = useState(0);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [user, setUser] = useState({});
-  const socket = connectSocket();
 
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
@@ -75,154 +72,169 @@ const Start = () => {
   const [otp, setOtp] = useState("");
   const [key, setKey] = useState(0);
 
-  useEffect(() => {
-    if (TokenAPI.getAccessToken() && TokenAPI.getRefreshToken()) {
-      navigate("/home");
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (TokenAPI.getAccessToken() && TokenAPI.getRefreshToken()) {
+  //     navigate("/home");
+  //   }
+  // }, []);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
-  const handleLogin = async (phoneNumber, password) => {
-    if (phoneNumber.trim() === "") {
-      toast.error("Bạn chưa nhập số điện thoại!");
-      return;
-    }
-    if (phoneNumber.length !== 10) {
-      toast.error("Số điện thoại phải có 10 số!");
-      return;
-    }
-
-    if (password.trim() === "") {
-      toast.error("Bạn chưa nhập mật khẩu!");
-      return;
-    }
-
-    if (password.length < 10) {
-      toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
-      return;
-    }
-
-    const data = await UserAPI.login(phoneNumber, password);
-    if (data) {
-      socket.emit("login", data.user.id);
-      dispatch(login(data));
-
-      navigate("/home");
-    } else {
-      toast.error("Số điện thoại hoặc mật khẩu không đúng!");
-    }
-  };
-
-  const handleSignup = async (
-    fullName,
-    email,
-    phoneNumber,
-    password,
-    rePassword
-  ) => {
-    if (fullName.trim() === "") {
-      toast.error("Bạn chưa nhập họ và tên!");
-      return;
-    }
-
-    if (phoneNumber.trim() === "") {
-      toast.error("Bạn chưa nhập số điện thoại!");
-      return;
-    }
-
-    if (isNaN(phoneNumber)) {
-      toast.error("Số điện thoại không hợp lệ!");
-      return;
-    }
-
-    if (phoneNumber.length !== 10) {
-      toast.error("Số điện thoại phải có 10 số!");
-      return;
-    }
-
+  const handleLogin = async (email, password) => {
     if (email.trim() === "") {
       toast.error("Bạn chưa nhập email!");
       return;
     }
 
-    if (!email.includes("@gmail.com")) {
-      toast.error("Email không hợp lệ!");
-      return;
-    }
-
     if (password.trim() === "") {
       toast.error("Bạn chưa nhập mật khẩu!");
       return;
     }
 
-    if (password.length < 10) {
-      toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
-      return;
-    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (password !== rePassword) {
-      toast.error("Mật khẩu không khớp!");
-      return;
-    }
-
-    const data = await UserAPI.signup(email, phoneNumber);
-    if (data) {
-      setUser({ ...user, fullName, email, phoneNumber, password });
-      handleOpen();
-    } else {
-      toast.error("Số điện thoại hoặc email đã tồn tại!");
-    }
-  };
-
-  const handleSendOtp = async () => {
-    if (user.email === "" || user.phoneNumber === "") {
-      toast.error("Có lỗi xảy ra!");
-      return;
-    }
-
-    const data = await UserAPI.signup(user?.email, user?.phoneNumber);
-    if (data) {
-      setKey((prevKey) => prevKey + 1);
-      toast.success(
-        "Gửi lại mã OTP thành công! Vui lòng kiểm tra email của bạn!"
-      );
-    } else {
-      toast.error("Gửi mã OTP thất bại!");
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (
-      user.fullName === "" ||
-      user.email === "" ||
-      user.phoneNumber === "" ||
-      user.password === "" ||
-      otp === ""
-    ) {
-      toast.error("Có lỗi xảy ra!");
-      return;
-    }
-
-    const data = await UserAPI.verifyOtp(
-      user.fullName,
-      user.email,
-      user.phoneNumber,
-      user.password,
-      otp
-    );
-
-    if (data) {
-      handleClose();
-      socket.emit("login", data.user.id);
-      dispatch(signup(data));
+      if (error) {
+        alert("Error: " + error.message);
+        return;
+      }
       navigate("/home");
-    } else {
-      toast.error("Mã OTP không đúng!");
+
+      // Supabase trên Web tự động lưu session vào localStorage
+      console.log("User:", data.user);
+      console.log("Session:", data.session);
+    } catch (error) {
+      alert("Error: " + (error.message || "Login failed"));
     }
+
+    // if (password.length < 10) {
+    //   toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
+    //   return;
+    // }
+
+    // const data = await UserAPI.login(email, password);
+    // if (data) {
+    //   socket.emit("login", data.user.id);
+    //   dispatch(login(data));
+
+    
+    // } else {
+    //   toast.error("Số điện thoại hoặc mật khẩu không đúng!");
+    // }
   };
+
+  // const handleSignup = async (
+  //   fullName,
+  //   email,
+  //   phoneNumber,
+  //   password,
+  //   rePassword
+  // ) => {
+  //   if (fullName.trim() === "") {
+  //     toast.error("Bạn chưa nhập họ và tên!");
+  //     return;
+  //   }
+
+  //   if (phoneNumber.trim() === "") {
+  //     toast.error("Bạn chưa nhập số điện thoại!");
+  //     return;
+  //   }
+
+  //   if (isNaN(phoneNumber)) {
+  //     toast.error("Số điện thoại không hợp lệ!");
+  //     return;
+  //   }
+
+  //   if (phoneNumber.length !== 10) {
+  //     toast.error("Số điện thoại phải có 10 số!");
+  //     return;
+  //   }
+
+  //   if (email.trim() === "") {
+  //     toast.error("Bạn chưa nhập email!");
+  //     return;
+  //   }
+
+  //   if (!email.includes("@gmail.com")) {
+  //     toast.error("Email không hợp lệ!");
+  //     return;
+  //   }
+
+  //   if (password.trim() === "") {
+  //     toast.error("Bạn chưa nhập mật khẩu!");
+  //     return;
+  //   }
+
+  //   if (password.length < 10) {
+  //     toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
+  //     return;
+  //   }
+
+  //   if (password !== rePassword) {
+  //     toast.error("Mật khẩu không khớp!");
+  //     return;
+  //   }
+
+  //   const data = await UserAPI.signup(email, phoneNumber);
+  //   if (data) {
+  //     setUser({ ...user, fullName, email, phoneNumber, password });
+  //     handleOpen();
+  //   } else {
+  //     toast.error("Số điện thoại hoặc email đã tồn tại!");
+  //   }
+  // };
+
+  // const handleSendOtp = async () => {
+  //   if (user.email === "" || user.phoneNumber === "") {
+  //     toast.error("Có lỗi xảy ra!");
+  //     return;
+  //   }
+
+  //   const data = await UserAPI.signup(user?.email, user?.phoneNumber);
+  //   if (data) {
+  //     setKey((prevKey) => prevKey + 1);
+  //     toast.success(
+  //       "Gửi lại mã OTP thành công! Vui lòng kiểm tra email của bạn!"
+  //     );
+  //   } else {
+  //     toast.error("Gửi mã OTP thất bại!");
+  //   }
+  // };
+
+  // const handleVerifyOtp = async () => {
+  //   if (
+  //     user.fullName === "" ||
+  //     user.email === "" ||
+  //     user.phoneNumber === "" ||
+  //     user.password === "" ||
+  //     otp === ""
+  //   ) {
+  //     toast.error("Có lỗi xảy ra!");
+  //     return;
+  //   }
+
+  //   const data = await UserAPI.verifyOtp(
+  //     user.fullName,
+  //     user.email,
+  //     user.phoneNumber,
+  //     user.password,
+  //     otp
+  //   );
+
+  //   if (data) {
+  //     handleClose();
+  //     socket.emit("login", data.user.id);
+  //     dispatch(signup(data));
+  //     navigate("/home");
+  //   } else {
+  //     toast.error("Mã OTP không đúng!");
+  //   }
+  // };
 
   return (
     <Container maxWidth="xl">
@@ -236,9 +248,7 @@ const Start = () => {
         <Box
           component="div"
           sx={{ textAlign: "center", marginRight: "150px", marginTop: "100px" }}
-        >
-    
-        </Box>
+        ></Box>
         <Box sx={{ marginTop: "50px" }}>
           <Typography
             textAlign="center"
@@ -275,12 +285,12 @@ const Start = () => {
               <Login handleLogin={handleLogin} />
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
-              <Signup handleSignup={handleSignup} />
+              {/* <Signup handleSignup={handleSignup} /> */}
             </CustomTabPanel>
           </Box>
         </Box>
       </Box>
-      <Modal
+      {/* <Modal
         open={open}
         onClose={handleClose}
         aria-labelledby="modal-modal-title"
@@ -350,7 +360,7 @@ const Start = () => {
             Huỷ bỏ
           </Button>
         </Box>
-      </Modal>
+      </Modal> */}
       <ToastContainer />
     </Container>
   );
