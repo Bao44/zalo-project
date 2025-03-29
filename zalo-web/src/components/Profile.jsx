@@ -21,14 +21,7 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import { useState } from "react";
 import AvatarEditor from "react-avatar-editor";
 import { useDispatch, useSelector } from "react-redux";
-import UploadAPI from "../api/UploadAPI";
-import UserAPI from "../api/UserAPI";
-import { setUser } from "../redux/userSlice";
-import {
-  convertDateToDateObj,
-  convertToDate,
-  convertToDateTime,
-} from "../utils/handler";
+
 import ModalImage from "./ModalImage";
 
 const style = {

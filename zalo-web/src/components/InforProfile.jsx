@@ -18,11 +18,7 @@ import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import ConversationAPI from "../api/ConversationAPI";
-import UserAPI from "../api/UserAPI";
 import { setUser } from "../redux/userSlice";
-import { convertToDate } from "../utils/handler";
-import connectSocket from "../utils/socketConfig";
 import ModalImage from "./ModalImage";
 
 const style = {

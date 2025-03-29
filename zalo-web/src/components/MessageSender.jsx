@@ -5,7 +5,6 @@ import KeyboardReturnIcon from "@mui/icons-material/KeyboardReturn";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { Box, Button, Modal, Popover, Typography } from "@mui/material";
 import { useState } from "react";
-import { convertToTime } from "../utils/handler";
 
 const MessageSender = ({ message, handleRevokeMessage }) => {
   const { content, type, isRevoked, createdAt, likes, id } = message;

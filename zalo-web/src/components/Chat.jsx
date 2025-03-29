@@ -21,25 +21,20 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import MessageSender from "./MessageSender";
 import MessageReceiver from "./MessageReceiver";
-import MessageAPI from "../api/MessageAPI";
 // import { io } from "socket.io-client";
 import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DehazeIcon from "@mui/icons-material/Dehaze";
-import UploadAPI from "../api/UploadAPI";
 import InforProfile from "./InforProfile";
-import ConversationAPI from "../api/ConversationAPI";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import { deleteConversation, removeYourself } from "../redux/conversationSlice";
 import GroupsIcon from "@mui/icons-material/Groups";
 import AddMember from "./AddMember";
 import GroupMember from "./GroupMember";
 import { toast } from "react-toastify";
 import CircleIcon from "@mui/icons-material/Circle";
 import PersonIcon from "@mui/icons-material/Person";
-import connectSocket from "../utils/socketConfig";
 
 const TYPING_DELAY = 5000; // Adjust the delay as needed
 

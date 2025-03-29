@@ -1,12 +1,11 @@
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require("@supabase/supabase-js");
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANOKEY;
+const supabaseKey = process.env.SUPABASE_ROLE_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const authService = {
-
   async signUp(email, password, userData) {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -31,12 +30,15 @@ const authService = {
   },
 
   async getUserData(userId) {
+    console.log("Fetching user data from Supabase for userId:", userId);
     const { data, error } = await supabase
       .from("users")
       .select()
       .eq("id", userId)
-      .single();
+      // .single();
+      .maybeSingle();
 
+    console.log("Supabase user data:", data);
     if (error) throw error;
     return { data, error };
   },
@@ -48,17 +50,17 @@ const authService = {
       .eq("id", userId);
 
     if (error) throw error;
-    
+
     const { data: updatedData, error: fetchError } = await supabase
       .from("users")
       .select()
       .eq("id", userId)
       .single();
-      
+
     if (fetchError) throw fetchError;
-    
+
     return { data: updatedData, error: null };
-  }
+  },
 };
 
 module.exports = authService;

@@ -10,10 +10,7 @@ import {
 
 import CloseIcon from "@mui/icons-material/Close";
 import { useDispatch, useSelector } from "react-redux";
-import ConversationAPI from "../api/ConversationAPI";
-import { addUser } from "../redux/conversationSlice";
 import { toast } from "react-toastify";
-import connectSocket from "../utils/socketConfig";
 import { useEffect } from "react";
 
 const style = {

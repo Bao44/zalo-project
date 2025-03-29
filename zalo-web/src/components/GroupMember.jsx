@@ -11,14 +11,12 @@ import {
 
 import CloseIcon from "@mui/icons-material/Close";
 import { useDispatch, useSelector } from "react-redux";
-import { assignAdmin, removeUser } from "../redux/conversationSlice";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import connectSocket from "../utils/socketConfig";
 
 const style = {
   position: "absolute",

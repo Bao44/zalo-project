@@ -7,7 +7,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import MessageAPI from "../api/MessageAPI";
 
 const CardItemGroup = ({ conver, setConversation }) => {
   let { name, members, admin, type, id } = conver;

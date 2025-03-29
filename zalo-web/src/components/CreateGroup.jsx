@@ -18,7 +18,6 @@ import {
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { createConversation } from "../redux/conversationSlice";
 
 export default function CreateGroup({ socket }) {
   const { user } = useSelector((state) => state.user);

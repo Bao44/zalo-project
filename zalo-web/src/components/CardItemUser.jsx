@@ -7,7 +7,6 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import MessageAPI from "../api/MessageAPI";
 
 const CardItemUser = ({ conver, setConversation }) => {
   let { name, members, admin, type, id } = conver;

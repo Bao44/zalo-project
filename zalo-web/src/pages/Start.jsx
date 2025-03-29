@@ -10,11 +10,9 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-// import TokenAPI from "../api/TokenAPI";
 import Login from "../components/Login";
 import { supabase } from "../../lib/supabase";
 
@@ -61,9 +59,8 @@ const a11yProps = (index) => {
 const Start = () => {
   console.log("Start");
   const [value, setValue] = useState(0);
-  const dispatch = useDispatch();
+  
   const navigate = useNavigate();
-  const [user, setUser] = useState({});
 
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
@@ -71,12 +68,6 @@ const Start = () => {
 
   const [otp, setOtp] = useState("");
   const [key, setKey] = useState(0);
-
-  // useEffect(() => {
-  //   if (TokenAPI.getAccessToken() && TokenAPI.getRefreshToken()) {
-  //     navigate("/home");
-  //   }
-  // }, []);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -98,7 +89,8 @@ const Start = () => {
         email,
         password,
       });
-
+      console.log("Userxxx:", data.user);
+      console.log("Sessionxxx:", data.session);
       if (error) {
         alert("Error: " + error.message);
         return;
@@ -106,8 +98,7 @@ const Start = () => {
       navigate("/home");
 
       // Supabase trên Web tự động lưu session vào localStorage
-      console.log("User:", data.user);
-      console.log("Session:", data.session);
+
     } catch (error) {
       alert("Error: " + (error.message || "Login failed"));
     }

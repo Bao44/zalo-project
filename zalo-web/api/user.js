@@ -1,16 +1,16 @@
-import axios from 'axios';
-import { BACKEND_URL } from '../constants/ip';
+import axios from "axios";
+import { BACKEND_URL } from "../constants/ip";
 
 const api = axios.create({
   baseURL: BACKEND_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const signUp = async (email, password, name) => {
   try {
-    const response = await api.post('/api/auth/signup', {
+    const response = await api.post("/api/auth/signup", {
       email,
       password,
       name,
@@ -23,7 +23,7 @@ export const signUp = async (email, password, name) => {
 
 export const signIn = async (email, password) => {
   try {
-    const response = await api.post('/api/auth/signin', {
+    const response = await api.post("/api/auth/signin", {
       email,
       password,
     });
@@ -46,23 +46,12 @@ export const signIn = async (email, password) => {
 export const getUserData = async (userId) => {
   try {
     const response = await api.get(`/api/users/${userId}`);
-    // Kiểm tra định dạng của response.data
-    if (response.data && typeof response.data === "object" && !Array.isArray(response.data)) {
-      return { success: true, data: response.data };
-    }
-    if (Array.isArray(response.data)) {
-      if (response.data.length === 0) {
-        return { success: false, error: "User not found" };
-      }
-      return { success: true, data: response.data[0] }; // Lấy phần tử đầu tiên nếu là mảng
-    }
-    return { success: false, error: "Invalid response format" };
+    return response.data;
   } catch (error) {
-    console.error("Error fetching user data:", error);
-    if (error.response?.status === 404) {
-      return { success: false, error: "User not found" };
-    }
-    return { success: false, error: error.response?.data || error.message };
+    return { 
+      success: false, 
+      error: error.response?.data?.error || error.message || "Unknown error" 
+    };
   }
 };
 

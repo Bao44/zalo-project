@@ -13,14 +13,10 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Carousel } from "react-responsive-carousel";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
-import ConversationAPI from "../api/ConversationAPI";
-import AddFriend from "../components/AddFriend";
 import CardItemGroup from "../components/CardItemGroup";
 import CardItemUser from "../components/CardItemUser";
 import Chat from "../components/Chat";
 import CreateGroup from "../components/CreateGroup";
-import { getAllConversations } from "../redux/conversationSlice";
-import connectSocket from "../utils/socketConfig";
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -49,25 +45,11 @@ function a11yProps(index) {
 
 const Messager = () => {
   const [value, setValue] = useState(0);
-  const { conversations } = useSelector((state) => state.conversation);
   const [conversation, setConversation] = useState(null);
-  const dispatch = useDispatch();
-  const socket = connectSocket();
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await ConversationAPI.getAllConversationForUser();
-      if (data) {
-        dispatch(getAllConversations(data));
-      }
-    };
-
-    fetchData();
-  }, [dispatch]);
 
   return (
     <Grid container item xs={11.3}>
@@ -116,26 +98,7 @@ const Messager = () => {
             </Tabs>
           </Box>
           <CustomTabPanel value={value} index={0}>
-            {conversations &&
-              conversations.map((conver) => {
-                if (conver.type === "FRIEND") {
-                  return (
-                    <CardItemUser
-                      key={conver.id}
-                      conver={conver}
-                      setConversation={setConversation}
-                    />
-                  );
-                } else {
-                  return (
-                    <CardItemGroup
-                      key={conver.id}
-                      conver={conver}
-                      setConversation={setConversation}
-                    />
-                  );
-                }
-              })}
+            
           </CustomTabPanel>
           <CustomTabPanel value={value} index={1}>
             <Typography>Không có tin nhắn chưa đọc</Typography>
@@ -155,9 +118,9 @@ const Messager = () => {
       >
         {conversation ? (
           <Chat
-            conversation={conversation}
-            setConversation={setConversation}
-            socket={socket}
+            // conversation={conversation}
+            // setConversation={setConversation}
+            // socket={socket}
           />
         ) : (
           <Box sx={{ marginTop: "100px" }}>

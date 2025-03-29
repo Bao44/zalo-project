@@ -1,18 +1,23 @@
-import { Provider } from "react-redux";
-import { store } from "./redux/store";
 import "./App.css";
-import { BrowserRouter } from "react-router-dom";
-import Routes from "./routes/Routes";
 import { AuthProvider } from "../contexts/AuthContext";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Start from "./pages/Start";
+import Home from "./pages/Home";
+import { Provider } from "react-redux";
+import { store } from "./redux/store"; // Đảm bảo đường dẫn đúng
 
 function App() {
   return (
     <Provider store={store}>
-      <BrowserRouter>
+      <Router>
         <AuthProvider>
-          <Routes />
+          <Routes>
+            <Route path="/" element={<Start />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
         </AuthProvider>
-      </BrowserRouter>
+      </Router>
     </Provider>
   );
 }
