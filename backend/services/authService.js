@@ -30,15 +30,12 @@ const authService = {
   },
 
   async getUserData(userId) {
-    console.log("Fetching user data from Supabase for userId:", userId);
     const { data, error } = await supabase
       .from("users")
       .select()
       .eq("id", userId)
-      // .single();
-      .maybeSingle();
+      .single();
 
-    console.log("Supabase user data:", data);
     if (error) throw error;
     return { data, error };
   },
