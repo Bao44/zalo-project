@@ -336,7 +336,7 @@ const ChatDetailScreen = () => {
                         'text/html', // HTML (.html)
                         'application/json', // JSON (.json)
                         'application/xml', // XML (.xml)
-                        'text/xml', // XML (.xml)
+                        'text/xml', // XML (.xml
                     ],
                     multiple: true,
                 }
