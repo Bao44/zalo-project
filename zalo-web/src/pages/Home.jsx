@@ -26,6 +26,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { getUserData } from "../../api/user";
 import { logout, setUser } from "../redux/userSlice";
 import { supabaseUrl } from "../../constants";
+import { getUserImageSrc } from "../../api/image";
+import UserAvatar from "../components/Avatar";
 
 // const Messager = lazy(() => import("./Messager"));
 // const Contact = lazy(() => import("./Contact"));
@@ -42,7 +44,7 @@ const Home = () => {
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
 
-  console.log("userData", userData);
+  console.log("userData in home", userData);
 
   useEffect(() => {
     if (!user?.id) {
@@ -106,16 +108,7 @@ const Home = () => {
               <ListItem
                 sx={{ justifyContent: "center", padding: "30px 0 0 14px" }}
               >
-                {/* Hiển thị avatar của người dùng */}
-                <Avatar
-                  sx={{ margin: "0 auto", width: 56, height: 56 }}
-                  alt={userData?.name || "User"}
-                  src={
-                    userData?.avatar
-                      ? `${supabaseUrl}/storage/v1/object/public/${userData.avatar}`
-                      : ""
-                  }
-                />
+                <UserAvatar uri={userData?.avatar} />
               </ListItem>
               <ListItem
                 sx={{
@@ -161,7 +154,7 @@ const Home = () => {
                 >
                   <List>
                     <ListItem sx={{ padding: 0 }}>
-                      {/* <Profile /> */}
+                      <Profile userData={userData} />
                     </ListItem>
                     <ListItem sx={{ padding: 0 }}>
                       <ChangePassword />

@@ -23,6 +23,7 @@ import AvatarEditor from "react-avatar-editor";
 import { useDispatch, useSelector } from "react-redux";
 
 import ModalImage from "./ModalImage";
+import { useAuth } from "../../contexts/AuthContext";
 
 const style = {
   position: "absolute",
@@ -42,9 +43,10 @@ const style = {
   p: 0,
 };
 
-export default function Profile() {
+export default function Profile({ userData }) {
   const [openModal, setOpenModal] = useState(false);
-  const { user } = useSelector((state) => state.user);
+
+  console.log("userData in profile", userData);
 
   const handleOpenModal = () => {
     changeBody("default");
@@ -75,7 +77,7 @@ export default function Profile() {
           {/* Modal navigation */}
           {body === "default" && (
             <InfoBody
-              user={user}
+              userData={userData}
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
             />
@@ -149,7 +151,7 @@ function HeaderModal({ name, changeBody, back, handleCloseModal }) {
   );
 }
 
-function InfoBody({ changeBody, handleCloseModal, user }) {
+function InfoBody({ changeBody, handleCloseModal, userData }) {
   return (
     <>
       {/* Title */}
@@ -172,9 +174,9 @@ function InfoBody({ changeBody, handleCloseModal, user }) {
       </Box>
       {/* Avatar */}
       <AvatarHome
-        fullName={user?.fullName ? user.fullName : ""}
-        avatarUrl={user?.avatarUrl ? user.avatarUrl : ""}
-        coverImage={user?.coverImage ? user.coverImage : ""}
+        name={userData?.name ? userData.name : ""}
+        avatar={userData?.avatar ? userData.avatar : ""}
+        background={userData?.background ? userData.background : ""}
         changeBody={changeBody}
       />
       {/* line break */}
@@ -183,12 +185,12 @@ function InfoBody({ changeBody, handleCloseModal, user }) {
       </Box>
       {/* Thông tin cá nhân */}
       <Info
-        gender={user?.gender ? "Nam" : "Nữ"}
-        dateOfBirth={
-          user?.dateOfBirth ? user.dateOfBirth : new Date().getTime()
+        gender={userData?.gender == 0 ? "Nam" : "Nữ"}
+        dob={
+          userData?.dob ? userData.dob : new Date().getTime()
         }
-        email={user?.email ? user.email : ""}
-        phoneNumber={user?.phoneNumber ? user.phoneNumber : ""}
+        phoneNumber={userData?.phone ? userData.phone : ""}
+        email={userData?.email ? userData.email : ""}
       />
       {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
@@ -200,7 +202,7 @@ function InfoBody({ changeBody, handleCloseModal, user }) {
   );
 }
 
-function AvatarHome({ fullName, avatarUrl, coverImage, changeBody }) {
+function AvatarHome({ name, avatar, background, changeBody }) {
   return (
     <>
       <Box>
@@ -226,9 +228,9 @@ function AvatarHome({ fullName, avatarUrl, coverImage, changeBody }) {
           style={{ width: "100%" }}
         >
           <Box sx={{ width: "100%" }}>
-            {coverImage ? (
+            {background ? (
               <img
-                src={coverImage}
+                src={background}
                 alt="load"
                 style={{
                   width: "100%",
@@ -281,7 +283,7 @@ function AvatarHome({ fullName, avatarUrl, coverImage, changeBody }) {
         >
           <ModalImage
             isOpen={false}
-            srcs={avatarUrl}
+            src={avatar}
             alt="load"
             styleOrigin={{
               width: 90,
@@ -290,7 +292,7 @@ function AvatarHome({ fullName, avatarUrl, coverImage, changeBody }) {
             }}
           >
             <img
-              src={avatarUrl}
+              src={avatar}
               alt="load"
               style={{
                 width: "100%",
@@ -301,7 +303,7 @@ function AvatarHome({ fullName, avatarUrl, coverImage, changeBody }) {
           </ModalImage>
         </Badge>
         <Typography component="h2" fontWeight={"bold"}>
-          {fullName}
+          {name}
         </Typography>
         <IconButton
           sx={{ minWidth: 0, padding: 0 }}
@@ -385,12 +387,12 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
     const avatarUrl = await UploadAPI.uploadImage(formData);
     if (avatarUrl) {
       const newUser = {
-        fullName: user.fullName,
-        gender: user?.gender,
-        email: user?.email,
-        dateOfBirth: user?.dateOfBirth,
-        avatarUrl,
-        coverImage: user?.coverImage,
+        name: userData.name,
+        gender: userData?.gender,
+        email: userData?.email,
+        dateOfBirth: userData?.dateOfBirth,
+        avatar: userData.avatar,
+        coverImage: userData?.background,
       };
       const data = await UserAPI.updateMe(newUser);
       if (data) {
@@ -441,7 +443,7 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
               }}
             >
               <Avatar
-                src={user?.avatarUrl ? user.avatarUrl : ""}
+                src={userData?.avatar ? userData.avatar : ""}
                 alt="avatar"
                 style={{
                   width: 200,
@@ -596,12 +598,12 @@ function ImageUploader({ changeBody, handleCloseModal }) {
 
     if (imageUrl) {
       const newUser = {
-        fullName: user?.fullName,
-        gender: user?.gender,
-        email: user?.email,
-        dateOfBirth: user?.dateOfBirth,
-        avatarUrl: user?.avatarUrl,
-        coverImage: imageUrl,
+        name: userData?.name,
+        gender: userData?.gender,
+        email: userData?.email,
+        dateOfBirth: userData?.dateOfBirth,
+        avatar: userData?.avatar,
+        background: imageUrl,
       };
 
       const data = await UserAPI.updateMe(newUser);
@@ -653,9 +655,9 @@ function ImageUploader({ changeBody, handleCloseModal }) {
                 marginTop: "60px",
               }}
             >
-              {user?.coverImage && (
+              {userData?.background && (
                 <img
-                  src={user?.coverImage ? user.coverImage : ""}
+                  src={userData?.background ? userData.background : ""}
                   alt="image"
                   style={{
                     width: 360,
@@ -776,7 +778,7 @@ function ImageUploader({ changeBody, handleCloseModal }) {
   );
 }
 
-function Info({ gender, dateOfBirth, email, phoneNumber }) {
+function Info({ gender, dob, phoneNumber, email }) {
   return (
     <Box marginLeft={2}>
       <Typography fontWeight={"bold"} fontSize="16px" marginBottom="10px">
@@ -822,7 +824,7 @@ function Info({ gender, dateOfBirth, email, phoneNumber }) {
             {gender}
           </Typography>
           <Typography variant="body1" fontSize="14px" marginBottom="10px">
-            {convertToDate(dateOfBirth)}
+            {dob}
           </Typography>
           <Typography variant="body1" fontSize="14px" marginBottom="10px">
             {phoneNumber}
