@@ -23,8 +23,11 @@ const api = axios.create({
 // };
 export const getUserImageSrc = (imagePath) => {
   if (imagePath) {
+    console.log("imagePath", imagePath);
     if (typeof imagePath === "string") {
-      return `${supabaseUrl}/storage/v1/object/public/uploads/${imagePath}`; // Trả về string URL
+      return {
+        uri: `${supabaseUrl}/storage/v1/object/public/uploads/${imagePath}` // Trả về string URL
+      };
     }
     return imagePath; // Nếu imagePath đã là URL hoặc dạng khác
   }
