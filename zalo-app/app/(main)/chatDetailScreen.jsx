@@ -391,7 +391,7 @@ const ChatDetailScreen = () => {
                         {type === "private" && <TouchableOpacity><Icon name="phone" size={26} color="#FFF" /></TouchableOpacity>}
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
                         {type === "group" && <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>}
-                        <TouchableOpacity><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push("infoChat1vs1")}><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
                     </View>
                 </View>
 
