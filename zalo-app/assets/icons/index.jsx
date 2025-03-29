@@ -58,15 +58,12 @@ import Computer from "./Computer";
 import Emoji from "./emoji";
 import Sent from "./Sent";
 import Mail from "./Mail";
-<<<<<<< HEAD
 import Comment from "./Comment";
 import Heart from "./Heart";
-=======
 import Location from "./Location";
 import Attach from "./Attach";
 import Audio from "./Audio";
 import BussinessCard from "./BussinessCard";
->>>>>>> 65a4feb4e9957aebdaf66396eaa8008f9b14f162
 
 
 const icons = {
