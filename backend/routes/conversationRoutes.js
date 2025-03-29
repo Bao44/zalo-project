@@ -1,5 +1,5 @@
 const express = require("express");
-const { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup } = require("../controllers/conversationController");
+const { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup, deleteConversation1vs1 } = require("../controllers/conversationController");
 const router = express.Router();
 
 // API: Tạo cuộc trò chuyện 1-1
@@ -19,5 +19,8 @@ router.get("/get-conversation1vs1/:user_id/:friend_id", getConversation1vs1);
 
 // API: Lấy danh sách cuộc trò chuyện group
 router.get("/group/:userId", getConversationsGroup);
+
+// API: Xóa lịch sử trò chuyện của người dùng
+router.patch("/:conversationId/delete/:userId", deleteConversation1vs1);
 
 module.exports = router;

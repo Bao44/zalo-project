@@ -300,7 +300,7 @@ const NewGroup = () => {
                             return (
                                 <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                        <Avatar style={styles.avatar} uri={item.avatar} />
+                                        <Avatar style={styles.avatar} uri={item?.avatar} />
                                         <View>
                                             <Text style={styles.textName}>{item.name}</Text>
                                             <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{ }</Text>
@@ -335,7 +335,7 @@ const NewGroup = () => {
                         showsHorizontalScrollIndicator={false}
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => toggleSelection(item)}>
-                                <Avatar uri={item.avatar} style={styles.avatar} />
+                                <Avatar uri={item?.avatar} style={styles.avatar} />
                                 <View style={styles.cancel}>
                                     <Icon name="cancel" size={12} strokeWidth={2.6} color="white" />
                                 </View>

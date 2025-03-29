@@ -35,7 +35,17 @@ const MessageScreen = () => {
         try {
           const data = await getConversations(user?.id);
           if (data.success) {
-            setConversations(data.data)
+            const filteredConversations = data.data.filter((conversation) => {
+              const isMemberDeleted = conversation.delete_history.find((deleteHistory) => deleteHistory.userId === user?.id);
+              if (isMemberDeleted) {
+                const lastMessageTime = conversation.lastMessage?.createdAt || conversation.createdAt;
+                const lastDeleteTime = conversation.delete_history.find((deleteHistory) => deleteHistory.userId === user?.id)?.time_delete;
+                return lastMessageTime > lastDeleteTime;
+              } else {
+                return true;
+              }
+            });
+            setConversations(filteredConversations);
           } else {
             console.log("Không tìm thấy cuộc hội thoại nào!")
           }
@@ -102,7 +112,7 @@ const MessageScreen = () => {
               {(() => {
                 const otherMember = item.members.find((u) => u._id !== user?.id);
                 return (
-                  <Avatar uri={otherMember.avatar} style={styles.avatarConversation} />
+                  <Avatar uri={otherMember?.avatar} style={styles.avatarConversation} />
                 );
               })()}
               <View style={styles.boxContentButton}>
@@ -115,7 +125,11 @@ const MessageScreen = () => {
                   </Text>
                 </View>
                 <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
-                  {item?.lastMessage?.content || "No messages yet"}
+                  {item?.lastMessage?.content ? item?.lastMessage?.content : "" ||
+                    item?.lastMessage?.attachments.length > 0 ? "[Ảnh]" : "" ||
+                    item?.lastMessage?.media[0]?.fileName ? `[Media] ${item?.lastMessage?.media[0]?.fileName}` : "" ||
+                    item?.lastMessage?.files[0]?.fileName ? `[File] ${item?.lastMessage?.files[0]?.fileName}` : "" ||
+                    "No messages yet"}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -171,7 +185,7 @@ const MessageScreen = () => {
               ) : (
                 <Image
                   style={styles.avatarConversation}
-                  source={{ uri: item.avatar}}
+                  source={{ uri: item.avatar }}
                 />
               )}
               <View style={styles.boxContentButton}>

@@ -65,6 +65,9 @@ import Attach from "./Attach";
 import Audio from "./Audio";
 import BussinessCard from "./BussinessCard";
 import Star from "./Star";
+import CallIncoming from "./CallIncoming";
+import AlarmClock from "./AlarmClock";
+import Block from "./Block";
 
 
 const icons = {
@@ -132,7 +135,10 @@ const icons = {
   attach : Attach,
   audio : Audio,
   bussinessCard : BussinessCard,
-  star : Star
+  star : Star,
+  callInComing : CallIncoming,
+  alarmClock : AlarmClock,
+  block : Block
 };
 
 const Icon = ({ name, ...props }) => {

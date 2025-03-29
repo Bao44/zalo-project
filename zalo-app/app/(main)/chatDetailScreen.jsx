@@ -125,7 +125,12 @@ const ChatDetailScreen = () => {
                         setConversation(response.data);
                         const messagesResponse = await getMessages(response.data?._id);
                         if (messagesResponse.success) {
-                            setMessages(messagesResponse.data);
+                            const deleteHistory = response.data.delete_history.find((entry) => entry.userId === user?.id);
+                            if (deleteHistory) {
+                                setMessages(messagesResponse.data.filter((msg) => new Date(msg.createdAt) > new Date(response.data.delete_history.find((entry) => entry.userId === user?.id).time_delete)));
+                            } else {
+                                setMessages(messagesResponse.data);
+                            }
                         }
                     } else if (response.status === 404) {
                         setConversation(null);
@@ -366,7 +371,6 @@ const ChatDetailScreen = () => {
         handleSendMessage();
     }
 
-
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -391,7 +395,7 @@ const ChatDetailScreen = () => {
                         {type === "private" && <TouchableOpacity><Icon name="phone" size={26} color="#FFF" /></TouchableOpacity>}
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
                         {type === "group" && <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>}
-                        <TouchableOpacity onPress={() => router.push("infoChat1vs1")}><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push({ pathname: "/infoChat1vs1", params: { conversationId: conversation?._id, friend: JSON.stringify(parsedData) } })}><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
                     </View>
                 </View>
 
@@ -435,7 +439,7 @@ const ChatDetailScreen = () => {
                                                     {item.files.length > 0 && (
                                                         <ViewFile file={item.files[0]} />
                                                     )}
-                                                   {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
+                                                    {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
                                                     {
                                                         index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
                                                             :

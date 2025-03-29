@@ -92,7 +92,7 @@ const getUserConversations = async (req, res) => {
     // Tìm tất cả các cuộc trò chuyện có userId trong danh sách members
     const conversations = await Conversation.find({ members: userId })
       .populate("members", "name avatar")
-      .populate("lastMessage", "type content createdAt")
+      .populate("lastMessage", "type content createdAt attachments media files")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);
@@ -146,7 +146,7 @@ const getConversationsGroup = async (req, res) => {
       .populate("members", "name avatar")
       .populate("lastMessage", "type content createdAt")
       .sort({ updatedAt: -1 });
-      
+
     res.status(200).json(conversations);
   } catch (error) {
     console.error("Error fetching conversations:", error);
@@ -154,4 +154,66 @@ const getConversationsGroup = async (req, res) => {
   }
 }
 
-module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup };
+// 📌 Xóa cuộc trò chuyện 1 vs 1 (cập nhật lại delete_History)
+const deleteConversation1vs1 = async (req, res) => {
+  try {
+    const { userId, conversationId } = req.params;
+    const time_delete = new Date();
+
+    // Tìm conversation trước để kiểm tra
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Kiểm tra xem userId đã có trong delete_history chưa
+    const existingDeleteEntry = conversation.delete_history.find(
+      entry => entry.userId.toString() === userId
+    );
+
+    let updatedConversation;
+    if (existingDeleteEntry) {
+      // Nếu đã có, chỉ cập nhật time_delete
+      updatedConversation = await Conversation.findByIdAndUpdate(
+        conversationId,
+        {
+          $set: {
+            "delete_history.$[elem].time_delete": time_delete
+          }
+        },
+        {
+          arrayFilters: [{ "elem.userId": userId }],
+          new: true
+        }
+      )
+        .populate("members", "name avatar")
+        .populate("lastMessage", "type content createdAt")
+        .sort({ updatedAt: -1 });
+    } else {
+      // Nếu chưa có, thêm mới vào delete_history
+      updatedConversation = await Conversation.findByIdAndUpdate(
+        conversationId,
+        {
+          $addToSet: {
+            delete_history: {
+              userId: userId,
+              time_delete: time_delete,
+            },
+          },
+        },
+        { new: true }
+      )
+        .populate("members", "name avatar")
+        .populate("lastMessage", "type content createdAt")
+        .sort({ updatedAt: -1 });
+    }
+
+    res.status(200).json(updatedConversation);
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup, deleteConversation1vs1 };
