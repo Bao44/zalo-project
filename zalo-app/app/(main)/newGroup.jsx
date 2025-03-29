@@ -155,6 +155,7 @@ const NewGroup = () => {
                         { text: "OK" }
                     ]
                 );
+                return;
             }
 
             //Kiểm tra tên nhóm
@@ -270,7 +271,7 @@ const NewGroup = () => {
                             return (
                                 <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                        <Avatar uri={item.avatar} style={styles.avatar} />
+                                        <Avatar uri={item.members.filter((u) => u._id !== user?.id)[0]?.avatar} style={styles.avatar} />
                                         <View>
                                             <Text style={styles.textName}>{item.members.filter((u) => u._id !== user?.id)[0]?.name}</Text>
                                             <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{formatTime(item.lastMessage.createdAt)}</Text>

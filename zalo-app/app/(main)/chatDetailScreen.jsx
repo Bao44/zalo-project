@@ -17,6 +17,9 @@ import RadioButton from "../../components/RadioButton";
 import * as FileSystem from "expo-file-system";
 import RenderImageMessage from "../../components/RenderImageMessage";
 import * as MediaLibrary from "expo-media-library";
+import * as DocumentPicker from 'expo-document-picker';
+import wordImage from "../../assets/images/iconFiles/6296672_microsoft_office_office365_powerpoint_icon.png"
+import ViewFile from "../../components/ViewFile";
 
 const ChatDetailScreen = () => {
     const { user } = useAuth();
@@ -33,6 +36,7 @@ const ChatDetailScreen = () => {
     const [stempId, setStempId] = useState("");
     const [option, setOption] = useState("emoji");
 
+    // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
         const getPhotos = async () => {
             // Kiểm tra quyền
@@ -68,6 +72,7 @@ const ChatDetailScreen = () => {
         getPhotos();
     }, []);
 
+    // NÉN ẢNH TRƯỚC KHI GỬI
     const compressImage = async (uri) => {
         const manipulatedImage = await ImageManipulator.manipulateAsync(
             uri,
@@ -77,9 +82,10 @@ const ChatDetailScreen = () => {
         return manipulatedImage.uri;
     };
 
+    // PARSE DATA
     const parsedData = typeof data === "string" ? JSON.parse(data) : data;
 
-    // Tham gia room và lắng nghe tin nhắn mới
+    // JOIN ROOM
     useEffect(() => {
         if (conversation?._id) {
             socket.emit("join", conversation._id); // Tham gia room dựa trên conversationId
@@ -108,7 +114,7 @@ const ChatDetailScreen = () => {
         };
     }, [conversation?._id]);
 
-    // Lấy conversation và tin nhắn ban đầu
+    // LẤY CUỘC TRÒ CHUYỆN
     useEffect(() => {
         const fetchConversation = async () => {
             try {
@@ -146,7 +152,7 @@ const ChatDetailScreen = () => {
         fetchConversation();
     }, [user?.id, parsedData?._id]);
 
-    // Gửi tin nhắn
+    // GỬI TIN NHẮN
     const handleSendMessage = async () => {
         if (!message && attachments.length === 0 && media.length === 0 && files.length === 0) {
             return;
@@ -239,13 +245,14 @@ const ChatDetailScreen = () => {
         }
     };
 
+    // FORMAT THỜI GIAN
     const formatTime = (timestamp) => {
         const date = timestamp && new Date(timestamp);
         return date ? `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}` : "";
     };
 
 
-    // Chức năng chọn ảnh
+    // CHỌN ẢNH
     const selectImage = (uri) => {
         if (attachments.includes(uri)) {
             setAttachments((prev) => prev.filter((img) => img.id !== uri.id));
@@ -254,7 +261,7 @@ const ChatDetailScreen = () => {
         }
     };
 
-    // Đóng / mở thư viện ảnh
+    // ẨN BÀN PHÍM KHI MỞ THƯ VIỆN ẢNH
     useEffect(() => {
         const keyboardDidShowListener = Keyboard.addListener("keyboardDidShow", () => {
             if (showGallery) {
@@ -268,6 +275,8 @@ const ChatDetailScreen = () => {
         };
     }, [showGallery]);
 
+
+    // MỞ CHỨC NĂNG MƠ RỘNG
     const toggleGallery = (ot) => {
         setOption(ot);
         if (option === "" || ot === option) {
@@ -283,6 +292,80 @@ const ChatDetailScreen = () => {
             Keyboard.dismiss();
         }
     };
+
+    // LẤY TÀI LIỆU TỪ MÁY
+    const handlePickFile = async () => {
+        try {
+            // Check permissions (optional, as Expo handles this implicitly on Android)
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert(
+                    'Quyền truy cập tài liệu',
+                    'Vui lòng cấp quyền truy cập tài liệu để chọn tài liệu.'
+                );
+                return;
+            } else {
+                console.log('Permission granted');
+            }
+
+            const result = await DocumentPicker.getDocumentAsync(
+                {
+                    type: [
+                        'application/pdf', // PDF
+                        'application/msword', // Word (.doc)
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word (.docx)
+                        'application/vnd.ms-excel', // Excel (.xls)
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel (.xlsx)
+                        'application/vnd.ms-project', // Microsoft Project (.mpp)
+                        'text/plain', // File văn bản (.txt)
+                        'application/vnd.ms-powerpoint', // PowerPoint (.ppt)
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PowerPoint (.pptx)
+                        'application/vnd.ms-outlook', // Outlook (.msg)
+                        'application/rtf', // Rich Text Format (.rtf)
+                        'application/vnd.oasis.opendocument.text', // Open Document Text (.odt)
+                        'application/vnd.oasis.opendocument.spreadsheet', // Open Document Spreadsheet (.ods)
+                        'application/vnd.oasis.opendocument.presentation', // Open Document Presentation (.odp)
+                        'application/zip', // ZIP (.zip)
+                        'application/x-rar-compressed', // RAR (.rar)
+                        'application/vnd.rar', // RAR (.rar)
+                        'text/plain', // File văn bản (.txt)
+                        'text/comma-separated-values', // CSV (.csv)
+                        'application/vnd.android.package-archive', // APK (.apk)
+                        'java/*', // Java (.java)
+                        'text/css', // CSS (.css)
+                        'text/html', // HTML (.html)
+                        'application/json', // JSON (.json)
+                        'application/xml', // XML (.xml)
+                        'text/xml', // XML (.xml)
+                    ],
+                    multiple: true,
+                }
+            );
+            if (!result.canceled) {
+                result.assets.map(async (file) => {
+                    const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
+                        encoding: FileSystem.EncodingType.Base64,
+                    });
+                    setFiles((prev) => [...prev, { uri: fileBase64, name: file.name, type: file.mimeType }]);
+                }
+                );
+            } else {
+                console.log("Cancel");
+            }
+        } catch (error) {
+            console.error('Error in handlePickFile:', error);
+            Alert.alert(
+                'Lỗi',
+                'Không thể chọn tài liệu từ máy: ' + (error.message || 'Lỗi không xác định')
+            );
+        }
+    };
+
+    // 
+    if (files.length > 0 && message === "" && attachments.length === 0 && media.length === 0) {
+        handleSendMessage();
+    }
+
 
     return (
         <ScreenWrapper>
@@ -332,7 +415,10 @@ const ChatDetailScreen = () => {
                                                     {item.attachments.length > 0 && (
                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
-                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    {item.files.length > 0 && (
+                                                        <ViewFile file={item.files[0]} />
+                                                    )}
+                                                    {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
                                                     {
                                                         index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
                                                             :
@@ -346,7 +432,10 @@ const ChatDetailScreen = () => {
                                                     {item.attachments.length > 0 && (
                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
-                                                    <Text style={styles.textMessage}>{item.content}</Text>
+                                                    {item.files.length > 0 && (
+                                                        <ViewFile file={item.files[0]} />
+                                                    )}
+                                                   {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
                                                     {
                                                         index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
                                                             :
@@ -364,7 +453,10 @@ const ChatDetailScreen = () => {
                                                         {item.attachments.length > 0 && (
                                                             <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                         )}
-                                                        <Text style={styles.textMessage}>{item.content}</Text>
+                                                        {item.files.length > 0 && (
+                                                            <ViewFile file={item.files[0]} />
+                                                        )}
+                                                        {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
                                                         <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
                                                     </View>
                                                 </View>
@@ -379,7 +471,10 @@ const ChatDetailScreen = () => {
                                                             {item.attachments.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
-                                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                                            {item.files.length > 0 && (
+                                                                <ViewFile file={item.files[0]} />
+                                                            )}
+                                                            {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
                                                             {(index === messages.length - 1) ?
                                                                 ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
                                                                 :
@@ -399,7 +494,10 @@ const ChatDetailScreen = () => {
                                                             {item.attachments.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
-                                                            <Text style={styles.textMessage}>{item.content}</Text>
+                                                            {item.files.length > 0 && (
+                                                                <ViewFile file={item.files[0]} />
+                                                            )}
+                                                            {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
                                                             {(index === messages.length - 1) ?
                                                                 ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
                                                                 :
@@ -430,7 +528,7 @@ const ChatDetailScreen = () => {
                         </View>
                         {message === "" && attachments.length === 0 ? (
                             <View style={styles.boxFeatureSendMessage}>
-                                <TouchableOpacity><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
+                                <TouchableOpacity onPress={() => toggleGallery("extend")}><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
                                 <TouchableOpacity onPress={() => toggleGallery("")}><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
                                 <TouchableOpacity onPress={() => toggleGallery("image")}><Icon name="imageFile" size={26} color="gray" /></TouchableOpacity>
                             </View>
@@ -445,23 +543,60 @@ const ChatDetailScreen = () => {
                     {showGallery && (
                         <View style={styles.galleryContainer}>
                             {option === "emoji" ?
-                                (<Text>Emoji</Text>)
+                                (<Image source={{ uri: wordImage.src }} style={{ width: 20, height: 20 }} />)
                                 :
-                                (
-                                    <FlatList
-                                        data={photos}
-                                        numColumns={3}
-                                        keyExtractor={(item) => item.uri}
-                                        renderItem={({ item }) => (
-                                            <TouchableOpacity onPress={() => selectImage(item)} style={{ position: "relative" }}>
-                                                <View style={{ position: "absolute", top: 7, right: 7, zIndex: 50 }}>
-                                                    <RadioButton isSelect={attachments.includes(item)} size={20} color={theme.colors.primary} onPress={() => selectImage(item)} />
+                                option === "image" ?
+                                    (
+                                        <FlatList
+                                            data={photos}
+                                            numColumns={3}
+                                            keyExtractor={(item) => item.uri}
+                                            renderItem={({ item }) => (
+                                                <TouchableOpacity onPress={() => selectImage(item)} style={{ position: "relative" }}>
+                                                    <View style={{ position: "absolute", top: 7, right: 7, zIndex: 50 }}>
+                                                        <RadioButton isSelect={attachments.includes(item)} size={20} color={theme.colors.primary} onPress={() => selectImage(item)} />
+                                                    </View>
+                                                    <Image source={{ uri: item.uri }} style={styles.galleryImage} />
+                                                </TouchableOpacity>
+                                            )}
+                                        />
+                                    )
+                                    :
+                                    option === "extend" ?
+                                        (
+                                            <View style={{ flexDirection: "row", justifyContent: "space-around", height: "100%" }}>
+                                                <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", width: "100%", height: "30%", paddingHorizontal: 20 }}>
+                                                    <TouchableOpacity style={styles.buttonExtend}>
+                                                        <View style={[styles.boxIcon, { backgroundColor: "#FFC107" }]}>
+                                                            <Icon name="location" size={26} color="#fff" />
+                                                        </View>
+                                                        <Text>Vị trí</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity style={styles.buttonExtend} onPress={handlePickFile}>
+                                                        <View style={[styles.boxIcon, { backgroundColor: "#FF5722" }]}>
+                                                            <Icon name="attach" size={26} color="#fff" />
+                                                        </View>
+                                                        <Text>Tài liệu</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity style={styles.buttonExtend}>
+                                                        <View style={[styles.boxIcon, { backgroundColor: "#4CAF50" }]}>
+                                                            <Icon name="audio" size={26} color="#fff" />
+                                                        </View>
+                                                        <Text>Audio</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity style={styles.buttonExtend}>
+                                                        <View style={[styles.boxIcon, { backgroundColor: "#2196F3" }]}>
+                                                            <Icon name="bussinessCard" size={26} color="#fff" />
+                                                        </View>
+                                                        <Text>Danh thiếp</Text>
+                                                    </TouchableOpacity>
                                                 </View>
-                                                <Image source={{ uri: item.uri }} style={styles.galleryImage} />
-                                            </TouchableOpacity>
-                                        )}
-                                    />
-                                )
+                                            </View>
+                                        )
+                                        :
+                                        (
+                                            <Text>Audio</Text>
+                                        )
                             }
                         </View>
                     )}
@@ -623,4 +758,19 @@ const styles = StyleSheet.create({
         top: 5,
         right: 5,
     },
+
+    //
+    boxIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 30,
+        alignItems: "center",
+        justifyContent: "center"
+    },
+    buttonExtend: {
+        alignItems: "center",
+        justifyContent: "space-evenly",
+        width: "20%",
+        height: "100%",
+    }
 });

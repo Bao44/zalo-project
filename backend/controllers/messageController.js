@@ -29,8 +29,6 @@ const messageController = {
             }
 
             let images = [];
-
-            // Upload ảnh TRƯỚC khi lưu tin nhắn
             if (attachments && attachments.length > 0) {
                 const uploadPromises = attachments.map(async (attachment) => {
                     if (!attachment.fileUri) throw new Error("Thiếu dữ liệu fileBase64");
@@ -47,34 +45,88 @@ const messageController = {
                 images = await Promise.all(uploadPromises);
             }
 
-            // Tạo tin nhắn sau khi upload xong
-            const newMessage = new Message({
-                conversationId: conversation._id,
-                senderId,
-                content: content || "",
-                attachments: images, // Ảnh đã có đầy đủ trước khi lưu
-                media: media || [],
-                files: files || [],
-                replyTo: replyTo || null,
-                status: "sent", // Không còn "uploading"
-            });
-
-            const savedMessage = await newMessage.save();
-
-            // Cập nhật tin nhắn cuối cùng trong conversation
-            conversation.lastMessage = savedMessage._id;
-            await conversation.save();
-
-            // Populate dữ liệu tin nhắn
-            const populatedMessage = await Message.findById(savedMessage._id)
-                .populate("senderId", "name avatar")
-                .populate("replyTo", "content senderId");
-
-            // Gửi tin nhắn real-time (không bị thiếu ảnh)
+            // Tạo tin nhắn cho nội dung văn bản hoặc ảnh (nếu có)
+            let savedMessages = [];
             const io = getSocketInstance();
-            io.to(conversation._id.toString()).emit("newMessage", populatedMessage, idTemp);
 
-            // Populate conversation và gửi cập nhật đến user trong conversation
+            if (content || images.length > 0) {
+                const newMessage = new Message({
+                    conversationId: conversation._id,
+                    senderId,
+                    content: content || "",
+                    attachments: images,
+                    media: media || [],
+                    files: [],
+                    replyTo: replyTo || null,
+                    status: "sent",
+                });
+
+                const savedMessage = await newMessage.save();
+                savedMessages.push(savedMessage);
+
+                // Populate và gửi tin nhắn real-time
+                const populatedMessage = await Message.findById(savedMessage._id)
+                    .populate("senderId", "name avatar")
+                    .populate("replyTo", "content senderId");
+                io.to(conversation._id.toString()).emit("newMessage", populatedMessage, idTemp);
+            }
+
+            // Upload và tạo tin nhắn riêng cho từng file
+            if (files && files.length > 0) {
+                const uploadPromises = files.map(async (file) => {
+                    if (!file.uri) {
+                        throw new Error(`Thiếu dữ liệu base64 cho file: ${file.name}`);
+                    }
+
+                    const mimeType = file.type || 'application/octet-stream';
+                    const dataUri = `data:${mimeType};base64,${file.uri}`;
+
+                    const result = await cloudinary.uploader.upload(dataUri, {
+                        folder: "files",
+                        resource_type: "auto",
+                        public_id: file.name,
+                    });
+
+                    const fileData = {
+                        fileName: file.name,
+                        fileType: file.type,
+                        fileUrl: result.secure_url,
+                    };
+
+                    // Tạo tin nhắn riêng cho file này
+                    const fileMessage = new Message({
+                        conversationId: conversation._id,
+                        senderId,
+                        content: "",
+                        attachments: [],
+                        media: [],
+                        files: [fileData],
+                        replyTo: replyTo || null,
+                        status: "sent",
+                    });
+
+                    const savedFileMessage = await fileMessage.save();
+                    const populatedFileMessage = await Message.findById(savedFileMessage._id)
+                        .populate("senderId", "name avatar")
+                        .populate("replyTo", "content senderId");
+
+                    // Gửi tin nhắn real-time cho file
+                    io.to(conversation._id.toString()).emit("newMessage", populatedFileMessage, idTemp);
+
+                    return savedFileMessage;
+                });
+
+                const fileMessages = await Promise.all(uploadPromises);
+                savedMessages = savedMessages.concat(fileMessages);
+            }
+
+            // Cập nhật lastMessage cho conversation
+            if (savedMessages.length > 0) {
+                conversation.lastMessage = savedMessages[savedMessages.length - 1]._id;
+                await conversation.save();
+            }
+
+            // Populate conversation và gửi cập nhật
             const conversationUpdate = await Conversation.findById(conversation._id)
                 .populate("members", "name avatar")
                 .populate("lastMessage", "type content createdAt");
@@ -86,7 +138,12 @@ const messageController = {
                 }
             });
 
-            res.status(201).json(populatedMessage);
+            // Trả về tin nhắn cuối cùng hoặc danh sách tin nhắn (tùy yêu cầu)
+            const lastPopulatedMessage = await Message.findById(savedMessages[savedMessages.length - 1]._id)
+                .populate("senderId", "name avatar")
+                .populate("replyTo", "content senderId");
+
+            res.status(201).json(lastPopulatedMessage);
         } catch (error) {
             console.error("Error sending message:", error);
             res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
