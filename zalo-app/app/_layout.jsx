@@ -1,73 +1,11 @@
-// import { View, Text, LogBox } from "react-native";
-// import React, { useEffect } from "react";
-// import { Stack, useRouter } from "expo-router";
-// import { AuthProvider, useAuth } from "../contexts/AuthContext";
-// import { supabase } from "../lib/supabase";
-// import { getUserData } from "../api/user";
-
-// LogBox.ignoreLogs([
-//   "Warning: TNodeChildrenRenderer",
-//   "Warning: MemoizedTNodeRenderer",
-//   "Warning: TRenderEngineProvider",
-// ]);
-// const _layout = () => {
-//   return (
-//     <AuthProvider>
-//       <MainLayout />
-//     </AuthProvider>
-//   );
-// };
-
-// const MainLayout = () => {
-//   const { setAuth, setUserData } = useAuth();
-//   const router = useRouter();
-
-//   useEffect(() => {
-//     // const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-//     const authListener = supabase.auth.onAuthStateChange((_event, session) => {
-//       console.log("Session:", session);
-//       if (session) {
-//         setAuth(session?.user);
-//         updateUserData(session?.user, session?.user?.email);
-//         router.replace("/home");
-//       } else {
-//         setAuth(null);
-//         router.replace("/welcome");
-//       }
-//     });
-
-//     console.log("authListener:", authListener);
-
-//     // Cleanup listener khi component unmount
-//     return () => {
-//       // authListener?.unsubscribe();
-//       authListener?.data?.subscription?.unsubscribe();
-//     };
-//   }, []);
-
-//   const updateUserData = async (user, email) => {
-//     let res = await getUserData(user?.id);
-//     if (res.success) setUserData({ ...res.data, email });
-//   };
-
-//   return (
-//     <Stack
-//       screenOptions={{
-//         headerShown: false,
-//       }}
-//     ></Stack>
-//   );
-// };
-
-// export default _layout;
-
-import { View, Text, LogBox } from "react-native";
+import { LogBox, Alert } from "react-native";
 import React, { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { getUserData } from "../api/user";
 import * as Linking from "expo-linking";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 LogBox.ignoreLogs([
   "Warning: TNodeChildrenRenderer",
@@ -108,7 +46,6 @@ const MainLayout = () => {
       const fragmentParams = parseFragment(event.url);
 
       // Xử lý deep link cho exp://
-      // Chỉ kiểm tra path, bỏ qua hostname vì có thể là null
       const isChangePasswordPath =
         path === "changePassword" || path === "--/changePassword";
 
@@ -160,15 +97,53 @@ const MainLayout = () => {
     return () => Linking.removeEventListener("url", handleDeepLink);
   }, [router]);
 
-  // Xử lý trạng thái auth
+  // Xử lý trạng thái auth và kiểm tra last_login_at
   useEffect(() => {
-    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         setAuth(session?.user);
+
+        // Lưu last_login_at khi đăng nhập
+        const lastLoginAt = session.user.last_sign_in_at;
+        console.log("Last login at:", lastLoginAt);
+        await AsyncStorage.setItem("lastLoginAt", lastLoginAt);
+
+        // Kiểm tra định kỳ last_login_at
+        const interval = setInterval(async () => {
+          const { data: userData, error } = await supabase.auth.getUser();
+          if (error || !userData?.user) {
+            console.log("Lỗi khi kiểm tra user:", error);
+            return;
+          }
+
+          const storedLastLoginAt = await AsyncStorage.getItem("lastLoginAt");
+          if (userData.user.last_sign_in_at !== storedLastLoginAt) {
+            // Có đăng nhập mới từ thiết bị khác
+            Alert.alert(
+              "Cảnh báo",
+              "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác. Bạn sẽ bị đăng xuất!",
+              [
+                {
+                  text: "OK",
+                  onPress: async () => {
+                    await supabase.auth.signOut();
+                    await AsyncStorage.removeItem("lastLoginAt");
+                    router.replace("/welcome");
+                  },
+                },
+              ]
+            );
+            clearInterval(interval);
+          }
+        }, 10000); // Kiểm tra mỗi 10 giây
+
         updateUserData(session?.user, session?.user?.email);
         router.replace("/home");
+
+        return () => clearInterval(interval);
       } else {
         setAuth(null);
+        await AsyncStorage.removeItem("lastLoginAt");
         router.replace("/welcome");
       }
     });
@@ -176,7 +151,7 @@ const MainLayout = () => {
     return () => {
       authListener?.data?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const updateUserData = async (user, email) => {
     let res = await getUserData(user?.id);
