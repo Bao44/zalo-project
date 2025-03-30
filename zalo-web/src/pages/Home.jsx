@@ -8,10 +8,8 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemIcon,
   Popover,
   Typography,
-  Avatar,
 } from "@mui/material";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -25,8 +23,6 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserData } from "../../api/user";
 import { logout, setUser } from "../redux/userSlice";
-import { supabaseUrl } from "../../constants";
-import { getUserImageSrc } from "../../api/image";
 import UserAvatar from "../components/Avatar";
 
 // const Messager = lazy(() => import("./Messager"));
@@ -41,10 +37,12 @@ const Home = () => {
   const [showMess, setShowMess] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
 
   console.log("userData in home", userData);
+  console.log("user in home", user);
 
   useEffect(() => {
     if (!user?.id) {
@@ -69,15 +67,55 @@ const Home = () => {
     };
 
     fetchUserData();
-  }, [user?.id, dispatch, navigate]);
 
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
+    // Lấy last_sign_in_at ban đầu ngay sau khi vào Home
+    const initializeLastLoginAt = async () => {
+      const { data: userData, error } = await supabase.auth.getUser();
+      if (error || !userData?.user) {
+        console.log("Lỗi khi lấy user ban đầu:", error);
+        return;
+      }
 
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+      const currentLastLoginAt = userData.user.last_sign_in_at;
+      localStorage.setItem("lastLoginAt", currentLastLoginAt); // Cập nhật giá trị lastLoginAt mới nhất
+      setInitialCheckDone(true); // Đánh dấu lần kiểm tra đầu tiên đã hoàn tất
+    };
+
+    initializeLastLoginAt();
+
+    // Kiểm tra định kỳ last_sign_in_at
+    const interval = setInterval(async () => {
+      if (!initialCheckDone) return; // Bỏ qua kiểm tra nếu lần kiểm tra đầu tiên chưa hoàn tất
+
+      try {
+        const { data: userData, error } = await supabase.auth.getUser();
+        if (error || !userData?.user) {
+          console.log("Lỗi khi kiểm tra user:", error);
+          return;
+        }
+
+        const storedLastLoginAt = localStorage.getItem("lastLoginAt");
+        console.log("storedLastLoginAt", storedLastLoginAt);
+        if (userData.user.last_sign_in_at !== storedLastLoginAt) {
+          console.log("Có đăng nhập mới từ thiết bị khác");
+          // Có đăng nhập mới từ thiết bị khác
+          toast.warn(
+            "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác!"
+          );
+          await supabase.auth.signOut();
+          localStorage.removeItem("lastLoginAt");
+          dispatch(logout());
+          setAuth(null);
+          navigate("/");
+          clearInterval(interval);
+        }
+      } catch (error) {
+        console.log("Lỗi trong quá trình kiểm tra:", error);
+      }
+    }, 10000); // Kiểm tra mỗi 10 giây
+
+    return () => clearInterval(interval); // Dọn dẹp interval khi component unmount
+  }, [user?.id, dispatch, navigate, setAuth, initialCheckDone]);
 
   const handleLogout = async () => {
     try {
@@ -86,10 +124,19 @@ const Home = () => {
 
       dispatch(logout());
       setAuth(null);
+      localStorage.removeItem("lastLoginAt");
       navigate("/");
     } catch (error) {
       toast.error("Lỗi khi đăng xuất: " + error.message);
     }
+  };
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
   return (
