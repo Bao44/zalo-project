@@ -29,8 +29,8 @@ import { supabaseUrl } from "../../constants";
 import { getUserImageSrc } from "../../api/image";
 import UserAvatar from "../components/Avatar";
 
-// const Messager = lazy(() => import("./Messager"));
-// const Contact = lazy(() => import("./Contact"));
+const Messager = lazy(() => import("./Messager"));
+const Contact = lazy(() => import("./Contact"));
 
 const Home = () => {
   const navigate = useNavigate();
@@ -172,7 +172,9 @@ const Home = () => {
               </ListItem>
             </List>
           </Grid>
-          {/* {isLoading ? <Loading /> : showMess ? <Messager /> : <Contact />}  */}
+          <Grid item xs={11.3}>
+            {isLoading ? <Loading /> : showMess ? <Messager /> : <Contact />}
+          </Grid>
         </Grid>
       </Box>
       <ToastContainer />

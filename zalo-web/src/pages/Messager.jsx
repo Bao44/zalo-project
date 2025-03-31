@@ -17,6 +17,8 @@ import CardItemGroup from "../components/CardItemGroup";
 import CardItemUser from "../components/CardItemUser";
 import Chat from "../components/Chat";
 import CreateGroup from "../components/CreateGroup";
+import AddFriend from "../components/AddFriend";
+import socket from "../../socket/socket";
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -97,9 +99,7 @@ const Messager = () => {
               />
             </Tabs>
           </Box>
-          <CustomTabPanel value={value} index={0}>
-            
-          </CustomTabPanel>
+          <CustomTabPanel value={value} index={0}></CustomTabPanel>
           <CustomTabPanel value={value} index={1}>
             <Typography>Không có tin nhắn chưa đọc</Typography>
           </CustomTabPanel>
@@ -118,9 +118,9 @@ const Messager = () => {
       >
         {conversation ? (
           <Chat
-            // conversation={conversation}
-            // setConversation={setConversation}
-            // socket={socket}
+          // conversation={conversation}
+          // setConversation={setConversation}
+          // socket={socket}
           />
         ) : (
           <Box sx={{ marginTop: "100px" }}>
