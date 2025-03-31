@@ -67,6 +67,16 @@ export const searchFriends = async (phone) => {
     }
 };
 
+//Kiểm tra đã là bạn hay chưa
+export const checkFriendship = async (userId, friendId) => {
+    try {
+        const response = await api.get(`/api/friendships/check-friend/${userId}/${friendId}`);
+        return {success: true, data: response.data};
+    } catch (error) {
+        return handleApiError(error);
+    }
+};
+
 // Xư lý lỗi trả về từ API
 const handleApiError = (error) => {
     if (error.response) {

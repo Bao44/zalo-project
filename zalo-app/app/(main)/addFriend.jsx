@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import React from "react";
+import React, {useState} from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import Icon from "../../assets/icons";
 import { theme } from "../../constants/theme";
@@ -10,7 +10,7 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const AddFriend = () => {
     const { user } = useAuth();
-    const [phone, setPhone] = React.useState("");
+    const [phone, setPhone] = useState("");
     
     // console.log("User", user);
 
@@ -18,9 +18,8 @@ const AddFriend = () => {
     const handleSearch = async (phone) => {
         try {
             const response = await searchFriends(phone);
-            console.log("Kết quả tìm kiếm bạn bè:", response);
             if (response.success) {
-                router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(response.data), type: "phone"}});
+                router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(response.data[0]), type: "phone"}});
             } else {
                 alert("Số điện thoại này chưa đăng ký tài khoản hoặc không cho phép tìm kiếm!");
             }
@@ -51,7 +50,7 @@ const AddFriend = () => {
                             <Text style={styles.textAreaCode}>+84</Text>
                             <Icon name="arrowDown" size={28} strokeWidth={1.6} color="black" />
                         </TouchableOpacity>
-                        <TextInput style={{ fontSize: 16, marginLeft: 5 }} placeholder="Nhập số điện thoại" onChangeText={(text) => setPhone(text)} />
+                        <TextInput style={{ fontSize: 16, marginLeft: 5 }} placeholder="Nhập số điện thoại" value={phone} onChangeText={(text) => setPhone(text)} />
                     </View>
                     <TouchableOpacity style={styles.buttonNextSearch} onPress={() => handleSearch(phone)}>
                         <Icon name="arrowRight" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />

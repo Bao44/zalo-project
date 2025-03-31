@@ -198,7 +198,29 @@ const friendshipController = {
         } catch (error) {
             return res.status(500).json({ success: false, message: error.message });
         }
-    }
+    },
+
+    //Check xem la bạn hay chưa
+    async checkFriendship(req, res) {
+        try {
+            const { userId, friendId } = req.params;
+            const friendship = await Friendship.findOne({
+                $or: [
+                    { sender_id: userId, receiver_id: friendId },
+                    { sender_id: friendId, receiver_id: userId },
+                ],
+                status: "accepted",
+            });
+
+            if (friendship) {
+                return res.status(200).json({ success: true, data: friendship });
+            } else {
+                return res.status(404).json({ success: false, message: "No friendship found" });
+            }
+        } catch (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
 };
 
 module.exports = friendshipController;

@@ -49,12 +49,9 @@ const InfoChat1vs1 = () => {
 
     //CHUYỂN ĐẾN TRANG CÁ NHÂN CỦA BẠN BÈ
     const handleInfo = async () => {
-       const info = await getUserFromMongoDB(friendInfo?.id);
-        if (info?.success) {
-            router.push({
-                pathname: "/(main)/profile",
-                params: { id: info?.user?._id, name: info?.user?.name, avatar: info?.user?.avatar },
-            });
+        const info = await getUserFromMongoDB(friendInfo?._id);
+        if (info) {
+           router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(info)}});
         } else {
             Alert.alert("Lỗi", info?.data.message || "Không thể tìm thấy thông tin người dùng.");
         }

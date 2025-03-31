@@ -51,9 +51,9 @@ export const updateUser = async (userId, data) => {
   }
 };
 
-export const getUserFromMongoDB = async (supabaseId) => {
+export const getUserFromMongoDB = async (userId) => {
   try {
-    const response = await api.get(`/api/users/mongo/${supabaseId}`);
+    const response = await api.get(`/api/users/mongo/${userId}`);
     return response.data.user;
   } catch (error) {
     throw error.response?.data || error;

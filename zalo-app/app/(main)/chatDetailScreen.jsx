@@ -377,7 +377,7 @@ const ChatDetailScreen = () => {
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.inFoHeader}>
-                        <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
+                        <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.push("home")}>
                             <Icon name="arrowLeft" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />
                         </TouchableOpacity>
                         {type === "private" ? (
