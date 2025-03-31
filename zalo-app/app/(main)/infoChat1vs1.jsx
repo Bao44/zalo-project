@@ -9,6 +9,7 @@ import { hp, wp } from "@/helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteConversation1vs1 } from "@/api/conversationAPI";
+import { getUserFromMongoDB } from "@/api/user";
 
 const InfoChat1vs1 = () => {
     const { user } = useAuth();
@@ -45,6 +46,20 @@ const InfoChat1vs1 = () => {
             },
         ]);
     };
+
+    //CHUYỂN ĐẾN TRANG CÁ NHÂN CỦA BẠN BÈ
+    const handleInfo = async () => {
+       const info = await getUserFromMongoDB(friendInfo?.id);
+        if (info?.success) {
+            router.push({
+                pathname: "/(main)/profile",
+                params: { id: info?.user?._id, name: info?.user?.name, avatar: info?.user?.avatar },
+            });
+        } else {
+            Alert.alert("Lỗi", info?.data.message || "Không thể tìm thấy thông tin người dùng.");
+        }
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -76,7 +91,7 @@ const InfoChat1vs1 = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Tìm tin nhắn</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: wp(15) }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: wp(15) }} onPress={handleInfo}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="profile"
