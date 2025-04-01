@@ -42,22 +42,24 @@ const createGroup = async (req, res) => {
     if (!admin || members.length < 2) {
       return res.status(400).json({ message: "Nhóm phải có ít nhất 2 thành viên và cần có tên nhóm." });
     }
+
+    let avatarUrl = "";
     //loadAvatar
-    const uploadPromises = async () => {
-      if (!avatar) throw new Error("Thiếu dữ liệu fileBase64");
+    if (avatar?.fileUri !== null) {
+      const uploadPromises = async () => {
+        if (!avatar) throw new Error("Thiếu dữ liệu fileBase64");
 
-      const resourceType = avatar.isImage ? "image" : "raw";
-      const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
-        folder: avatar.folderName || "uploads",
-        resource_type: resourceType,
-      });
-      return result.secure_url;
-    };
+        const resourceType = avatar.isImage ? "image" : "raw";
+        const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
+          folder: avatar.folderName || "uploads",
+          resource_type: resourceType,
+        });
+        return result.secure_url;
+      };
 
-    // Tải ảnh lên và lấy URL (nếu có avatar)
-    let avatarUrl = null;
-    if (avatar) {
-      avatarUrl = await uploadPromises(); // Chờ Promise hoàn thành
+      if (avatar) {
+        avatarUrl = await uploadPromises(); // Chờ Promise hoàn thành
+      }
     }
 
     let mb = members.map((u) => u?._id);
@@ -92,7 +94,7 @@ const getUserConversations = async (req, res) => {
     // Tìm tất cả các cuộc trò chuyện có userId trong danh sách members
     const conversations = await Conversation.find({ members: userId })
       .populate("members", "name avatar")
-      .populate("lastMessage", "type content createdAt attachments media files")
+      .populate("lastMessage", "type content createdAt attachments media files senderId seen")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);
