@@ -43,17 +43,10 @@ const style = {
   p: 0,
 };
 
-<<<<<<< HEAD
 export default function Profile({ user }) {
   const [openModal, setOpenModal] = useState(false);
 
   console.log("user in profile", user);
-=======
-export default function Profile({ userData }) {
-  const [openModal, setOpenModal] = useState(false);
-
-  console.log("userData in profile", userData);
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
 
   const handleOpenModal = () => {
     changeBody("default");
@@ -84,11 +77,7 @@ export default function Profile({ userData }) {
           {/* Modal navigation */}
           {body === "default" && (
             <InfoBody
-<<<<<<< HEAD
             user={user}
-=======
-              userData={userData}
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
             />
@@ -185,15 +174,9 @@ function InfoBody({ changeBody, handleCloseModal, userData }) {
       </Box>
       {/* Avatar */}
       <AvatarHome
-<<<<<<< HEAD
         name={user?.name ? user.name : ""}
         avatar={user?.avatar ? user.avatar : ""}
         background={user?.background ? user.background : ""}
-=======
-        name={userData?.name ? userData.name : ""}
-        avatar={userData?.avatar ? userData.avatar : ""}
-        background={userData?.background ? userData.background : ""}
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
         changeBody={changeBody}
       />
       {/* line break */}
@@ -202,21 +185,12 @@ function InfoBody({ changeBody, handleCloseModal, userData }) {
       </Box>
       {/* Thông tin cá nhân */}
       <Info
-<<<<<<< HEAD
         gender={user?.gender == 0 ? "Nam" : "Nữ"}
         dob={
           user?.dob ? user.dob : new Date().getTime()
         }
         phoneNumber={user?.phone ? user.phone : ""}
         email={user?.email ? user.email : ""}
-=======
-        gender={userData?.gender == 0 ? "Nam" : "Nữ"}
-        dob={
-          userData?.dob ? userData.dob : new Date().getTime()
-        }
-        phoneNumber={userData?.phone ? userData.phone : ""}
-        email={userData?.email ? userData.email : ""}
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
       />
       {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
@@ -413,21 +387,12 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
     const avatarUrl = await UploadAPI.uploadImage(formData);
     if (avatarUrl) {
       const newUser = {
-<<<<<<< HEAD
         name: user.name,
         gender: user?.gender,
         email: user?.email,
         dateOfBirth: user?.dateOfBirth,
         avatar: user.avatar,
         coverImage: user?.background,
-=======
-        name: userData.name,
-        gender: userData?.gender,
-        email: userData?.email,
-        dateOfBirth: userData?.dateOfBirth,
-        avatar: userData.avatar,
-        coverImage: userData?.background,
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
       };
       const data = await UserAPI.updateMe(newUser);
       if (data) {
@@ -478,11 +443,7 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
               }}
             >
               <Avatar
-<<<<<<< HEAD
                 src={user?.avatar ? user.avatar : ""}
-=======
-                src={userData?.avatar ? userData.avatar : ""}
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
                 alt="avatar"
                 style={{
                   width: 200,
@@ -637,19 +598,11 @@ function ImageUploader({ changeBody, handleCloseModal }) {
 
     if (imageUrl) {
       const newUser = {
-<<<<<<< HEAD
         name: user?.name,
         gender: user?.gender,
         email: user?.email,
         dateOfBirth: user?.dateOfBirth,
         avatar: user?.avatar,
-=======
-        name: userData?.name,
-        gender: userData?.gender,
-        email: userData?.email,
-        dateOfBirth: userData?.dateOfBirth,
-        avatar: userData?.avatar,
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
         background: imageUrl,
       };
 
@@ -702,15 +655,9 @@ function ImageUploader({ changeBody, handleCloseModal }) {
                 marginTop: "60px",
               }}
             >
-<<<<<<< HEAD
               {user?.background && (
                 <img
                   src={user?.background ? user.background : ""}
-=======
-              {userData?.background && (
-                <img
-                  src={userData?.background ? userData.background : ""}
->>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
                   alt="image"
                   style={{
                     width: 360,
