@@ -12,13 +12,15 @@ import {
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/userSlice";
-import connectSocket from "../utils/socketConfig";
+// import connectSocket from "../utils/socketConfig";
 import InforProfile from "./InforProfile";
+import { toast } from "react-toastify";
+import socket from "../../socket/socket";
 
 const RequestFriend = ({ handleOpenChat }) => {
   const { user } = useSelector((state) => state.user);
   const [open, setOpen] = useState(false);
-  const socket = connectSocket();
+  // const socket = connectSocket();
   const dispatch = useDispatch();
   const [openModalReceiver, setOpenModalReceiver] = useState(false);
   const [openModalSender, setOpenModalSender] = useState(false);

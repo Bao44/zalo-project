@@ -43,10 +43,10 @@ const style = {
   p: 0,
 };
 
-export default function Profile({ userData }) {
+export default function Profile({ user }) {
   const [openModal, setOpenModal] = useState(false);
 
-  console.log("userData in profile", userData);
+  console.log("user in profile", user);
 
   const handleOpenModal = () => {
     changeBody("default");
@@ -77,7 +77,7 @@ export default function Profile({ userData }) {
           {/* Modal navigation */}
           {body === "default" && (
             <InfoBody
-              userData={userData}
+            user={user}
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
             />
@@ -151,7 +151,7 @@ function HeaderModal({ name, changeBody, back, handleCloseModal }) {
   );
 }
 
-function InfoBody({ changeBody, handleCloseModal, userData }) {
+function InfoBody({ changeBody, handleCloseModal, user }) {
   return (
     <>
       {/* Title */}
@@ -174,9 +174,9 @@ function InfoBody({ changeBody, handleCloseModal, userData }) {
       </Box>
       {/* Avatar */}
       <AvatarHome
-        name={userData?.name ? userData.name : ""}
-        avatar={userData?.avatar ? userData.avatar : ""}
-        background={userData?.background ? userData.background : ""}
+        name={user?.name ? user.name : ""}
+        avatar={user?.avatar ? user.avatar : ""}
+        background={user?.background ? user.background : ""}
         changeBody={changeBody}
       />
       {/* line break */}
@@ -185,12 +185,12 @@ function InfoBody({ changeBody, handleCloseModal, userData }) {
       </Box>
       {/* Thông tin cá nhân */}
       <Info
-        gender={userData?.gender == 0 ? "Nam" : "Nữ"}
+        gender={user?.gender == 0 ? "Nam" : "Nữ"}
         dob={
-          userData?.dob ? userData.dob : new Date().getTime()
+          user?.dob ? user.dob : new Date().getTime()
         }
-        phoneNumber={userData?.phone ? userData.phone : ""}
-        email={userData?.email ? userData.email : ""}
+        phoneNumber={user?.phone ? user.phone : ""}
+        email={user?.email ? user.email : ""}
       />
       {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
@@ -387,12 +387,12 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
     const avatarUrl = await UploadAPI.uploadImage(formData);
     if (avatarUrl) {
       const newUser = {
-        name: userData.name,
-        gender: userData?.gender,
-        email: userData?.email,
-        dateOfBirth: userData?.dateOfBirth,
-        avatar: userData.avatar,
-        coverImage: userData?.background,
+        name: user.name,
+        gender: user?.gender,
+        email: user?.email,
+        dateOfBirth: user?.dateOfBirth,
+        avatar: user.avatar,
+        coverImage: user?.background,
       };
       const data = await UserAPI.updateMe(newUser);
       if (data) {
@@ -443,7 +443,7 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
               }}
             >
               <Avatar
-                src={userData?.avatar ? userData.avatar : ""}
+                src={user?.avatar ? user.avatar : ""}
                 alt="avatar"
                 style={{
                   width: 200,
@@ -598,11 +598,11 @@ function ImageUploader({ changeBody, handleCloseModal }) {
 
     if (imageUrl) {
       const newUser = {
-        name: userData?.name,
-        gender: userData?.gender,
-        email: userData?.email,
-        dateOfBirth: userData?.dateOfBirth,
-        avatar: userData?.avatar,
+        name: user?.name,
+        gender: user?.gender,
+        email: user?.email,
+        dateOfBirth: user?.dateOfBirth,
+        avatar: user?.avatar,
         background: imageUrl,
       };
 
@@ -655,9 +655,9 @@ function ImageUploader({ changeBody, handleCloseModal }) {
                 marginTop: "60px",
               }}
             >
-              {userData?.background && (
+              {user?.background && (
                 <img
-                  src={userData?.background ? userData.background : ""}
+                  src={user?.background ? user.background : ""}
                   alt="image"
                   style={{
                     width: 360,

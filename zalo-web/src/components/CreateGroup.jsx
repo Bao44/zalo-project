@@ -200,7 +200,7 @@ export default function CreateGroup({ socket }) {
                 </Typography>
                 <List>
                   {user &&
-                    user.friendList.length > 0 &&
+                    user?.friendList?.length > 0 &&
                     user.friendList.map((friend) => (
                       <CardCheck
                         key={friend.id}

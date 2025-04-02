@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import CardItemUser from "./CardItemUser";
-import UserAPI from "../api/UserAPI";
+// import UserAPI from "../api/UserAPI";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/userSlice";
 import { toast } from "react-toastify";
@@ -112,23 +112,23 @@ export default function AddFriend({ socket }) {
   }, [socket]);
 
   const handleSearchUser = async () => {
-    const data = await UserAPI.getUserByPhoneNumber(phoneNumber);
-    if (data) {
-      setFriend(data);
-      if (user.friendList.find((friend) => friend.id === data.id)) {
-        setStatus("friend");
-      } else if (
-        user.sendedRequestList.find((friend) => friend.id === data.id)
-      ) {
-        setStatus("revoke");
-      } else if (
-        user.receivedRequestList.find((friend) => friend.id === data.id)
-      ) {
-        setStatus("accept");
-      } else {
-        setStatus("request");
-      }
-    }
+    // const data = await UserAPI.getUserByPhoneNumber(phoneNumber);
+    // if (data) {
+    //   setFriend(data);
+    //   if (user.friendList.find((friend) => friend.id === data.id)) {
+    //     setStatus("friend");
+    //   } else if (
+    //     user.sendedRequestList.find((friend) => friend.id === data.id)
+    //   ) {
+    //     setStatus("revoke");
+    //   } else if (
+    //     user.receivedRequestList.find((friend) => friend.id === data.id)
+    //   ) {
+    //     setStatus("accept");
+    //   } else {
+    //     setStatus("request");
+    //   }
+    // }
   };
 
   const handleRequestFriend = async () => {
