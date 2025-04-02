@@ -1,73 +1,11 @@
-// import { View, Text, LogBox } from "react-native";
-// import React, { useEffect } from "react";
-// import { Stack, useRouter } from "expo-router";
-// import { AuthProvider, useAuth } from "../contexts/AuthContext";
-// import { supabase } from "../lib/supabase";
-// import { getUserData } from "../api/user";
-
-// LogBox.ignoreLogs([
-//   "Warning: TNodeChildrenRenderer",
-//   "Warning: MemoizedTNodeRenderer",
-//   "Warning: TRenderEngineProvider",
-// ]);
-// const _layout = () => {
-//   return (
-//     <AuthProvider>
-//       <MainLayout />
-//     </AuthProvider>
-//   );
-// };
-
-// const MainLayout = () => {
-//   const { setAuth, setUserData } = useAuth();
-//   const router = useRouter();
-
-//   useEffect(() => {
-//     // const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-//     const authListener = supabase.auth.onAuthStateChange((_event, session) => {
-//       console.log("Session:", session);
-//       if (session) {
-//         setAuth(session?.user);
-//         updateUserData(session?.user, session?.user?.email);
-//         router.replace("/home");
-//       } else {
-//         setAuth(null);
-//         router.replace("/welcome");
-//       }
-//     });
-
-//     console.log("authListener:", authListener);
-
-//     // Cleanup listener khi component unmount
-//     return () => {
-//       // authListener?.unsubscribe();
-//       authListener?.data?.subscription?.unsubscribe();
-//     };
-//   }, []);
-
-//   const updateUserData = async (user, email) => {
-//     let res = await getUserData(user?.id);
-//     if (res.success) setUserData({ ...res.data, email });
-//   };
-
-//   return (
-//     <Stack
-//       screenOptions={{
-//         headerShown: false,
-//       }}
-//     ></Stack>
-//   );
-// };
-
-// export default _layout;
-
-import { View, Text, LogBox } from "react-native";
+import { LogBox, Alert } from "react-native";
 import React, { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { getUserData } from "../api/user";
 import * as Linking from "expo-linking";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 LogBox.ignoreLogs([
   "Warning: TNodeChildrenRenderer",
@@ -99,7 +37,7 @@ const MainLayout = () => {
     return result;
   };
 
-  // Xử lý deep link
+  // Xử lý deep link cho changePassword và signUp
   useEffect(() => {
     const handleDeepLink = async (event) => {
       const { path, queryParams, hostname } = Linking.parse(event.url);
@@ -107,48 +45,143 @@ const MainLayout = () => {
       // Phân tích fragment để lấy token
       const fragmentParams = parseFragment(event.url);
 
-      // Xử lý deep link cho exp://
-      // Chỉ kiểm tra path, bỏ qua hostname vì có thể là null
-      const isChangePasswordPath =
-        path === "changePassword" || path === "--/changePassword";
+      // kiểm tra path
+      if (isSignUpPath) {
+        console.log("Đã xác định đường dẫn signUp");
+      }
 
-      if (
-        isChangePasswordPath &&
-        fragmentParams.access_token &&
-        fragmentParams.refresh_token
-      ) {
+      // Nếu path là null, thử phân tích URL theo cách khác
+      let adjustedPath = path;
+      if (!path && event.url) {
+        const urlParts = event.url.split("/");
+        adjustedPath = urlParts[urlParts.length - 1];
+        if (adjustedPath.includes("#")) {
+          adjustedPath = adjustedPath.split("#")[0];
+        }
+      }
+
+      console.log("Nhận deep link:", event.url);
+      console.log("Path phân tích được:", path);
+      console.log("adjustedPath:", adjustedPath);
+      console.log("Fragment params:", fragmentParams);
+
+      // Xử lý deep link cho exp://
+      const isChangePasswordPath =
+        adjustedPath === "changePassword" ||
+        adjustedPath === "--/changePassword" ||
+        adjustedPath === "changePassword/" ||
+        adjustedPath === "--/changePassword/";
+      const isSignUpPath =
+        adjustedPath === "signUp" ||
+        adjustedPath === "--/signUp" ||
+        adjustedPath === "signUp/" ||
+        adjustedPath === "--/signUp/";
+
+      // kiểm tra xem có access_token và refresh_token không
+      if (fragmentParams.access_token && fragmentParams.refresh_token) {
         try {
-          // Thiết lập session với access_token và refresh_token
+          // thiết lập session với access_token và refresh_token
           const { data, error } = await supabase.auth.setSession({
             access_token: fragmentParams.access_token,
             refresh_token: fragmentParams.refresh_token,
           });
 
-          if (error) throw error;
-
-          // Kiểm tra session sau khi thiết lập
-          const { data: sessionData, error: sessionError } =
-            await supabase.auth.getSession();
-
-          if (sessionError || !sessionData.session) {
-            if (sessionError?.message?.includes("otp_expired")) {
-              router.replace({
-                pathname: "/forgotPassword",
-                params: {
-                  error: "Link xác nhận đã hết hạn. Vui lòng gửi lại yêu cầu!",
-                },
-              });
+          if (error) {
+            if (error.message?.includes("otp_expired")) {
+              if (isChangePasswordPath) {
+                router.replace({
+                  pathname: "/forgotPassword",
+                  params: {
+                    error:
+                      "Link xác nhận đã hết hạn. Vui lòng gửi lại yêu cầu!",
+                  },
+                });
+              } else if (isSignUpPath) {
+                router.replace({
+                  pathname: "/signUp",
+                  params: {
+                    error:
+                      "Link xác nhận đã hết hạn. Vui lòng gửi lại yêu cầu!",
+                  },
+                });
+              }
             } else {
-              router.replace("/forgotPassword");
+              // Hiển thị lỗi khác
+              if (isChangePasswordPath) {
+                router.replace({
+                  pathname: "/forgotPassword",
+                  params: {
+                    error: `Lỗi xác thực: ${error.message}`,
+                  },
+                });
+              } else if (isSignUpPath) {
+                router.replace({
+                  pathname: "/signUp",
+                  params: {
+                    error: `Lỗi xác thực: ${error.message}`,
+                  },
+                });
+              }
             }
-          } else {
+            return;
+          }
+
+          // Nếu setSession thành công, chuyển hướng theo path
+          if (isChangePasswordPath) {
             router.replace("/changePassword");
+          } else if (isSignUpPath) {
+            router.replace("/login");
+          } else {
+            router.replace("/welcome");
           }
         } catch (error) {
-          router.replace("/forgotPassword");
+          console.error("Error handling deep link:", error);
+          if (isChangePasswordPath) {
+            router.replace({
+              pathname: "/forgotPassword",
+              params: {
+                error: `Lỗi không xác định forgotPassword: ${error.message}`,
+              },
+            });
+          } else if (isSignUpPath) {
+            router.replace({
+              pathname: "/signUp",
+              params: {
+                error: `Lỗi không xác định signUp: ${error.message}`,
+              },
+            });
+          } else {
+            router.replace("/welcome");
+          }
         }
       } else {
-        router.replace("/forgotPassword");
+        console.log("No access_token or refresh_token found in deep link");
+        // Nếu không có token, hiển thị thông báo lỗi và chuyển về màn hình tương ứng
+        if (isChangePasswordPath) {
+          router.replace({
+            pathname: "/forgotPassword",
+            params: {
+              error:
+                "Link xác thực không hợp lệ: Thiếu access_token hoặc refresh_token.",
+            },
+          });
+        } else if (isSignUpPath) {
+          router.replace({
+            pathname: "/signUp",
+            params: {
+              error:
+                "Link xác thực không hợp lệ: Thiếu access_token hoặc refresh_token.",
+            },
+          });
+        } else {
+          router.replace({
+            pathname: "/welcome",
+            params: {
+              error:
+                "Link không hợp lệ: Thiếu access_token hoặc refresh_token.",
+            },
+          });
+        }
       }
     };
 
@@ -160,23 +193,63 @@ const MainLayout = () => {
     return () => Linking.removeEventListener("url", handleDeepLink);
   }, [router]);
 
-  // Xử lý trạng thái auth
+  // Xử lý trạng thái auth và kiểm tra last_login_at
   useEffect(() => {
-    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setAuth(session?.user);
-        updateUserData(session?.user, session?.user?.email);
-        router.replace("/home");
-      } else {
-        setAuth(null);
-        router.replace("/welcome");
+    const authListener = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session) {
+          setAuth(session?.user);
+
+          // Lưu last_login_at khi đăng nhập
+          const lastLoginAt = session.user.last_sign_in_at;
+          console.log("Last login at:", lastLoginAt);
+          await AsyncStorage.setItem("lastLoginAt", lastLoginAt);
+
+          // Kiểm tra định kỳ last_login_at
+          const interval = setInterval(async () => {
+            const { data: userData, error } = await supabase.auth.getUser();
+            if (error || !userData?.user) {
+              // console.log("Lỗi khi kiểm tra user:", error);
+              return;
+            }
+
+            const storedLastLoginAt = await AsyncStorage.getItem("lastLoginAt");
+            if (userData.user.last_sign_in_at !== storedLastLoginAt) {
+              // Có đăng nhập mới từ thiết bị khác
+              Alert.alert(
+                "Cảnh báo",
+                "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác. Bạn sẽ bị đăng xuất!",
+                [
+                  {
+                    text: "OK",
+                    onPress: async () => {
+                      await supabase.auth.signOut();
+                      await AsyncStorage.removeItem("lastLoginAt");
+                      router.replace("/welcome");
+                    },
+                  },
+                ]
+              );
+              clearInterval(interval);
+            }
+          }, 10000); // Kiểm tra mỗi 10 giây
+
+          updateUserData(session?.user, session?.user?.email);
+          router.replace("/home");
+
+          return () => clearInterval(interval);
+        } else {
+          setAuth(null);
+          await AsyncStorage.removeItem("lastLoginAt");
+          router.replace("/welcome");
+        }
       }
-    });
+    );
 
     return () => {
       authListener?.data?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const updateUserData = async (user, email) => {
     let res = await getUserData(user?.id);

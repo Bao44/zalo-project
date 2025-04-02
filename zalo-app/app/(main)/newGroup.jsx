@@ -29,7 +29,7 @@ const NewGroup = () => {
     const [avatarGroup, setAvatarGroup] = useState("");
     const [search, setSearch] = useState("");
 
-    // console.log(recent);
+    console.log(userSelecteds);
 
     // Lấy danh sách người dùng gần đây và danh bạ
     useEffect(() => {
@@ -54,7 +54,12 @@ const NewGroup = () => {
                     // Lọc các hội thoại private
                     let temp = ds.filter((u) => u.type === "private");
 
-                    setRecent(temp);
+                    const recentData = resContact.data.map((item) => {
+                        const found = temp.find((u) => u.members[0]._id === item._id || u.members[1]._id === item._id);
+                        return found ? { ...found, ...item } : null;
+                    }
+                    ).filter((item) => item !== null);
+                    setRecent(recentData); // Lưu danh sách hội thoại vào state
                 } else {
                     console.log("Không có dữ liệu hoặc lỗi từ server!");
                 }
@@ -158,14 +163,22 @@ const NewGroup = () => {
                 return;
             }
 
-            //Kiểm tra tên nhóm
+            let tenNhom = nameGroup.trim();
+            //Kiểm tra tên nhóm nếu không có thì sẽ lấy tên của từng người đã chọn ghép lại
             if (nameGroup === "") {
-                setNameGroup(userSelecteds.map(user => user.name).join(", "));
+                tenNhom = userSelecteds.map((u) => u.name).join(", ");
+                // ghép thêm tên của người tạo nhóm vào cuối
+                tenNhom = `${tenNhom}, ${user.name}`;
             }
 
-            const fileBase64 = await FileSystem.readAsStringAsync(avatarGroup, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
+            //Kiểm tra ảnh đại diện
+            let fileBase64 = null;
+            if (avatarGroup !== "") {
+                fileBase64 = await FileSystem.readAsStringAsync(avatarGroup, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+            } 
+
 
             const av = {
                 folderName: "group",
@@ -175,7 +188,7 @@ const NewGroup = () => {
 
             //Tạo data cuộc hội thoại nhóm
             const groupChat = {
-                nameGroup: nameGroup,
+                nameGroup: tenNhom,
                 admin: user?.id,
                 members: userSelecteds,
                 avatar: av,
@@ -268,6 +281,7 @@ const NewGroup = () => {
                         data={recent}
                         keyExtractor={(item) => item?._id}
                         renderItem={({ item }) => {
+                            // console.log(item);
                             return (
                                 <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
@@ -297,10 +311,11 @@ const NewGroup = () => {
                         sections={conTact}
                         keyExtractor={(item, index) => item + index}
                         renderItem={({ item }) => {
+                            // console.log(item);
                             return (
                                 <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                        <Avatar style={styles.avatar} uri={item.avatar} />
+                                        <Avatar style={styles.avatar} uri={item?.avatar} />
                                         <View>
                                             <Text style={styles.textName}>{item.name}</Text>
                                             <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{ }</Text>
@@ -335,7 +350,7 @@ const NewGroup = () => {
                         showsHorizontalScrollIndicator={false}
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => toggleSelection(item)}>
-                                <Avatar uri={item.avatar} style={styles.avatar} />
+                                <Avatar uri={item?.avatar} style={styles.avatar} />
                                 <View style={styles.cancel}>
                                     <Icon name="cancel" size={12} strokeWidth={2.6} color="white" />
                                 </View>

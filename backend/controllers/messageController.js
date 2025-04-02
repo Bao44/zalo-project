@@ -172,6 +172,70 @@ const messageController = {
             res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
         }
     },
+
+    async addUserSeen(req, res) {
+        const { conversationId, userId } = req.body;
+        if (!conversationId || !userId) {
+            return res.status(400).json({ error: "conversationId và userId là bắt buộc" });
+        }
+        try {
+            // Lấy danh sách tin nhắn trước khi cập nhật để biết những tin nhắn nào bị ảnh hưởng
+            const messagesToUpdate = await Message.find({
+                conversationId,
+                senderId: { $ne: userId }, // Tin nhắn không phải do userId gửi
+                seen: { $ne: userId } // Tin nhắn chưa được userId xem
+            }).select('_id'); // Chỉ lấy trường _id để tối ưu
+
+            // Cập nhật các tin nhắn
+            const updatedMessages = await Message.updateMany(
+                {
+                    conversationId,
+                    senderId: { $ne: userId },
+                    seen: { $ne: userId }
+                },
+                { $addToSet: { seen: userId } }
+            );
+
+            if (updatedMessages.modifiedCount === 0) {
+                return res.status(404).json({ error: "Không có tin nhắn nào để cập nhật" });
+            }
+
+            // Lấy instance socket
+            const io = getSocketInstance();
+
+            // Gửi sự kiện "messageSeen" với danh sách ID tin nhắn được cập nhật
+            io.to(conversationId.toString()).emit("messageSeen", {
+                conversationId,
+                userId,
+                updatedMessageIds: messagesToUpdate.map(msg => msg._id.toString()), // Danh sách ID tin nhắn
+                updatedCount: updatedMessages.modifiedCount
+            });
+
+            res.status(200).json({ message: "Cập nhật trạng thái đã xem thành công" });
+        } catch (error) {
+            console.error("Error updating message:", error);
+            res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
+        }
+    },
+
+    //Đếm tin nhắn chưa đọc của một người dùng trong một cuộc trò chuyện
+    async countUnreadMessages(req, res) {
+        const { conversationId, userId } = req.query;
+        if (!conversationId || !userId) {
+            return res.status(400).json({ error: "conversationId và userId là bắt buộc" });
+        }
+        try {
+            const count = await Message.countDocuments({
+                conversationId,
+                senderId: { $ne: userId },
+                seen: { $ne: userId }
+            });
+            res.status(200).json({ count });
+        } catch (error) {
+            console.error("Error counting unread messages:", error);
+            res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
+        }
+    }
 };
 
 module.exports = messageController;

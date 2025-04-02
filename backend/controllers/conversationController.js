@@ -42,22 +42,24 @@ const createGroup = async (req, res) => {
     if (!admin || members.length < 2) {
       return res.status(400).json({ message: "Nhóm phải có ít nhất 2 thành viên và cần có tên nhóm." });
     }
+
+    let avatarUrl = "";
     //loadAvatar
-    const uploadPromises = async () => {
-      if (!avatar) throw new Error("Thiếu dữ liệu fileBase64");
+    if (avatar?.fileUri !== null) {
+      const uploadPromises = async () => {
+        if (!avatar) throw new Error("Thiếu dữ liệu fileBase64");
 
-      const resourceType = avatar.isImage ? "image" : "raw";
-      const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
-        folder: avatar.folderName || "uploads",
-        resource_type: resourceType,
-      });
-      return result.secure_url;
-    };
+        const resourceType = avatar.isImage ? "image" : "raw";
+        const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
+          folder: avatar.folderName || "uploads",
+          resource_type: resourceType,
+        });
+        return result.secure_url;
+      };
 
-    // Tải ảnh lên và lấy URL (nếu có avatar)
-    let avatarUrl = null;
-    if (avatar) {
-      avatarUrl = await uploadPromises(); // Chờ Promise hoàn thành
+      if (avatar) {
+        avatarUrl = await uploadPromises(); // Chờ Promise hoàn thành
+      }
     }
 
     let mb = members.map((u) => u?._id);
@@ -92,7 +94,7 @@ const getUserConversations = async (req, res) => {
     // Tìm tất cả các cuộc trò chuyện có userId trong danh sách members
     const conversations = await Conversation.find({ members: userId })
       .populate("members", "name avatar")
-      .populate("lastMessage", "type content createdAt")
+      .populate("lastMessage", "type content createdAt attachments media files senderId seen")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);
@@ -146,7 +148,7 @@ const getConversationsGroup = async (req, res) => {
       .populate("members", "name avatar")
       .populate("lastMessage", "type content createdAt")
       .sort({ updatedAt: -1 });
-      
+
     res.status(200).json(conversations);
   } catch (error) {
     console.error("Error fetching conversations:", error);
@@ -154,4 +156,66 @@ const getConversationsGroup = async (req, res) => {
   }
 }
 
-module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup };
+// 📌 Xóa cuộc trò chuyện 1 vs 1 (cập nhật lại delete_History)
+const deleteConversation1vs1 = async (req, res) => {
+  try {
+    const { userId, conversationId } = req.params;
+    const time_delete = new Date();
+
+    // Tìm conversation trước để kiểm tra
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Kiểm tra xem userId đã có trong delete_history chưa
+    const existingDeleteEntry = conversation.delete_history.find(
+      entry => entry.userId.toString() === userId
+    );
+
+    let updatedConversation;
+    if (existingDeleteEntry) {
+      // Nếu đã có, chỉ cập nhật time_delete
+      updatedConversation = await Conversation.findByIdAndUpdate(
+        conversationId,
+        {
+          $set: {
+            "delete_history.$[elem].time_delete": time_delete
+          }
+        },
+        {
+          arrayFilters: [{ "elem.userId": userId }],
+          new: true
+        }
+      )
+        .populate("members", "name avatar")
+        .populate("lastMessage", "type content createdAt")
+        .sort({ updatedAt: -1 });
+    } else {
+      // Nếu chưa có, thêm mới vào delete_history
+      updatedConversation = await Conversation.findByIdAndUpdate(
+        conversationId,
+        {
+          $addToSet: {
+            delete_history: {
+              userId: userId,
+              time_delete: time_delete,
+            },
+          },
+        },
+        { new: true }
+      )
+        .populate("members", "name avatar")
+        .populate("lastMessage", "type content createdAt")
+        .sort({ updatedAt: -1 });
+    }
+
+    res.status(200).json(updatedConversation);
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup, deleteConversation1vs1 };

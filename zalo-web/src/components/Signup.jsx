@@ -5,7 +5,7 @@ import { useState } from "react";
 
 const Signup = ({ handleSignup }) => {
   const [fullName, setFullName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  // const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rePassword, setRePassword] = useState("");
@@ -15,9 +15,10 @@ const Signup = ({ handleSignup }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    handleSignup(fullName, email, phoneNumber, password, rePassword);
+    // handleSignup(fullName, email, phoneNumber, password, rePassword);
+    handleSignup(fullName, email, password, rePassword);
     setFullName("");
-    setPhoneNumber("");
+    // setPhoneNumber("");
     setEmail("");
     setPassword("");
     setRePassword("");
@@ -39,7 +40,7 @@ const Signup = ({ handleSignup }) => {
           style={{ marginBottom: "20px" }}
         />
       </Box>
-      <Box>
+      {/* <Box>
         <Typography fontSize="14px">
           Số điện thoại<span style={{ color: "red" }}>*</span>
         </Typography>
@@ -52,7 +53,7 @@ const Signup = ({ handleSignup }) => {
           fullWidth
           style={{ marginBottom: "20px" }}
         />
-      </Box>
+      </Box> */}
       <Box>
         <Typography fontSize="14px">
           Email<span style={{ color: "red" }}>*</span>

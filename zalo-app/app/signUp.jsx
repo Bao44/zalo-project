@@ -4,7 +4,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import React, { useRef, useState } from "react";
@@ -16,17 +15,19 @@ import { useRouter } from "expo-router";
 import { hp, wp } from "../helpers/common";
 import Input from "../components/Input";
 import Button from "../components/Button";
-import { signUp } from "../api/user";
+import { supabase } from "../lib/supabase";
+import Constants from "expo-constants";
 
 const SignUp = () => {
   const router = useRouter();
   const emailRef = useRef("");
   const nameRef = useRef("");
   const passwordRef = useRef("");
+  const confirmPasswordRef = useRef("");
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current || !nameRef.current) {
+    if (!emailRef.current || !passwordRef.current || !confirmPasswordRef.current || !nameRef.current) {
       alert("Please fill in all fields");
       return;
     }
@@ -34,23 +35,29 @@ const SignUp = () => {
     let name = nameRef.current.trim();
     let email = emailRef.current.trim();
     let password = passwordRef.current.trim();
+    let confirmPassword = confirmPasswordRef.current.trim();
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Mật khẩu không khớp!");
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const result = await signUp(email, password, name);
-
-      if (result.success) {
-        Alert.alert(
-          "Check your email",
-          "A confirmation email has been sent. Please verify your email."
-        );
-        router.push("login");
-      } else {
-        Alert.alert("Sign up", result.message);
-      }
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
+          emailRedirectTo: `exp://${Constants.expoConfig?.hostUri}/--/signUp`,
+        },
+      });
+      if (error) throw error;
+      Alert.alert("Thành công", "Liên kết đã được gửi đến email của bạn!");
     } catch (error) {
-      Alert.alert("Error", error.message || "Registration failed");
+      Alert.alert("Lỗi", error.message || "Có lỗi xảy ra khi gửi yêu cầu!");
+      console.log("Lỗi gửi yêu cầu:", error);
     } finally {
       setLoading(false);
     }
@@ -89,6 +96,12 @@ const SignUp = () => {
             placeholder="Enter your password"
             secureTextEntry
             onChangeText={(value) => (passwordRef.current = value)}
+          />
+          <Input
+            icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your confirmPassword"
+            secureTextEntry
+            onChangeText={(value) => (confirmPasswordRef.current = value)}
           />
 
           {/* button */}

@@ -1,6 +1,9 @@
 import axios from "axios";
 import { supabaseUrl } from "../constants";
 import { BACKEND_URL } from '../constants/ip';
+import * as FileSystem from "expo-file-system";
+import defaultUserImage from "../assets/images/defaultUser.png";
+
 
 const api = axios.create({
   baseURL: BACKEND_URL,

@@ -8,6 +8,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Avatar from "../../components/Avatar";
 import socket from "../../utils/socket";
 import { useCallback } from "react";
+import { countUnreadMessages } from "../../api/messageAPI";
 
 const MessageScreen = () => {
   const { user } = useAuth();
@@ -35,7 +36,17 @@ const MessageScreen = () => {
         try {
           const data = await getConversations(user?.id);
           if (data.success) {
-            setConversations(data.data)
+            const filteredConversations = data.data.filter((conversation) => {
+              const isMemberDeleted = conversation.delete_history.find((deleteHistory) => deleteHistory.userId === user?.id);
+              if (isMemberDeleted) {
+                const lastMessageTime = conversation.lastMessage?.createdAt || conversation.createdAt;
+                const lastDeleteTime = conversation.delete_history.find((deleteHistory) => deleteHistory.userId === user?.id)?.time_delete;
+                return lastMessageTime > lastDeleteTime;
+              } else {
+                return true;
+              }
+            });
+            setConversations(filteredConversations);
           } else {
             console.log("Không tìm thấy cuộc hội thoại nào!")
           }
@@ -85,39 +96,88 @@ const MessageScreen = () => {
     );
   }
 
+  const styleNotification = (seen, senderId) => {
+    // Kiểm tra xem có id của người dùng trong mảng seen không
+    if (senderId !== user?.id) {
+      const isSeen = seen?.some((userId) => userId === user?.id);
+      if (!isSeen) {
+        return {
+          color: "black",
+          fontWeight: "bold",
+        };
+      }
+    }
+  }
+
+
+
+  const iconNotification = async (conversationId) => {
+    // Đếm số lượng tin nhắn chưa đọc
+    const count = await countUnreadMessages(conversationId, user?.id);
+    if (count?.success) {
+      if (count?.data?.count === 1) {
+        return (<View style={{ width: 10, height: 10, backgroundColor: "red", borderRadius: 5, position: "absolute", right: 15, bottom: 15 }}></View>);
+      } else if (count?.data?.count > 1) {
+        return (
+          <View style={{ width: 20, height: 20, backgroundColor: "red", borderRadius: 10, position: "absolute", right: 15, bottom: 15, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ color: "#FFF", fontWeight: "bold" }}>{count?.data?.count}</Text>
+          </View>
+        );
+      } else if(count?.data?.count > 99) {
+        return (
+          <View style={{ width: 20, height: 20, backgroundColor: "red", borderRadius: 10, position: "absolute", right: 15, bottom: 15, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ color: "#FFF", fontWeight: "bold" }}>99+</Text>
+          </View>
+        );
+      }
+    } else {
+      console.log("Lỗi khi đếm số lượng tin nhắn chưa đọc:", count.error);
+    }
+  }
+
   return (
     <View>
       <FlatList
         data={conversations}
-        keyExtractor={(item) => item._id.toString()}
+        keyExtractor={(item) => item?._id?.toString()}
         scrollEnabled={true}
         renderItem={({ item }) => (
-          item.type === "private" ? (
+          item?.type === "private" ? (
             <TouchableOpacity
               style={styles.buttonMessage}
               onPress={() =>
-                router.push({ pathname: "chatDetailScreen", params: { type: "private", data: JSON.stringify(item.members.filter((f) => f._id !== user?.id)[0]) } })
+                router.push({ pathname: "chatDetailScreen", params: { type: "private", data: JSON.stringify(item?.members.filter((f) => f._id !== user?.id)[0]) } })
               }
             >
               {(() => {
-                const otherMember = item.members.find((u) => u._id !== user?.id);
+                const otherMember = item?.members.find((u) => u._id !== user?.id);
                 return (
-                  <Avatar uri={otherMember.avatar} style={styles.avatarConversation} />
+                  <Avatar uri={otherMember?.avatar} style={styles.avatarConversation} />
                 );
               })()}
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
-                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
-                    {item.members.find((u) => u._id !== user?.id)?.name || "Unknown User"}
+                  <Text style={[styles.textNameConversation, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
+                    {item?.members.find((u) => u._id !== user?.id)?.name || "Unknown User"}
                   </Text>
-                  <Text style={styles.textTimeConversation}>
-                    {item?.lastMessage ? formatTime(item.lastMessage.createdAt) : formatTime(item.createdAt)}
+                  <Text style={[styles.textTimeConversation, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]}>
+                    {item?.lastMessage ? formatTime(item?.lastMessage?.createdAt) : formatTime(item?.createdAt)}
                   </Text>
                 </View>
-                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
-                  {item?.lastMessage?.content || "No messages yet"}
+                <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
+                  {item?.type === "private" ? (
+                    item?.lastMessage?.senderId === user?.id ? "Bạn: " : "")
+                    : (
+                      item?.lastMessage?.senderId === user?.id ? "Bạn: " : `${item?.members.find((u) => u._id !== user?.id)?.name}: `
+                    )}
+                  {item?.lastMessage?.content ? item?.lastMessage?.content : "" ||
+                    item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
+                      item?.lastMessage?.media[0]?.fileName ? `[Media] ${item?.lastMessage?.media[0]?.fileName}` : "" ||
+                        item?.lastMessage?.files[0]?.fileName ? `[File] ${item?.lastMessage?.files[0]?.fileName}` : "" ||
+                  "No messages yet"}
                 </Text>
               </View>
+              {iconNotification(item?._id)}
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -126,44 +186,44 @@ const MessageScreen = () => {
                 router.push({ pathname: "chatDetailScreen", params: { type: item?.type, converId: item?._id } })
               }
             >
-              {item.avatar === null || item.avatar === "" ? (
-                item.members.length === 3 ? (
+              {item?.avatar === null || item?.avatar === "" ? (
+                item?.members?.length === 3 ? (
                   <View style={[styles.containerAvatar3, { width: 50, height: 50 }]}>
                     <Avatar
                       style={[styles.avatar3, styles.top3]}
-                      uri={item.members[0].avatar}
+                      uri={item?.members[0].avatar}
                     />
                     <Avatar
                       style={[styles.avatar3, styles.bottomLeft3]}
-                      uri={item.members[1].avatar}
+                      uri={item?.members[1].avatar}
                     />
                     <Avatar
                       style={[styles.avatar3, styles.bottomRight3]}
-                      uri={item.members[2].avatar}
+                      uri={item?.members[2].avatar}
                     />
                   </View>
                 ) : (
                   <View style={[styles.containerAvatar4, { width: 60, height: 60 }]}>
                     <Avatar
                       style={[styles.avatar4, styles.topLeft4]}
-                      uri={item.members[0].avatar}
+                      uri={item?.members[0].avatar}
                     />
                     <Avatar
                       style={[styles.avatar4, styles.topRight4]}
-                      uri={item.members[1].avatar}
+                      uri={item?.members[1].avatar}
                     />
                     <Avatar
                       style={[styles.avatar4, styles.bottomLeft4]}
-                      uri={item.members[2].avatar}
+                      uri={item?.members[2].avatar}
                     />
-                    {item.members.length > 4 ? (
+                    {item?.members?.length > 4 ? (
                       <View style={styles.moreContainer4}>
-                        <Text style={styles.moreText4}>+{item.members.length - 3}</Text>
+                        <Text style={styles.moreText4}>+{item?.members?.length - 3}</Text>
                       </View>
                     ) : (
                       <Avatar
                         style={[styles.avatar4, styles.bottomRight4]}
-                        uri={item.members[3].avatar}
+                        uri={item?.members[3].avatar}
                       />
                     )}
                   </View>
@@ -171,22 +231,27 @@ const MessageScreen = () => {
               ) : (
                 <Image
                   style={styles.avatarConversation}
-                  source={{ uri: item.avatar}}
+                  source={{ uri: item?.avatar }}
                 />
               )}
               <View style={styles.boxContentButton}>
                 <View style={styles.boxNameConversation}>
-                  <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">
-                    {item.name || "Unnamed Group"}
+                  <Text style={[styles.textNameConversation, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
+                    {item?.name || "Unnamed Group"}
                   </Text>
-                  <Text style={styles.textTimeConversation}>
-                    {item.lastMessage ? formatTime(item.lastMessage.createdAt) : formatTime(item.createdAt)}
+                  <Text style={[styles.textTimeConversation, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]}>
+                    {item?.lastMessage ? formatTime(item?.lastMessage.createdAt) : formatTime(item?.createdAt)}
                   </Text>
                 </View>
-                <Text style={styles.textMessage} numberOfLines={1} ellipsizeMode="tail">
-                  {item.lastMessage?.content || "Bạn hãy là người mở đầu cuộc trò chuyện"}
+                <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
+                  {item?.lastMessage?.senderId === user?.id ? "Bạn: " : "" || item?.members.find((u) => u._id !== user?.id)?.name ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""}
+                  {item?.lastMessage?.content ? item?.lastMessage?.content : "" || item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
+                    item?.lastMessage?.media[0]?.fileName ? `[Media] ${item?.lastMessage?.media[0]?.fileName}` : "" ||
+                      item?.lastMessage?.files[0]?.fileName ? `[File] ${item?.lastMessage?.files[0]?.fileName}` : "" || "No messages yet"
+                  }
                 </Text>
               </View>
+              {iconNotification(item?._id)}
             </TouchableOpacity>
           )
         )}
@@ -268,7 +333,7 @@ const styles = StyleSheet.create({
   textMessage: {
     color: "gray",
     fontSize: 16,
-    width: "90%"
+    width: "85%"
   },
   boxContentButton: {
     width: wp(75),

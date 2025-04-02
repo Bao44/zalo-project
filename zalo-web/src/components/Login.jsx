@@ -1,9 +1,21 @@
-import { Box, Button, TextField, Typography } from "@mui/material";
+import {
+  AccordionSummary,
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Accordion,
+  AccordionDetails,
+} from "@mui/material";
 import { useState } from "react";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const Login = ({ handleLogin, setCurrentScreen }) => {
+  const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState("password");
@@ -13,6 +25,25 @@ const Login = ({ handleLogin, setCurrentScreen }) => {
     handleLogin(email, password);
     setEmail("");
     setPassword("");
+  };
+
+  const handleResetPassword = async () => {
+    if (email.trim() === "") {
+      toast.error("Vui lòng nhập email");
+      return;
+    }
+
+    if (!email.match(/.+@gmail.com/)) {
+      toast.error("Email không hợp lệ");
+      return;
+    }
+
+    // const data = await UserAPI.forgotPassword(email);
+    // if (data) {
+    //   toast.success("Kiểm tra email của bạn để đặt lại mật khẩu");
+    // } else {
+    //   toast.error("Email không tồn tại trong hệ thống!");
+    // }
   };
 
   const handleForgotPassword = () => {

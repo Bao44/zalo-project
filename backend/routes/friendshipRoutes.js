@@ -17,4 +17,7 @@ router.get('/search-friends/:phone', friendshipController.searchFriends);
 // Lấy danh sách lời mời kết bạn
 router.get('/friend-requests/:receiverId', friendshipController.getFriendRequests);
 
+// Check da là bạn hay chưa
+router.get('/check-friend/:userId/:friendId', friendshipController.checkFriendship);
+
 module.exports = router;
