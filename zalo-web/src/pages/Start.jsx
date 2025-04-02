@@ -15,6 +15,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Login from "../components/Login";
 import { supabase } from "../../lib/supabase";
+import Signup from "../components/Signup";
+import * as UserAPI from "../../api/user";
 
 const style = {
   position: "absolute",
@@ -59,7 +61,7 @@ const a11yProps = (index) => {
 const Start = () => {
   console.log("Start");
   const [value, setValue] = useState(0);
-  
+
   const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
@@ -98,7 +100,6 @@ const Start = () => {
       navigate("/home");
 
       // Supabase trên Web tự động lưu session vào localStorage
-
     } catch (error) {
       alert("Error: " + (error.message || "Login failed"));
     }
@@ -113,72 +114,71 @@ const Start = () => {
     //   socket.emit("login", data.user.id);
     //   dispatch(login(data));
 
-    
     // } else {
     //   toast.error("Số điện thoại hoặc mật khẩu không đúng!");
     // }
   };
 
-  // const handleSignup = async (
-  //   fullName,
-  //   email,
-  //   phoneNumber,
-  //   password,
-  //   rePassword
-  // ) => {
-  //   if (fullName.trim() === "") {
-  //     toast.error("Bạn chưa nhập họ và tên!");
-  //     return;
-  //   }
+  const handleSignup = async (
+    fullName,
+    email,
+    phoneNumber,
+    password,
+    rePassword
+  ) => {
+    if (fullName.trim() === "") {
+      toast.error("Bạn chưa nhập họ và tên!");
+      return;
+    }
 
-  //   if (phoneNumber.trim() === "") {
-  //     toast.error("Bạn chưa nhập số điện thoại!");
-  //     return;
-  //   }
+    if (phoneNumber.trim() === "") {
+      toast.error("Bạn chưa nhập số điện thoại!");
+      return;
+    }
 
-  //   if (isNaN(phoneNumber)) {
-  //     toast.error("Số điện thoại không hợp lệ!");
-  //     return;
-  //   }
+    if (isNaN(phoneNumber)) {
+      toast.error("Số điện thoại không hợp lệ!");
+      return;
+    }
 
-  //   if (phoneNumber.length !== 10) {
-  //     toast.error("Số điện thoại phải có 10 số!");
-  //     return;
-  //   }
+    if (phoneNumber.length !== 10) {
+      toast.error("Số điện thoại phải có 10 số!");
+      return;
+    }
 
-  //   if (email.trim() === "") {
-  //     toast.error("Bạn chưa nhập email!");
-  //     return;
-  //   }
+    if (email.trim() === "") {
+      toast.error("Bạn chưa nhập email!");
+      return;
+    }
 
-  //   if (!email.includes("@gmail.com")) {
-  //     toast.error("Email không hợp lệ!");
-  //     return;
-  //   }
+    if (!email.includes("@gmail.com")) {
+      toast.error("Email không hợp lệ!");
+      return;
+    }
 
-  //   if (password.trim() === "") {
-  //     toast.error("Bạn chưa nhập mật khẩu!");
-  //     return;
-  //   }
+    if (password.trim() === "") {
+      toast.error("Bạn chưa nhập mật khẩu!");
+      return;
+    }
 
-  //   if (password.length < 10) {
-  //     toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
-  //     return;
-  //   }
+    if (password.length < 10) {
+      toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
+      return;
+    }
 
-  //   if (password !== rePassword) {
-  //     toast.error("Mật khẩu không khớp!");
-  //     return;
-  //   }
+    if (password !== rePassword) {
+      toast.error("Mật khẩu không khớp!");
+      return;
+    }
 
-  //   const data = await UserAPI.signup(email, phoneNumber);
-  //   if (data) {
-  //     setUser({ ...user, fullName, email, phoneNumber, password });
-  //     handleOpen();
-  //   } else {
-  //     toast.error("Số điện thoại hoặc email đã tồn tại!");
-  //   }
-  // };
+    // const data = await UserAPI.signUp(email, phoneNumber);
+    // if (data) {
+    //   // setUser({ ...user, fullName, email, phoneNumber, password });
+    //   handleOpen();
+    // } else {
+    //   toast.error("Số điện thoại hoặc email đã tồn tại!");
+    // }
+  };
 
   // const handleSendOtp = async () => {
   //   if (user.email === "" || user.phoneNumber === "") {
@@ -276,7 +276,7 @@ const Start = () => {
               <Login handleLogin={handleLogin} />
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
-              {/* <Signup handleSignup={handleSignup} /> */}
+              <Signup handleSignup={handleSignup} />
             </CustomTabPanel>
           </Box>
         </Box>
