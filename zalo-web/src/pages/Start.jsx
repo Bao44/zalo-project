@@ -62,11 +62,7 @@ const a11yProps = (index) => {
 
 const Start = () => {
   const [value, setValue] = useState(0);
-<<<<<<< HEAD
-
-=======
   const [currentScreen, setCurrentScreen] = useState("login");
->>>>>>> ed1cb6f43a6a6a194054773ccdf703c88ca8e8c1
   const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
@@ -101,31 +97,9 @@ const Start = () => {
         return;
       }
       navigate("/home");
-<<<<<<< HEAD
-
-      // Supabase trên Web tự động lưu session vào localStorage
-=======
->>>>>>> ed1cb6f43a6a6a194054773ccdf703c88ca8e8c1
     } catch (error) {
       toast.error("Error: " + (error.message || "Login failed"));
     }
-<<<<<<< HEAD
-
-    // if (password.length < 10) {
-    //   toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
-    //   return;
-    // }
-
-    // const data = await UserAPI.login(email, password);
-    // if (data) {
-    //   socket.emit("login", data.user.id);
-    //   dispatch(login(data));
-
-    // } else {
-    //   toast.error("Số điện thoại hoặc mật khẩu không đúng!");
-    // }
-=======
->>>>>>> ed1cb6f43a6a6a194054773ccdf703c88ca8e8c1
   };
 
   const handleSignup = async (
@@ -145,50 +119,11 @@ const Start = () => {
       return;
     }
 
-<<<<<<< HEAD
-    if (isNaN(phoneNumber)) {
-=======
     if (isNaN(phoneNumber) || phoneNumber.length !== 10) {
->>>>>>> ed1cb6f43a6a6a194054773ccdf703c88ca8e8c1
       toast.error("Số điện thoại không hợp lệ!");
       return;
     }
 
-<<<<<<< HEAD
-    if (phoneNumber.length !== 10) {
-      toast.error("Số điện thoại phải có 10 số!");
-      return;
-    }
-
-    if (email.trim() === "") {
-      toast.error("Bạn chưa nhập email!");
-      return;
-    }
-
-    if (!email.includes("@gmail.com")) {
-      toast.error("Email không hợp lệ!");
-      return;
-    }
-
-    if (password.trim() === "") {
-      toast.error("Bạn chưa nhập mật khẩu!");
-      return;
-    }
-
-    if (password.length < 10) {
-      toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
-      return;
-    }
-
-    if (password !== rePassword) {
-      toast.error("Mật khẩu không khớp!");
-      return;
-    }
-
-    // const data = await UserAPI.signUp(email, phoneNumber);
-    // if (data) {
-    //   // setUser({ ...user, fullName, email, phoneNumber, password });
-=======
     if (email.trim() === "" || !email.includes("@gmail.com")) {
       toast.error("Email không hợp lệ!");
       return;
@@ -203,66 +138,7 @@ const Start = () => {
       toast.error("Mật khẩu không khớp!");
       return;
     }
-
-    // Uncomment and implement real signup logic if needed
-    // const data = await UserAPI.signUp(email, phoneNumber, password);
-    // if (data) {
->>>>>>> ed1cb6f43a6a6a194054773ccdf703c88ca8e8c1
-    //   handleOpen();
-    // } else {
-    //   toast.error("Số điện thoại hoặc email đã tồn tại!");
-    // }
   };
-<<<<<<< HEAD
-
-  // const handleSendOtp = async () => {
-  //   if (user.email === "" || user.phoneNumber === "") {
-  //     toast.error("Có lỗi xảy ra!");
-  //     return;
-  //   }
-
-  //   const data = await UserAPI.signup(user?.email, user?.phoneNumber);
-  //   if (data) {
-  //     setKey((prevKey) => prevKey + 1);
-  //     toast.success(
-  //       "Gửi lại mã OTP thành công! Vui lòng kiểm tra email của bạn!"
-  //     );
-  //   } else {
-  //     toast.error("Gửi mã OTP thất bại!");
-  //   }
-  // };
-
-  // const handleVerifyOtp = async () => {
-  //   if (
-  //     user.fullName === "" ||
-  //     user.email === "" ||
-  //     user.phoneNumber === "" ||
-  //     user.password === "" ||
-  //     otp === ""
-  //   ) {
-  //     toast.error("Có lỗi xảy ra!");
-  //     return;
-  //   }
-
-  //   const data = await UserAPI.verifyOtp(
-  //     user.fullName,
-  //     user.email,
-  //     user.phoneNumber,
-  //     user.password,
-  //     otp
-  //   );
-
-  //   if (data) {
-  //     handleClose();
-  //     socket.emit("login", data.user.id);
-  //     dispatch(signup(data));
-  //     navigate("/home");
-  //   } else {
-  //     toast.error("Mã OTP không đúng!");
-  //   }
-  // };
-=======
->>>>>>> ed1cb6f43a6a6a194054773ccdf703c88ca8e8c1
 
   return (
     <Container maxWidth="xl">
@@ -292,7 +168,11 @@ const Start = () => {
           <Box sx={{ width: "500px", boxShadow: "0px 0px 5px #ccc" }}>
             <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
               <Tabs value={value} onChange={handleChange}>
-                <Tab label="ĐĂNG NHẬP" {...a11yProps(0)} sx={{ width: "50%" }} />
+                <Tab
+                  label="ĐĂNG NHẬP"
+                  {...a11yProps(0)}
+                  sx={{ width: "50%" }}
+                />
                 <Tab label="ĐĂNG KÝ" {...a11yProps(1)} sx={{ width: "50%" }} />
               </Tabs>
             </Box>
