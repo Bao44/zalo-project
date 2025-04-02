@@ -1,10 +1,20 @@
-import { Box, Button, TextField, Typography } from "@mui/material";
+import {
+  AccordionSummary,
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Accordion,
+  AccordionDetails,
+} from "@mui/material";
 import { useState } from "react";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
-const Login = ({ handleLogin, setCurrentScreen }) => {
+const Login = ({ handleLogin }) => {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -17,8 +27,23 @@ const Login = ({ handleLogin, setCurrentScreen }) => {
     setPassword("");
   };
 
-  const handleForgotPassword = () => {
-    setCurrentScreen("forgotPassword"); // Chuyển sang ForgotPassword trong cùng tab
+  const handleResetPassword = async () => {
+    if (email.trim() === "") {
+      toast.error("Vui lòng nhập email");
+      return;
+    }
+
+    if (!email.match(/.+@gmail.com/)) {
+      toast.error("Email không hợp lệ");
+      return;
+    }
+    
+    // const data = await UserAPI.forgotPassword(email);
+    // if (data) {
+    //   toast.success("Kiểm tra email của bạn để đặt lại mật khẩu");
+    // } else {
+    //   toast.error("Email không tồn tại trong hệ thống!");
+    // }
   };
 
   return (
@@ -37,7 +62,11 @@ const Login = ({ handleLogin, setCurrentScreen }) => {
           style={{ marginBottom: "20px" }}
         />
       </Box>
-      <Box sx={{ position: "relative" }}>
+      <Box
+        sx={{
+          position: "relative",
+        }}
+      >
         <Typography fontSize="14px">
           Mật khẩu<span style={{ color: "red" }}>*</span>
         </Typography>
@@ -77,18 +106,38 @@ const Login = ({ handleLogin, setCurrentScreen }) => {
         variant="contained"
         fullWidth
         style={{ margin: "20px 0" }}
-        onClick={handleSubmit}
+        onClick={(e) => handleSubmit(e)}
       >
         Đăng nhập với mật khẩu
       </Button>
       <Box textAlign="center">
-        <Button
-          variant="text"
-          style={{ fontStyle: "italic" }}
-          onClick={handleForgotPassword}
-        >
-          Quên mật khẩu?
-        </Button>
+        <Accordion>
+          <AccordionSummary
+            expandIcon={<ArrowDropDownIcon />}
+            aria-controls="panel2-content"
+            id="panel2-header"
+          >
+            <Typography fontStyle="italic">Quên mật khẩu?</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <TextField
+              id="email"
+              label="Email"
+              variant="standard"
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              style={{ margin: "20px 0" }}
+              onClick={handleResetPassword}
+            >
+              Làm mới mật khẩu
+            </Button>
+          </AccordionDetails>
+        </Accordion>
       </Box>
     </Box>
   );

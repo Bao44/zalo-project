@@ -1,3 +1,4 @@
+
 import {
   Avatar,
   Badge,
@@ -151,7 +152,7 @@ function HeaderModal({ name, changeBody, back, handleCloseModal }) {
   );
 }
 
-function InfoBody({ changeBody, handleCloseModal, userData }) {
+function InfoBody({ changeBody, handleCloseModal, user }) {
   return (
     <>
       {/* Title */}
