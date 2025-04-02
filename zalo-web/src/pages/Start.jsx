@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Login from "../components/Login";
+import ForgotPassword from "../components/ForgotPassword";
+import ResetPassword from "../components/ResetPassword";
 import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
@@ -59,9 +61,8 @@ const a11yProps = (index) => {
 };
 
 const Start = () => {
-  console.log("Start");
   const [value, setValue] = useState(0);
-
+  const [currentScreen, setCurrentScreen] = useState("login");
   const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
@@ -91,32 +92,14 @@ const Start = () => {
         email,
         password,
       });
-      console.log("Userxxx:", data.user);
-      console.log("Sessionxxx:", data.session);
       if (error) {
-        alert("Error: " + error.message);
+        toast.error("Error: " + error.message);
         return;
       }
       navigate("/home");
-
-      // Supabase trên Web tự động lưu session vào localStorage
     } catch (error) {
-      alert("Error: " + (error.message || "Login failed"));
+      toast.error("Error: " + (error.message || "Login failed"));
     }
-
-    // if (password.length < 10) {
-    //   toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
-    //   return;
-    // }
-
-    // const data = await UserAPI.login(email, password);
-    // if (data) {
-    //   socket.emit("login", data.user.id);
-    //   dispatch(login(data));
-
-    // } else {
-    //   toast.error("Số điện thoại hoặc mật khẩu không đúng!");
-    // }
   };
 
   const handleSignup = async (
@@ -136,32 +119,17 @@ const Start = () => {
       return;
     }
 
-    if (isNaN(phoneNumber)) {
+    if (isNaN(phoneNumber) || phoneNumber.length !== 10) {
       toast.error("Số điện thoại không hợp lệ!");
       return;
     }
 
-    if (phoneNumber.length !== 10) {
-      toast.error("Số điện thoại phải có 10 số!");
-      return;
-    }
-
-    if (email.trim() === "") {
-      toast.error("Bạn chưa nhập email!");
-      return;
-    }
-
-    if (!email.includes("@gmail.com")) {
+    if (email.trim() === "" || !email.includes("@gmail.com")) {
       toast.error("Email không hợp lệ!");
       return;
     }
 
-    if (password.trim() === "") {
-      toast.error("Bạn chưa nhập mật khẩu!");
-      return;
-    }
-
-    if (password.length < 10) {
+    if (password.trim() === "" || password.length < 10) {
       toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
       return;
     }
@@ -171,61 +139,14 @@ const Start = () => {
       return;
     }
 
-    // const data = await UserAPI.signUp(email, phoneNumber);
+    // Uncomment and implement real signup logic if needed
+    // const data = await UserAPI.signUp(email, phoneNumber, password);
     // if (data) {
-    //   // setUser({ ...user, fullName, email, phoneNumber, password });
     //   handleOpen();
     // } else {
     //   toast.error("Số điện thoại hoặc email đã tồn tại!");
     // }
   };
-
-  // const handleSendOtp = async () => {
-  //   if (user.email === "" || user.phoneNumber === "") {
-  //     toast.error("Có lỗi xảy ra!");
-  //     return;
-  //   }
-
-  //   const data = await UserAPI.signup(user?.email, user?.phoneNumber);
-  //   if (data) {
-  //     setKey((prevKey) => prevKey + 1);
-  //     toast.success(
-  //       "Gửi lại mã OTP thành công! Vui lòng kiểm tra email của bạn!"
-  //     );
-  //   } else {
-  //     toast.error("Gửi mã OTP thất bại!");
-  //   }
-  // };
-
-  // const handleVerifyOtp = async () => {
-  //   if (
-  //     user.fullName === "" ||
-  //     user.email === "" ||
-  //     user.phoneNumber === "" ||
-  //     user.password === "" ||
-  //     otp === ""
-  //   ) {
-  //     toast.error("Có lỗi xảy ra!");
-  //     return;
-  //   }
-
-  //   const data = await UserAPI.verifyOtp(
-  //     user.fullName,
-  //     user.email,
-  //     user.phoneNumber,
-  //     user.password,
-  //     otp
-  //   );
-
-  //   if (data) {
-  //     handleClose();
-  //     socket.emit("login", data.user.id);
-  //     dispatch(signup(data));
-  //     navigate("/home");
-  //   } else {
-  //     toast.error("Mã OTP không đúng!");
-  //   }
-  // };
 
   return (
     <Container maxWidth="xl">
@@ -236,10 +157,6 @@ const Start = () => {
           justifyContent: "center",
         }}
       >
-        <Box
-          component="div"
-          sx={{ textAlign: "center", marginRight: "150px", marginTop: "100px" }}
-        ></Box>
         <Box sx={{ marginTop: "50px" }}>
           <Typography
             textAlign="center"
@@ -257,23 +174,28 @@ const Start = () => {
             Để kết nối với ứng dụng Zalo!
           </Typography>
           <Box sx={{ width: "500px", boxShadow: "0px 0px 5px #ccc" }}>
-            <Box
-              sx={{
-                borderBottom: 1,
-                borderColor: "divider",
-              }}
-            >
+            <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
               <Tabs value={value} onChange={handleChange}>
-                <Tab
-                  label="ĐĂNG NHẬP"
-                  {...a11yProps(0)}
-                  sx={{ width: "50%" }}
-                />
+                <Tab label="ĐĂNG NHẬP" {...a11yProps(0)} sx={{ width: "50%" }} />
                 <Tab label="ĐĂNG KÝ" {...a11yProps(1)} sx={{ width: "50%" }} />
               </Tabs>
             </Box>
             <CustomTabPanel value={value} index={0}>
-              <Login handleLogin={handleLogin} />
+              {currentScreen === "login" ? (
+                <Login
+                  handleLogin={handleLogin}
+                  setCurrentScreen={setCurrentScreen}
+                />
+              ) : currentScreen === "forgotPassword" ? (
+                <ForgotPassword setCurrentScreen={setCurrentScreen} />
+              ) : (
+                <ResetPassword
+                  setCurrentScreen={setCurrentScreen}
+                  email={
+                    typeof currentScreen === "object" ? currentScreen.email : ""
+                  }
+                />
+              )}
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
               <Signup handleSignup={handleSignup} />
@@ -281,7 +203,7 @@ const Start = () => {
           </Box>
         </Box>
       </Box>
-      {/* <Modal
+      <Modal
         open={open}
         onClose={handleClose}
         aria-labelledby="modal-modal-title"
@@ -317,7 +239,6 @@ const Start = () => {
               colorsTime={[20, 10, 5, 0]}
               strokeWidth={5}
               size={80}
-              st
             >
               {({ remainingTime }) => remainingTime}
             </CountdownCircleTimer>
@@ -325,20 +246,10 @@ const Start = () => {
               Thời gian hiệu lực
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            fullWidth
-            style={{ margin: "20px 0" }}
-            onClick={handleVerifyOtp}
-          >
+          <Button variant="contained" fullWidth style={{ margin: "20px 0" }}>
             Xác nhận
           </Button>
-          <Button
-            variant="contained"
-            color="inherit"
-            fullWidth
-            onClick={handleSendOtp}
-          >
+          <Button variant="contained" color="inherit" fullWidth>
             Gửi lại mã OTP
           </Button>
           <Button
@@ -351,7 +262,7 @@ const Start = () => {
             Huỷ bỏ
           </Button>
         </Box>
-      </Modal> */}
+      </Modal>
       <ToastContainer />
     </Container>
   );
