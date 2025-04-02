@@ -93,6 +93,18 @@ export const createConversationGroupChat = async (groupData) => {
   }
 }
 
+// Xóa lịch sử trò chuyện của người dùng
+export const deleteConversation1vs1 = async (conversationId, userId) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/delete/${userId}`);
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in deleteConversation1vs1:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+};
+
 // Xư lý lỗi trả về từ API
 const handleApiError = (error) => {
   if (error.response) {

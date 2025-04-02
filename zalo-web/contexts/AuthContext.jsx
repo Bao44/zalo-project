@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+=======
+import { createContext, useContext, useEffect, useState } from "react";
+>>>>>>> cf33d175f5987aaa20892a42a757740a77908f2a
 import { supabase } from "../lib/supabase";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getUserData } from "../api/user";

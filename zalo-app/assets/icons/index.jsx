@@ -64,6 +64,10 @@ import Location from "./Location";
 import Attach from "./Attach";
 import Audio from "./Audio";
 import BussinessCard from "./BussinessCard";
+import Star from "./Star";
+import CallIncoming from "./CallIncoming";
+import AlarmClock from "./AlarmClock";
+import Block from "./Block";
 
 
 const icons = {
@@ -130,7 +134,11 @@ const icons = {
   location : Location,
   attach : Attach,
   audio : Audio,
-  bussinessCard : BussinessCard
+  bussinessCard : BussinessCard,
+  star : Star,
+  callInComing : CallIncoming,
+  alarmClock : AlarmClock,
+  block : Block
 };
 
 const Icon = ({ name, ...props }) => {

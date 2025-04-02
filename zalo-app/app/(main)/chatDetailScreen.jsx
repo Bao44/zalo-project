@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { getConversationBetweenTwoUsers, createConversation1vs1, getConversationsGroup, getConversation } from "../../api/conversationAPI";
-import { getMessages, sendMessage } from "../../api/messageAPI";
+import { getMessages, sendMessage, addUserSeen } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
 import Loading from "../../components/Loading";
@@ -58,7 +58,7 @@ const ChatDetailScreen = () => {
                     first: 50,
                     after: after,
                 });
-                if (photos.assets.length === 0) {
+                if (photos?.assets?.length === 0) {
                     console.warn("⚠️ Không tìm thấy ảnh nào trong thư viện.");
                 }
 
@@ -91,6 +91,7 @@ const ChatDetailScreen = () => {
             socket.emit("join", conversation._id); // Tham gia room dựa trên conversationId
         }
 
+        // Lắng nghe sự kiện newMessage
         socket.on("newMessage", (message, tempId) => {
             if (message.conversationId === conversation?._id) {
                 setMessages((prev) => {
@@ -106,8 +107,25 @@ const ChatDetailScreen = () => {
             }
         });
 
+        // Lắng nghe sự kiện messageSeen với nhiều tin nhắn
+        socket.on("messageSeen", ({ conversationId, userId, updatedMessageIds, updatedCount }) => {
+            if (conversationId === conversation?._id && userId !== user?.id) {
+                setMessages((prev) =>
+                    prev.map((msg) => {
+                        // Chỉ cập nhật những tin nhắn có trong updatedMessageIds
+                        if (updatedMessageIds.includes(msg._id.toString()) && !msg.seen.includes(userId)) {
+                            return { ...msg, seen: [...msg.seen, userId] };
+                        }
+                        return msg;
+                    })
+                );
+                console.log(`${userId} đã xem ${updatedCount} tin nhắn: ${updatedMessageIds}`);
+            }
+        });
+
         return () => {
             socket.off("newMessage");
+            socket.off("messageSeen");
             if (conversation?._id) {
                 socket.emit("leave", conversation._id); // Rời room khi thoát
             }
@@ -125,7 +143,14 @@ const ChatDetailScreen = () => {
                         setConversation(response.data);
                         const messagesResponse = await getMessages(response.data?._id);
                         if (messagesResponse.success) {
-                            setMessages(messagesResponse.data);
+                            const deleteHistory = response.data.delete_history.find((entry) => entry.userId === user?.id);
+                            if (deleteHistory) {
+                                setMessages(messagesResponse.data.filter((msg) => new Date(msg.createdAt) > new Date(response.data.delete_history.find((entry) => entry.userId === user?.id).time_delete)));
+                            } else {
+                                setMessages(messagesResponse.data);
+                            }
+                            // Cập nhật trạng thái đã xem cho người dùng
+                            await addUserSeen(response.data._id, user?.id);
                         }
                     } else if (response.status === 404) {
                         setConversation(null);
@@ -138,6 +163,8 @@ const ChatDetailScreen = () => {
                         const messagesResponse = await getMessages(response.data._id);
                         if (messagesResponse.success) {
                             setMessages(messagesResponse.data);
+                            // Cập nhật trạng thái đã xem cho người dùng
+                            await addUserSeen(response.data._id, user?.id);
                         }
                     } else if (response.status === 404) {
                         setConversation(null);
@@ -154,7 +181,7 @@ const ChatDetailScreen = () => {
 
     // GỬI TIN NHẮN
     const handleSendMessage = async () => {
-        if (!message && attachments.length === 0 && media.length === 0 && files.length === 0) {
+        if (!message && attachments?.length === 0 && media?.length === 0 && files?.length === 0) {
             return;
         }
         try {
@@ -168,7 +195,7 @@ const ChatDetailScreen = () => {
             let conversationId = conversation?._id;
 
             if (!conversation) {
-                const response = await createConversation1vs1(user.id, parsedData._id);
+                const response = await createConversation1vs1(user?.id, parsedData?._id);
                 if (response.success && response.data) {
                     setConversation(response.data);
                     conversationId = response.data._id;
@@ -185,7 +212,7 @@ const ChatDetailScreen = () => {
             }
 
             let images = [];
-            if (attachments.length > 0) {
+            if (attachments?.length > 0) {
                 images = await Promise.all(
                     attachments.map(async (attachment) => {
                         const compressedUri = await compressImage(attachment.uri);
@@ -206,7 +233,7 @@ const ChatDetailScreen = () => {
 
             const messageData = {
                 idTemp: t,
-                senderId: user.id,
+                senderId: user?.id,
                 content: message,
                 attachments: images,
                 media,
@@ -218,7 +245,7 @@ const ChatDetailScreen = () => {
             setMessages((prev) => [
                 {
                     _id: t,
-                    senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+                    senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
                     content: message,
                     attachments: attachments.map((img) => img.uri),
                     media,
@@ -336,7 +363,7 @@ const ChatDetailScreen = () => {
                         'text/html', // HTML (.html)
                         'application/json', // JSON (.json)
                         'application/xml', // XML (.xml)
-                        'text/xml', // XML (.xml)
+                        'text/xml', // XML (.xml
                     ],
                     multiple: true,
                 }
@@ -361,11 +388,10 @@ const ChatDetailScreen = () => {
         }
     };
 
-    // 
-    if (files.length > 0 && message === "" && attachments.length === 0 && media.length === 0) {
+    // GỬI TIN NHẮN KHI CÓ FILE 
+    if (files?.length > 0 && message === "" && attachments?.length === 0 && media?.length === 0) {
         handleSendMessage();
     }
-
 
     return (
         <ScreenWrapper>
@@ -373,7 +399,7 @@ const ChatDetailScreen = () => {
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.inFoHeader}>
-                        <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => router.back()}>
+                        <TouchableOpacity style={{ paddingHorizontal: 20 }} onPress={() => { Keyboard.dismiss(); router.push("home") }}>
                             <Icon name="arrowLeft" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />
                         </TouchableOpacity>
                         {type === "private" ? (
@@ -383,7 +409,7 @@ const ChatDetailScreen = () => {
                         ) : (
                             <View style={styles.boxInfoConversation}>
                                 <Text style={styles.textNameConversation} numberOfLines={1} ellipsizeMode="tail">{conversation?.name}</Text>
-                                <Text style={styles.textNumberMember}>{conversation?.members.length} thành viên</Text>
+                                <Text style={styles.textNumberMember}>{conversation?.members?.length} thành viên</Text>
                             </View>
                         )}
                     </View>
@@ -391,122 +417,123 @@ const ChatDetailScreen = () => {
                         {type === "private" && <TouchableOpacity><Icon name="phone" size={26} color="#FFF" /></TouchableOpacity>}
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
                         {type === "group" && <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>}
-                        <TouchableOpacity><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push({ pathname: "/infoChat1vs1", params: { conversationId: conversation?._id, friend: JSON.stringify(parsedData) } })}><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Nội dung chat */}
                 <View style={styles.contentChat}>
                     {
-                        loading ? (<Loading />) : messages.length === 0 ? (
+                        loading ? (<Loading />) : messages?.length === 0 ? (
                             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                                 <Text>Không có tin nhắn</Text>
                             </View>
                         ) : (
                             <FlatList
                                 data={messages}
-                                keyExtractor={(item) => item?._id.toString()}
+                                keyExtractor={(item) => item?._id?.toString()}
                                 renderItem={({ item, index }) => (
-                                    (item?.senderId._id === user?.id)
+                                    (item?.senderId?._id === user?.id)
                                         ?
-                                        ((index !== messages.length - 1 && item.userId === messages[index + 1].senderId._id) ?
+                                        ((index !== messages?.length - 1 && item?.senderId?._id === messages[index + 1]?.senderId?._id) ?
                                             (
-                                                <View style={[styles.messageOfMe, { marginTop: 5 }]}>
-                                                    {item.attachments.length > 0 && (
+                                                <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                    {item?.attachments?.length > 0 && (
                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
-                                                    {item.files.length > 0 && (
-                                                        <ViewFile file={item.files[0]} />
+                                                    {item?.files?.length > 0 && (
+                                                        <ViewFile file={item?.files[0]} />
                                                     )}
-                                                    {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
+                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                     {
-                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             :
-                                                            (item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                            (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                     }
-                                                </View>
+                                                </TouchableOpacity>
                                             )
                                             :
                                             (
-                                                <View style={styles.messageOfMe}>
-                                                    {item.attachments.length > 0 && (
+                                                <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfMe]}>
+                                                    {item?.attachments?.length > 0 && (
                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
-                                                    {item.files.length > 0 && (
-                                                        <ViewFile file={item.files[0]} />
+                                                    {item?.files?.length > 0 && (
+                                                        <ViewFile file={item?.files[0]} />
                                                     )}
-                                                   {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
+                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                     {
-                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             :
-                                                            (item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                            (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                     }
-                                                </View>
-                                            ))
+                                                </TouchableOpacity>
+                                            )
+                                        )
                                         :
-                                        (index === messages.length - 1) ?
+                                        (index === messages?.length - 1) ?
                                             (
-                                                <View style={[styles.messageOfOther]}>
-                                                    <Avatar uri={item.senderId.avatar} style={styles.avatar} />
+                                                <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfOther]}>
+                                                    <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
                                                     <View style={styles.boxMessageContent}>
-                                                        {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
-                                                        {item.attachments.length > 0 && (
+                                                        {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
+                                                        {item?.attachments?.length > 0 && (
                                                             <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                         )}
-                                                        {item.files.length > 0 && (
-                                                            <ViewFile file={item.files[0]} />
+                                                        {item?.files?.length > 0 && (
+                                                            <ViewFile file={item?.files[0]} />
                                                         )}
-                                                        {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
-                                                        <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                        {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                        <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                     </View>
-                                                </View>
+                                                </TouchableOpacity>
                                             )
                                             :
-                                            (item.senderId._id === messages[index + 1].senderId._id) ?
+                                            (item?.senderId?._id === messages[index + 1]?.senderId?._id) ?
 
                                                 (
-                                                    <View style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                    <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfOther, { marginTop: 5 }]}>
                                                         <Image style={styles.avatar} />
                                                         <View style={styles.boxMessageContent}>
-                                                            {item.attachments.length > 0 && (
+                                                            {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
-                                                            {item.files.length > 0 && (
-                                                                <ViewFile file={item.files[0]} />
+                                                            {item?.files?.length > 0 && (
+                                                                <ViewFile file={item?.files[0]} />
                                                             )}
-                                                            {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
-                                                            {(index === messages.length - 1) ?
-                                                                ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                            {(index === messages?.length - 1) ?
+                                                                ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                 :
-                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                                    ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                             }
                                                         </View>
-                                                    </View>
+                                                    </TouchableOpacity>
                                                 )
                                                 :
                                                 (
-                                                    <View style={[styles.messageOfOther]}>
-                                                        <Avatar uri={item.senderId.avatar} style={styles.avatar} />
+                                                    <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfOther]}>
+                                                        <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
                                                         <View style={styles.boxMessageContent}>
-                                                            {conversation.type === "private" ? null : <Text style={styles.textNameOthers}>{item.senderId.name}</Text>}
-                                                            {item.attachments.length > 0 && (
+                                                            {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
+                                                            {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
-                                                            {item.files.length > 0 && (
-                                                                <ViewFile file={item.files[0]} />
+                                                            {item?.files?.length > 0 && (
+                                                                <ViewFile file={item?.files[0]} />
                                                             )}
-                                                            {item.content && <Text style={styles.textMessage}>{item.content}</Text>}
-                                                            {(index === messages.length - 1) ?
-                                                                ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                            {(index === messages?.length - 1) ?
+                                                                ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                 :
-                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>
+                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    ((item.senderId._id === messages[index - 1].senderId._id) ? null : <Text style={styles.textTime}>{formatTime(item.createdAt)}</Text>)
+                                                                    ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                             }
                                                         </View>
-                                                    </View>
+                                                    </TouchableOpacity>
                                                 )
                                 )}
                                 // Để hiển thị tin nhắn mới nhất
@@ -526,7 +553,7 @@ const ChatDetailScreen = () => {
                             </TouchableOpacity>
                             <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
                         </View>
-                        {message === "" && attachments.length === 0 ? (
+                        {message === "" && attachments?.length === 0 ? (
                             <View style={styles.boxFeatureSendMessage}>
                                 <TouchableOpacity onPress={() => toggleGallery("extend")}><Icon name="moreHorizontal" size={26} color="gray" /></TouchableOpacity>
                                 <TouchableOpacity onPress={() => toggleGallery("")}><Icon name="microOn" size={26} color="gray" /></TouchableOpacity>
@@ -543,20 +570,20 @@ const ChatDetailScreen = () => {
                     {showGallery && (
                         <View style={styles.galleryContainer}>
                             {option === "emoji" ?
-                                (<Image source={{ uri: wordImage.src }} style={{ width: 20, height: 20 }} />)
+                                (<Image source={{ uri: wordImage?.src }} style={{ width: 20, height: 20 }} />)
                                 :
                                 option === "image" ?
                                     (
                                         <FlatList
                                             data={photos}
                                             numColumns={3}
-                                            keyExtractor={(item) => item.uri}
+                                            keyExtractor={(item) => item?.uri}
                                             renderItem={({ item }) => (
                                                 <TouchableOpacity onPress={() => selectImage(item)} style={{ position: "relative" }}>
                                                     <View style={{ position: "absolute", top: 7, right: 7, zIndex: 50 }}>
                                                         <RadioButton isSelect={attachments.includes(item)} size={20} color={theme.colors.primary} onPress={() => selectImage(item)} />
                                                     </View>
-                                                    <Image source={{ uri: item.uri }} style={styles.galleryImage} />
+                                                    <Image source={{ uri: item?.uri }} style={styles.galleryImage} />
                                                 </TouchableOpacity>
                                             )}
                                         />

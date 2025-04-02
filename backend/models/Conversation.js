@@ -26,9 +26,22 @@ const ConversationSchema = new mongoose.Schema(
       ref: "User",
     },
     lastMessage: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Message",
-    }
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+    },
+    delete_history: [
+      {
+        _id: false,
+        userId: {
+          type: String,
+          ref: "User",
+        },
+        time_delete: {
+          type: Date,
+          default: Date.now,
+        }
+      }
+    ],
   },
   { timestamps: true } // Tự động tạo createdAt và updatedAt
 );

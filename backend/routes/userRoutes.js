@@ -12,7 +12,7 @@ router.get('/:userId', userController.getUserData);
 router.put('/:userId', userController.updateUser);
 
 // Lấy thông tin người dùng từ MongoDB
-router.get('/mongo/:supabaseId', userController.getUserFromMongoDB);
+router.get('/mongo/:userId', userController.getUserFromMongoDB);
 
 // Lấy thông tin người dùng theo email từ MongoDB
 router.get('/email/:email', userController.getUserByEmailFromMongoDB);
