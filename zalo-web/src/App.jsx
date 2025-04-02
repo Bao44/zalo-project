@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Start from "./pages/Start";
 import Home from "./pages/Home";
 import { Provider } from "react-redux";
-import { store } from "./redux/store"; // Đảm bảo đường dẫn đúng
+import { store } from "./redux/store";
 
 function App() {
   return (

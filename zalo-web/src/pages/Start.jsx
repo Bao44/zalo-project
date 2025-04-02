@@ -59,7 +59,6 @@ const a11yProps = (index) => {
 };
 
 const Start = () => {
-  console.log("Start");
   const [value, setValue] = useState(0);
 
   const navigate = useNavigate();
@@ -67,9 +66,6 @@ const Start = () => {
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-
-  const [otp, setOtp] = useState("");
-  const [key, setKey] = useState(0);
 
   const [loading, setLoading] = useState(false);
 
@@ -102,55 +98,48 @@ const Start = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const response = await UserAPI.signIn(email, password);
 
-      if (error) {
-        toast.error("Email hoặc mật khẩu không đúng!");
+      if (!response || !response.data || response.error) {
+        toast.error(
+          response?.error?.message || "Email hoặc mật khẩu không đúng!"
+        );
         setLoading(false);
         return;
       }
 
-      const user = data.user;
-      console.log("User:", user);
-      navigate("/home");
+      const { data } = response;
 
-      // Supabase trên Web tự động lưu session vào localStorage
+      if (!data.user || !data.session) {
+        toast.error("Không nhận được thông tin người dùng!");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+
+        navigate("/home");
+      } catch (sessionError) {
+        console.error("Session error:", sessionError);
+        toast.error("Lỗi xác thực phiên làm việc!");
+      }
     } catch (error) {
+      console.error("Login error:", error);
       toast.error("Email hoặc mật khẩu không đúng!");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignup = async (
-    fullName,
-    email,
-    // phoneNumber,
-    password,
-    rePassword
-  ) => {
+  const handleSignup = async (fullName, email, password, rePassword) => {
     if (fullName.trim() === "") {
       toast.error("Bạn chưa nhập họ và tên!");
       return;
     }
-
-    // if (phoneNumber.trim() === "") {
-    //   toast.error("Bạn chưa nhập số điện thoại!");
-    //   return;
-    // }
-
-    // if (isNaN(phoneNumber)) {
-    //   toast.error("Số điện thoại không hợp lệ!");
-    //   return;
-    // }
-
-    // if (phoneNumber.length !== 10) {
-    //   toast.error("Số điện thoại phải có 10 số!");
-    //   return;
-    // }
 
     if (email.trim() === "") {
       toast.error("Bạn chưa nhập email!");
@@ -179,7 +168,6 @@ const Start = () => {
 
     try {
       const redirectTo = "http://localhost:5173/";
-      console.log("Redirect URL for Sign Up (Web):", redirectTo);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -198,62 +186,13 @@ const Start = () => {
         return;
       }
 
-      toast.success(
-        "Đăng ký thành công! Vui lòng kiểm tra email của bạn để xác nhận tài khoản!"
-      );
+      toast.success("Vui lòng kiểm tra email của bạn để xác nhận tài khoản!");
     } catch (error) {
       toast.error("Email hoặc mật khẩu không hợp lệ!");
     } finally {
       setLoading(false);
     }
   };
-
-  // const handleSendOtp = async () => {
-  //   if (user.email === "" || user.phoneNumber === "") {
-  //     toast.error("Có lỗi xảy ra!");
-  //     return;
-  //   }
-
-  //   const data = await UserAPI.signup(user?.email, user?.phoneNumber);
-  //   if (data) {
-  //     setKey((prevKey) => prevKey + 1);
-  //     toast.success(
-  //       "Gửi lại mã OTP thành công! Vui lòng kiểm tra email của bạn!"
-  //     );
-  //   } else {
-  //     toast.error("Gửi mã OTP thất bại!");
-  //   }
-  // };
-
-  // const handleVerifyOtp = async () => {
-  //   if (
-  //     user.fullName === "" ||
-  //     user.email === "" ||
-  //     user.phoneNumber === "" ||
-  //     user.password === "" ||
-  //     otp === ""
-  //   ) {
-  //     toast.error("Có lỗi xảy ra!");
-  //     return;
-  //   }
-
-  //   const data = await UserAPI.verifyOtp(
-  //     user.fullName,
-  //     user.email,
-  //     user.phoneNumber,
-  //     user.password,
-  //     otp
-  //   );
-
-  //   if (data) {
-  //     handleClose();
-  //     socket.emit("login", data.user.id);
-  //     dispatch(signup(data));
-  //     navigate("/home");
-  //   } else {
-  //     toast.error("Mã OTP không đúng!");
-  //   }
-  // };
 
   return (
     <Container maxWidth="xl">
