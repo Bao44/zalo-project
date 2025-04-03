@@ -17,7 +17,7 @@ import Login from "../components/Login";
 import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
-import ForgotPassword from "../components/ForgotPassword";
+import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "../components/ResetPassword";
 
 const style = {
