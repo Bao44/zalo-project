@@ -46,13 +46,14 @@ const MessageScreen = () => {
                 return true;
               }
             });
-            setConversations(filteredConversations);
+            setConversations(filteredConversations || []); // Đảm bảo luôn là mảng
           } else {
-            console.log("Không tìm thấy cuộc hội thoại nào!")
+            console.log("Không tìm thấy cuộc hội thoại nào!");
+            setConversations([]); // Đặt lại thành mảng rỗng nếu không có dữ liệu
           }
         } catch (error) {
           console.error("Failed to fetch conversations:", error);
-          setConversations([]);
+          setConversations([]); // Đặt lại thành mảng rỗng nếu có lỗi
         } finally {
           setLoading(false);
         }
@@ -64,29 +65,28 @@ const MessageScreen = () => {
 
   //Nhận conversation mới
   useEffect(() => {
-    socket.on("newConversation", (conversation) => {
-      if (conversation.members.some((member) => member?._id === user?.id)) {
+    const handleNewConversation = (conversation) => {
+      if (conversation?.members?.some((member) => member?._id === user?.id)) {
         setConversations((prev) => {
-          // Kiểm tra xem conversation đã tồn tại trong danh sách chưa
-          const existingConversation = prev.find((c) => c._id === conversation._id);
+          const existingConversation = prev?.find((c) => c?._id === conversation?._id);
 
           if (!existingConversation) {
-            // Nếu chưa có, thêm conversation mới vào đầu danh sách
             return [conversation, ...prev];
           } else {
-            // Nếu đã có, cập nhật lastMessage của conversation đó
             return prev.map((c) =>
-              c._id === conversation._id ? { ...c, lastMessage: conversation.lastMessage } : c
+              c?._id === conversation?._id ? { ...c, lastMessage: conversation?.lastMessage } : c
             );
           }
         });
       }
-    });
+    };
+
+    socket.on("newConversation", handleNewConversation);
 
     return () => {
-      socket.off("newConversation");
+      socket.off("newConversation", handleNewConversation);
     };
-  }, [user?.id, conversations]); // Thêm conversations vào dependency nếu cần
+  }, [user?.id, conversations]);
 
   if (loading) {
     return (
@@ -123,7 +123,7 @@ const MessageScreen = () => {
             <Text style={{ color: "#FFF", fontWeight: "bold" }}>{count?.data?.count}</Text>
           </View>
         );
-      } else if(count?.data?.count > 99) {
+      } else if (count?.data?.count > 99) {
         return (
           <View style={{ width: 20, height: 20, backgroundColor: "red", borderRadius: 10, position: "absolute", right: 15, bottom: 15, justifyContent: "center", alignItems: "center" }}>
             <Text style={{ color: "#FFF", fontWeight: "bold" }}>99+</Text>
