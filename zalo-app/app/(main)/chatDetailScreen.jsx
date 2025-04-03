@@ -23,7 +23,7 @@ import ViewFile from "../../components/ViewFile";
 
 const ChatDetailScreen = () => {
     const { user } = useAuth();
-    const { type, data, converId } = useLocalSearchParams();
+    const { type, data, convertId } = useLocalSearchParams();
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
@@ -35,6 +35,8 @@ const ChatDetailScreen = () => {
     const [showGallery, setShowGallery] = useState(false);
     const [stempId, setStempId] = useState("");
     const [option, setOption] = useState("emoji");
+
+    console.log("convertId", convertId);
 
     // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
@@ -156,8 +158,8 @@ const ChatDetailScreen = () => {
                         setConversation(null);
                     }
                 } else {
-                    if (!user?.id || !converId) return;
-                    const response = await getConversation(converId);
+                    if (!user?.id || !convertId) return;
+                    const response = await getConversation(convertId);
                     if (response.success && response.data) {
                         setConversation(response.data);
                         const messagesResponse = await getMessages(response.data._id);
@@ -181,11 +183,21 @@ const ChatDetailScreen = () => {
 
     // GỬI TIN NHẮN
     const handleSendMessage = async () => {
+        console.log("OKKKK");
         if (!message && attachments?.length === 0 && media?.length === 0 && files?.length === 0) {
             return;
         }
+        console.log("OKKKK 2");
+        console.log("attachments", attachments);
+        console.log("media", media);
+        console.log("files", files);
+        console.log("message", message);
+        console.log("conversationId", conversation?._id);
+        console.log("userId", user?.id);
+        console.log("receiverId", parsedData?._id);
+        console.log("convertId", convertId);
         try {
-            if (!converId) {
+            if (!convertId) {
                 if (!user?.id || !parsedData?._id) {
                     Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
                     return;
@@ -368,12 +380,15 @@ const ChatDetailScreen = () => {
                     multiple: true,
                 }
             );
+            console.log("result file:", result);
             if (!result.canceled) {
                 result.assets.map(async (file) => {
                     const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
                         encoding: FileSystem.EncodingType.Base64,
                     });
+                    console.log("file base64", fileBase64);
                     setFiles((prev) => [...prev, { uri: fileBase64, name: file.name, type: file.mimeType }]);
+                    consolelog("setFiles", files);
                 }
                 );
             } else {
@@ -390,6 +405,7 @@ const ChatDetailScreen = () => {
 
     // GỬI TIN NHẮN KHI CÓ FILE 
     if (files?.length > 0 && message === "" && attachments?.length === 0 && media?.length === 0) {
+        console.log("if file: ", files)
         handleSendMessage();
     }
 
