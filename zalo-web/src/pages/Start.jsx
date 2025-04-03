@@ -64,6 +64,7 @@ const Start = () => {
   const navigate = useNavigate();
   const [currentScreen, setCurrentScreen] = useState("login");
 
+  console.log("aa")
   const [value, setValue] = useState(0);
 
   const [loading, setLoading] = useState(false);
