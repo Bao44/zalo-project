@@ -10,6 +10,8 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState("password");
 
+  console.log("Email từ props:", email); // Kiểm tra giá trị email nhận được từ props
+
   const handleSubmitNewPassword = async () => {
     if (newPassword.trim() === "") {
       toast.error("Vui lòng nhập mật khẩu mới");
@@ -27,9 +29,18 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
     }
 
     try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        toast.error(
+          "Phiên xác thực không hợp lệ. Vui lòng xác nhận qua email trước!"
+        );
+        handleBackToForgotPassword;
+        return;
+      }
+
       const { data, error } = await supabase.auth.updateUser({
-        email: email,
-        password: newPassword,
+        newPassword: confirmPassword,
       });
 
       if (error) {

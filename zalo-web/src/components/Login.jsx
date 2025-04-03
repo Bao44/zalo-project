@@ -27,25 +27,6 @@ const Login = ({ handleLogin, setCurrentScreen }) => {
     setPassword("");
   };
 
-  const handleResetPassword = async () => {
-    if (email.trim() === "") {
-      toast.error("Vui lòng nhập email");
-      return;
-    }
-
-    if (!email.match(/.+@gmail.com/)) {
-      toast.error("Email không hợp lệ");
-      return;
-    }
-
-    // const data = await UserAPI.forgotPassword(email);
-    // if (data) {
-    //   toast.success("Kiểm tra email của bạn để đặt lại mật khẩu");
-    // } else {
-    //   toast.error("Email không tồn tại trong hệ thống!");
-    // }
-  };
-
   const handleForgotPassword = () => {
     setCurrentScreen("forgotPassword"); // Chuyển sang ForgotPassword trong cùng tab
   };

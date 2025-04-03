@@ -1,9 +1,11 @@
 import { Box, Button, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { supabase } from "../../lib/supabase";
 
 const ForgotPassword = ({ setCurrentScreen }) => {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleResetPassword = async () => {
     if (email.trim() === "") {
@@ -17,21 +19,31 @@ const ForgotPassword = ({ setCurrentScreen }) => {
     }
 
     try {
-      // Giả lập API call (thay bằng API thật của bạn)
-      const data = true; // const data = await UserAPI.forgotPassword(email);
-      if (data) {
-        toast.success("Yêu cầu đã được gửi! Vui lòng nhập mật khẩu mới.");
-        setCurrentScreen({ screen: "resetPassword", email }); // Chuyển sang ResetPassword với email
-      } else {
-        toast.error("Email không tồn tại trong hệ thống!");
+      const redirectTo = "http://localhost:5173/"; 
+      
+      const { data, error } = await supabase.auth.resetPasswordForEmail(
+        email,
+        {
+          emailRedirectTo: redirectTo,
+        }
+      );
+
+      if (error) {
+        toast.error("Lỗi: " + error.message);
+        setLoading(false);
+        return;
       }
+
+      toast.success("Vui lòng kiểm tra email của bạn để đặt lại mật khẩu!");
     } catch (error) {
-      toast.error("Đã có lỗi xảy ra, vui lòng thử lại!");
+      toast.error("Email không hợp lệ!");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBackToLogin = () => {
-    setCurrentScreen("login"); // Quay lại màn Login
+    setCurrentScreen("login");
   };
 
   return (
