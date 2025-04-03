@@ -320,7 +320,7 @@ import Login from "../components/Login";
 import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
-import ForgotPassword from "../components/ForgotPassword";
+import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "../components/ResetPassword";
 
 const style = {
@@ -367,6 +367,7 @@ const Start = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentScreen, setCurrentScreen] = useState("login");
+
   const [value, setValue] = useState(0);
   const [loading, setLoading] = useState(false);
 
