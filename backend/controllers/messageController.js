@@ -129,7 +129,7 @@ const messageController = {
             // Populate conversation và gửi cập nhật
             const conversationUpdate = await Conversation.findById(conversation._id)
                 .populate("members", "name avatar")
-                .populate("lastMessage", "type content createdAt");
+                .populate("lastMessage", "type content createdAt attachments media files senderId seen");
 
             conversation.members.forEach(memberId => {
                 const memberSocketId = io.onlineUsers?.get(memberId);
