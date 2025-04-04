@@ -80,8 +80,12 @@ export const AuthProvider = ({ children }) => {
 
           if (!user) {
             setAuth(null);
-            if (window.location.pathname !== "/") {
+            // Chỉ redirect về "/" nếu không ở "/" hoặc "/reset-password"
+            if (window.location.pathname !== "/" && window.location.pathname !== "/reset-password") {
+              console.log("[AuthProvider] No session, redirecting to /");
               navigate("/");
+            } else {
+              console.log("[AuthProvider] No session, but staying on current path", { pathname: window.location.pathname });
             }
           }
         }
@@ -96,7 +100,13 @@ export const AuthProvider = ({ children }) => {
             }
           } else if (_event === "SIGNED_OUT") {
             setAuth(null);
-            navigate("/");
+            // Chỉ redirect về "/" nếu không ở "/reset-password"
+            if (window.location.pathname !== "/reset-password") {
+              console.log("[AuthProvider] Signed out, redirecting to /");
+              navigate("/");
+            } else {
+              console.log("[AuthProvider] Signed out, but staying on /reset-password");
+            }
           }
         });
 

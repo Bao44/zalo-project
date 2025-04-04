@@ -18,7 +18,6 @@ import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
 import ForgotPassword from "../components/ForgotPassword";
-import ResetPassword from "./ResetPassword";
 
 const style = {
   position: "absolute",
@@ -63,22 +62,26 @@ const a11yProps = (index) => {
 const Start = () => {
   const navigate = useNavigate();
   const [currentScreen, setCurrentScreen] = useState("login");
-
-  console.log("aa")
   const [value, setValue] = useState(0);
-
   const [loading, setLoading] = useState(false);
-
   const location = useLocation();
 
   useEffect(() => {
+    console.log("[Start] useEffect triggered", { locationState: location.state, pathname: location.pathname });
+    if (location.pathname !== "/") {
+      console.log("[Start] Not on root path, skipping useEffect logic");
+      return;
+    }
     if (location.state?.message) {
       toast.success(location.state.message);
     }
     if (location.state?.error) {
       toast.error(location.state.error);
     }
-  }, [location.state]);
+    if (location.state?.screen) {
+      setCurrentScreen(location.state.screen);
+    }
+  }, [location.state, location.pathname]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -245,15 +248,8 @@ const Start = () => {
                   handleLogin={handleLogin}
                   setCurrentScreen={setCurrentScreen}
                 />
-              ) : currentScreen === "forgotPassword" ? (
-                <ForgotPassword setCurrentScreen={setCurrentScreen} />
               ) : (
-                <ResetPassword
-                  setCurrentScreen={setCurrentScreen}
-                  email={
-                    typeof currentScreen === "object" ? currentScreen.email : ""
-                  }
-                />
+                <ForgotPassword setCurrentScreen={setCurrentScreen} />
               )}
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
