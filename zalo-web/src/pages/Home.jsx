@@ -32,7 +32,7 @@ const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, setAuth } = useAuth();
-  
+
   // Sử dụng useRef để theo dõi trạng thái đã fetch dữ liệu hay chưa
   const hasDataBeenFetched = useRef(false);
   const lastLoginCheckInterval = useRef(null);
@@ -43,6 +43,7 @@ const Home = () => {
   const [initialCheckDone, setInitialCheckDone] = useState(false);
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
 
   // Fetch user data chỉ một lần khi component mount
   useEffect(() => {
@@ -54,13 +55,14 @@ const Home = () => {
     // Hàm fetch dữ liệu người dùng
     const fetchUser = async () => {
       if (hasDataBeenFetched.current) return;
-      
+
       setIsLoading(true);
       try {
         const result = await getUserData(user.id);
         if (result?.success) {
           dispatch(setUser(result.data));
           hasDataBeenFetched.current = true;
+          setIsUserLoaded(true); // ✅ Đánh dấu đã tải xong
         } else {
           toast.error("Không thể tải dữ liệu người dùng");
         }
@@ -167,43 +169,41 @@ const Home = () => {
               }}
             >
               <ListItem
-                sx={{ justifyContent: "center", padding: "30px 0 0 14px" }}
+                sx={{ justifyContent: "center", alignItems: "center", width: "100%", height: "100px" }}
               >
-                <UserAvatar uri={user?.avatar} />
+                <UserAvatar width={50} height={50} uri={user?.avatar} />
               </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  padding: "0 0 0 14px",
                   backgroundColor: showMess ? "rgba(0,0,0,0.2)" : "transparent",
                 }}
               >
                 <ListItemButton onClick={() => setShowMess(true)}>
-                  <ChatIcon sx={{ color: "#fff" }} />
+                  <ChatIcon sx={{ color: "#fff", width: "40px", height: "40px" }} />
                 </ListItemButton>
               </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  padding: "0 0 0 14px",
+                  alignItems: "center",
                   backgroundColor: !showMess
                     ? "rgba(0,0,0,0.2)"
                     : "transparent",
                 }}
               >
                 <ListItemButton onClick={() => setShowMess(false)}>
-                  <ContactsIcon sx={{ color: "#fff" }} />
+                  <ContactsIcon sx={{ color: "#fff", width: "40px", height: "40px" }} />
                 </ListItemButton>
               </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  padding: "0 0 0 14px",
                   marginTop: "auto",
                 }}
               >
                 <ListItemButton aria-describedby={id} onClick={handleClick}>
-                  <SettingsIcon sx={{ color: "#fff" }} />
+                  <SettingsIcon sx={{ color: "#fff", width: "40px", height: "40px" }} />
                 </ListItemButton>
                 <Popover
                   id={id}
@@ -215,7 +215,7 @@ const Home = () => {
                 >
                   <List>
                     <ListItem sx={{ padding: 0 }}>
-                      <Profile user={user} height={50} width={50}/>
+                      <Profile user={user} height={50} width={50} />
                     </ListItem>
                     <ListItem sx={{ padding: 0 }}>
                       <ChangePassword />
@@ -234,7 +234,13 @@ const Home = () => {
             </List>
           </Grid>
           <Grid item xs={11.3}>
-            {isLoading ? <Loading /> : showMess ? <Messager /> : <Contact />}
+            {isLoading || !isUserLoaded ? (
+              <Loading />
+            ) : showMess ? (
+              <Messager />
+            ) : (
+              <Contact />
+            )}
           </Grid>
         </Grid>
       </Box>

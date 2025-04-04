@@ -5,11 +5,17 @@ import KeyboardReturnIcon from "@mui/icons-material/KeyboardReturn";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { Box, Button, Modal, Popover, Typography } from "@mui/material";
 import { useState } from "react";
+import PropTypes from "prop-types";
+import { convertToTime } from "../../utils/formatTime";
+import RenderImageMessage from "./RenderImageMessage";
 
-const MessageSender = ({ message, handleRevokeMessage }) => {
-  const { content, type, isRevoked, createdAt, likes, id } = message;
+const MessageSender = ({ message }) => {
+  const { content, createdAt } = message;
   const [anchorEl, setAnchorEl] = useState(null);
   const [opening, setOpening] = useState(false);
+  const isRevoked = false;
+  const statusLike = false;
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -25,20 +31,27 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
   return (
     <Box
       sx={{
-        marginLeft: "auto",
-        width: "fit-content",
+        width: "100%", // Box chính rộng full
         display: "flex",
+        justifyContent: "flex-end", // Đẩy nội dung sang phải
         alignItems: "center",
         marginBottom: "30px",
         position: "relative",
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      {!isRevoked && <MoreVertIcon fontSize={"medium"} onClick={handleClick} />}
+      {!isRevoked && isHovered && (
+        <MoreVertIcon fontSize={"medium"} onClick={handleClick} />
+      )}
       <Box
         sx={{
           padding: "15px",
-          backgroundColor: "#fff",
+          backgroundColor: "#8FE3FF",
           borderRadius: 3,
+          display: "inline-block", // Chiều dài theo nội dung
+          maxWidth: "70%", // Giới hạn tối đa 70% chiều rộng
+          minWidth: "7%"
         }}
       >
         {isRevoked ? (
@@ -47,40 +60,29 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
           </Typography>
         ) : (
           <>
-            {type === "TEXT" && (
-              <Typography
-                color={"black"}
-                fontWeight={"bold"}
-                marginBottom="10px"
-              >
-                {content}
-              </Typography>
-            )}
-            {type === "IMAGE" && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  flexDirection: "column",
-                }}
-              >
-                <Button
-                  onClick={() => setOpening(true)}
-                  style={{ marginBottom: "10px" }}
+            {message?.content && (
+              message?.attachments?.length === 0 ? (
+                <Typography
+                  color={"black"}
+                  fontWeight={"bold"}
+                  marginBottom="10px"
                 >
-                  <img
-                    src={content}
-                    alt="image"
-                    style={{ width: "400px", height: "300px" }}
-                  />
-                </Button>
-                <Button href={content} download>
-                  <FileDownloadIcon fontSize="small" />
-                  <Typography fontSize={14}>TẢI XUỐNG</Typography>
-                </Button>
-              </Box>
+                  {content}
+                </Typography>
+              ) : (
+                <Box>
+                  <RenderImageMessage images={message?.attachments} />
+                  <Typography
+                    color={"black"}
+                    fontWeight={"bold"}
+                    marginBottom="10px"
+                  >
+                    {content}
+                  </Typography>
+                </Box>
+              )
             )}
-            {type === "VIDEO" && (
+            {message?.media?.length > 0 && (
               <Box
                 sx={{
                   marginBottom: "10px",
@@ -90,15 +92,15 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
                 }}
               >
                 <video width="600" height="400" controls>
-                  <source src={content} type="video/mp4" />
+                  <source src={message?.media[0].fileUrl} type="video/mp4" />
                 </video>
-                <Button href={content} download style={{ marginTop: "10px" }}>
+                <Button href={message?.media?.fileUrl} download style={{ marginTop: "10px" }}>
                   <FileDownloadIcon fontSize="small" />
                   <Typography fontSize={14}>TẢI XUỐNG</Typography>
                 </Button>
               </Box>
             )}
-            {type === "FILE" && (
+            {message?.files?.length > 0 && (
               <Box
                 sx={{
                   display: "flex",
@@ -109,10 +111,10 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
                 <DescriptionIcon fontSize="large" />
                 <Box marginLeft="10px">
                   <Typography fontSize={14} fontWeight="bold">
-                    {content.split("/").pop()}
+                    {message?.files[0].fileName}
                   </Typography>
                   <Button
-                    href={content}
+                    href={message?.files[0].fileUrl}
                     download
                     style={{
                       marginTop: "5px",
@@ -120,7 +122,7 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
                   >
                     <FileDownloadIcon fontSize="small" />
                     <Typography fontSize={14}>
-                      Tải xuống tệp đính kèm
+                      Tải xuống
                     </Typography>
                   </Button>
                 </Box>
@@ -131,26 +133,46 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
         )}
       </Box>
       {!isRevoked && (
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: "-20px",
-            right: "10px",
-            backgroundColor: "#fff",
-            padding: "4px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 99,
-            boxShadow: "0 0 5px 0px #000",
-            borderRadius: "10px",
-          }}
-        >
-          <FavoriteIcon fontSize="small" color="error" />
-          <Typography fontSize="14px" color="inherit" marginLeft="5px">
-            {likes.length}
-          </Typography>
-        </Box>
+        <>
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: "-15px",
+              right: "10px",
+              backgroundColor: "#fff",
+              padding: "5px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 99,
+              boxShadow: "0 0 5px 0px #000",
+              borderRadius: "50%",
+            }}
+          >
+            <FavoriteIcon
+              fontSize="small"
+              color={statusLike ? "error" : "disabled"}
+            />
+          </Box>
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: "-15px",
+              right: "50px",
+              backgroundColor: "#fff",
+              padding: "4px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 99,
+              boxShadow: "0 0 5px 0px #000",
+              borderRadius: "10px",
+            }}
+          >
+            <FavoriteIcon fontSize="small" color="error" />
+            <Typography fontSize={14} color="gray" marginRight="5px">5</Typography>
+          </Box>
+        </>
       )}
       <Popover
         id={uid}
@@ -169,10 +191,6 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
         <Button
           style={{ display: "flex", alignItems: "center", paddingX: "10px" }}
           color="inherit"
-          onClick={() => {
-            handleRevokeMessage(id);
-            handleClose();
-          }}
         >
           <KeyboardReturnIcon fontSize={"small"} />
           <Typography sx={{ p: 1 }} fontSize="12px">
@@ -200,9 +218,9 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
             p: 4,
           }}
         >
-          {type === "IMAGE" && (
+          {message?.attachments?.length > 0 && (
             <img
-              src={content}
+              src={message?.attachments[0].fileUrl}
               alt="image"
               style={{ width: "590px", height: "390px" }}
             />
@@ -211,6 +229,48 @@ const MessageSender = ({ message, handleRevokeMessage }) => {
       </Modal>
     </Box>
   );
+};
+
+MessageSender.propTypes = {
+  message: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    conversationId: PropTypes.string.isRequired,
+    senderId: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      avatar: PropTypes.string,
+    }).isRequired,
+    members: PropTypes.arrayOf(
+      PropTypes.shape({
+        _id: PropTypes.string.isRequired,
+        avatar: PropTypes.string,
+        name: PropTypes.string,
+      })
+    ),
+    content: PropTypes.string,
+    attachments: PropTypes.arrayOf(PropTypes.any),
+    media: PropTypes.arrayOf(
+      PropTypes.shape({
+        fileName: PropTypes.string,
+        fileType: PropTypes.string,
+        fileUrl: PropTypes.string,
+      })
+    ),
+    files: PropTypes.arrayOf(
+      PropTypes.shape({
+        fileName: PropTypes.string,
+        fileType: PropTypes.string,
+        fileUrl: PropTypes.string,
+        _id: PropTypes.string,
+      })
+    ),
+    replyTo: PropTypes.oneOfType([PropTypes.object, PropTypes.oneOf([null])]),
+    seen: PropTypes.arrayOf(PropTypes.string),
+    reactions: PropTypes.arrayOf(PropTypes.any),
+    createdAt: PropTypes.string.isRequired,
+    updatedAt: PropTypes.string,
+    __v: PropTypes.number,
+  }).isRequired,
 };
 
 export default MessageSender;

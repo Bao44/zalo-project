@@ -1,5 +1,6 @@
 import Avatar from "@mui/material/Avatar";
 import { supabaseUrl } from "../../constants";
+import PropTypes from "prop-types";
 
 const UserAvatar = ({ uri, height, width }) => {
   return (
@@ -9,11 +10,15 @@ const UserAvatar = ({ uri, height, width }) => {
       sx={{
         width: width,
         height: height,
-        marginBottom: "15px",
         display: "block",
       }}
     />
   );
+};
+UserAvatar.propTypes = {
+  uri: PropTypes.string.isRequired,
+  height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 export default UserAvatar;
