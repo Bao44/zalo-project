@@ -321,7 +321,6 @@ import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
 import ForgotPassword from "../components/ForgotPassword";
-import ResetPassword from "./ResetPassword";
 
 const style = {
   position: "absolute",
@@ -576,15 +575,8 @@ const Start = () => {
                   handleLogin={handleLogin}
                   setCurrentScreen={setCurrentScreen}
                 />
-              ) : currentScreen === "forgotPassword" ? (
-                <ForgotPassword setCurrentScreen={setCurrentScreen} />
               ) : (
-                <ResetPassword
-                  setCurrentScreen={setCurrentScreen}
-                  email={
-                    typeof currentScreen === "object" ? currentScreen.email : ""
-                  }
-                />
+                <ForgotPassword setCurrentScreen={setCurrentScreen} />
               )}
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>

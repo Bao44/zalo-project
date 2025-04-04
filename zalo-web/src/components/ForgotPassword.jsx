@@ -8,16 +8,20 @@ const ForgotPassword = ({ setCurrentScreen }) => {
   const [loading, setLoading] = useState(false);
 
   const handleResetPassword = async () => {
+    console.log("[ForgotPassword] handleResetPassword called", { email });
+  
     if (email.trim() === "") {
+      console.log("[ForgotPassword] Email is empty");
       toast.error("Vui lòng nhập email");
       return;
     }
-
+  
     if (!email.match(/.+@gmail.com/)) {
+      console.log("[ForgotPassword] Email invalid", { email });
       toast.error("Email không hợp lệ");
       return;
     }
-
+  
     try {
       const redirectTo = "http://localhost:5173/"; 
       
@@ -41,7 +45,7 @@ const ForgotPassword = ({ setCurrentScreen }) => {
       setLoading(false);
     }
   };
-
+  
   const handleBackToLogin = () => {
     setCurrentScreen("login");
   };
@@ -60,7 +64,10 @@ const ForgotPassword = ({ setCurrentScreen }) => {
           placeholder="Nhập email"
           variant="standard"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            console.log("[ForgotPassword] Email input changed", { newValue: e.target.value });
+            setEmail(e.target.value);
+          }}
           fullWidth
           style={{ marginBottom: "20px" }}
         />
@@ -69,14 +76,20 @@ const ForgotPassword = ({ setCurrentScreen }) => {
         variant="contained"
         fullWidth
         style={{ margin: "20px 0" }}
-        onClick={handleResetPassword}
+        onClick={() => {
+          console.log("[ForgotPassword] Reset password button clicked");
+          handleResetPassword();
+        }}
       >
         Gửi yêu cầu đặt lại mật khẩu
       </Button>
       <Box textAlign="center">
         <Button
           variant="text"
-          onClick={handleBackToLogin}
+          onClick={() => {
+            console.log("[ForgotPassword] Back to login button clicked");
+            handleBackToLogin();
+          }}
           sx={{ textTransform: "none" }}
         >
           Quay lại đăng nhập
