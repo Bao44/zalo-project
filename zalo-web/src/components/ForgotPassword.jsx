@@ -7,6 +7,7 @@ const ForgotPassword = ({ setCurrentScreen }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  console.log("[ForgotPassword] Component initialized", { email, setCurrentScreen });
   const handleResetPassword = async () => {
     console.log("[ForgotPassword] handleResetPassword called", { email });
   
@@ -47,6 +48,7 @@ const ForgotPassword = ({ setCurrentScreen }) => {
   };
   
   const handleBackToLogin = () => {
+    console.log("[ForgotPassword] handleBackToLogin called, returning to login screen");
     setCurrentScreen("login");
   };
 
