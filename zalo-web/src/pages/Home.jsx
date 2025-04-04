@@ -216,7 +216,7 @@ const Home = () => {
                 >
                   <List>
                     <ListItem sx={{ padding: 0 }}>
-                      <Profile user={user} />
+                      <Profile user={user} height={50} width={50}/>
                     </ListItem>
                     <ListItem sx={{ padding: 0 }}>
                       <ChangePassword />
