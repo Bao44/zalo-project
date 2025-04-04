@@ -34,20 +34,6 @@ const ResetPassword = () => {
     };
   }, [location.pathname, email, navigate]);
 
-  const email = location.state?.email || "";
-  console.log("[ResetPassword] Component initialized", { email, newPassword, confirmPassword, showPassword });
-
-  useEffect(() => {
-    console.log("[ResetPassword] Mounted", { pathname: location.pathname });
-    if (!email) {
-      console.log("[ResetPassword] No email in state, redirecting to /");
-      navigate("/"); // Kiểm tra xem có redirect ở đây không
-    }
-    return () => {
-      console.log("[ResetPassword] Unmounted");
-    };
-  }, [location.pathname, email, navigate]);
-
   const handleSubmitNewPassword = async () => {
     console.log("[ResetPassword] handleSubmitNewPassword called", { email, newPassword, confirmPassword });
 
