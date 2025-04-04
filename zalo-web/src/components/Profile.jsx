@@ -1,4 +1,3 @@
-
 import {
   Avatar,
   Badge,
@@ -24,7 +23,7 @@ import AvatarEditor from "react-avatar-editor";
 import { useDispatch, useSelector } from "react-redux";
 
 import ModalImage from "./ModalImage";
-import { useAuth } from "../../contexts/AuthContext";
+import { supabaseUrl } from "../../constants";
 
 const style = {
   position: "absolute",
@@ -47,7 +46,7 @@ const style = {
 export default function Profile({ user }) {
   const [openModal, setOpenModal] = useState(false);
 
-  console.log("user in profile", user);
+  const { user: currentUser } = useSelector((state) => state.user);
 
   const handleOpenModal = () => {
     changeBody("default");
@@ -78,9 +77,9 @@ export default function Profile({ user }) {
           {/* Modal navigation */}
           {body === "default" && (
             <InfoBody
-            user={user}
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
+              user={user}
             />
           )}
           {body === "avatar_editor" && (
@@ -187,9 +186,7 @@ function InfoBody({ changeBody, handleCloseModal, user }) {
       {/* Thông tin cá nhân */}
       <Info
         gender={user?.gender == 0 ? "Nam" : "Nữ"}
-        dob={
-          user?.dob ? user.dob : new Date().getTime()
-        }
+        dob={user?.dob ? user.dob : new Date().getTime()}
         phoneNumber={user?.phone ? user.phone : ""}
         email={user?.email ? user.email : ""}
       />
@@ -231,7 +228,7 @@ function AvatarHome({ name, avatar, background, changeBody }) {
           <Box sx={{ width: "100%" }}>
             {background ? (
               <img
-                src={background}
+                src={`${supabaseUrl}/storage/v1/object/public/uploads/${background}`}
                 alt="load"
                 style={{
                   width: "100%",
