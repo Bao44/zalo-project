@@ -8,11 +8,9 @@ const ForgotPassword = ({ setCurrentScreen }) => {
   const [loading, setLoading] = useState(false);
 
   console.log("[ForgotPassword] Component initialized", { email, setCurrentScreen });
-
-  console.log("[ForgotPassword] Component initialized", { email, setCurrentScreen });
   const handleResetPassword = async () => {
     console.log("[ForgotPassword] handleResetPassword called", { email });
-  
+
     if (email.trim() === "") {
       console.log("[ForgotPassword] Email is empty");
       toast.error("Vui lòng nhập email");

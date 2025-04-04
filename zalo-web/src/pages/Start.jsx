@@ -14,7 +14,6 @@ import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
 import ForgotPassword from "../components/ForgotPassword";
-import ResetPassword from "./ResetPassword";
 
 const style = {
   position: "absolute",
