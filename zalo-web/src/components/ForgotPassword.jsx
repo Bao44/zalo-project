@@ -1,11 +1,13 @@
 import { Box, Button, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 
 const ForgotPassword = ({ setCurrentScreen }) => {
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleResetPassword = async () => {
     if (email.trim() === "") {
@@ -19,26 +21,23 @@ const ForgotPassword = ({ setCurrentScreen }) => {
     }
 
     try {
-      const redirectTo = "http://localhost:5173/"; 
-      
-      const { data, error } = await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          emailRedirectTo: redirectTo,
-        }
-      );
+      const redirectTo = "http://localhost:5173/reset-password";
+
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectTo,
+      });
 
       if (error) {
         toast.error("Lỗi: " + error.message);
-        setLoading(false);
         return;
       }
 
-      toast.success("Vui lòng kiểm tra email của bạn để đặt lại mật khẩu!");
+      toast.success("Vui lòng kiểm tra email của bạn để xác nhận tài khoản!");
+      navigate("/");
     } catch (error) {
-      toast.error("Email không hợp lệ!");
+      console.error("Error sending reset password email:", error);
     } finally {
-      setLoading(false);
+      console.log("finally");
     }
   };
 
@@ -60,7 +59,12 @@ const ForgotPassword = ({ setCurrentScreen }) => {
           placeholder="Nhập email"
           variant="standard"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            console.log("[ForgotPassword] Email input changed", {
+              newValue: e.target.value,
+            });
+            setEmail(e.target.value);
+          }}
           fullWidth
           style={{ marginBottom: "20px" }}
         />
@@ -69,14 +73,18 @@ const ForgotPassword = ({ setCurrentScreen }) => {
         variant="contained"
         fullWidth
         style={{ margin: "20px 0" }}
-        onClick={handleResetPassword}
+        onClick={() => {
+          handleResetPassword();
+        }}
       >
         Gửi yêu cầu đặt lại mật khẩu
       </Button>
       <Box textAlign="center">
         <Button
           variant="text"
-          onClick={handleBackToLogin}
+          onClick={() => {
+            handleBackToLogin();
+          }}
           sx={{ textTransform: "none" }}
         >
           Quay lại đăng nhập

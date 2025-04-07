@@ -1,16 +1,42 @@
-import { Box, Button, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, TextField, Typography } from "@mui/material";
 import { useState } from "react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { supabase } from "../../lib/supabase";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
-const ResetPassword = ({ setCurrentScreen, email }) => {
+const ResetPassword = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState("password");
 
-  console.log("Email từ props:", email); // Kiểm tra giá trị email nhận được từ props
+  useEffect(() => {
+    const hashParams = window.location.hash
+      .substring(1)
+      .split("&")
+      .reduce((acc, param) => {
+        const [key, value] = param.split("=");
+        if (key && value) acc[key] = decodeURIComponent(value);
+        return acc;
+      }, {});
+
+    if (hashParams.access_token) {
+      supabase.auth
+        .setSession({
+          access_token: hashParams.access_token,
+          refresh_token: hashParams.refresh_token || "",
+        })
+        .then(({ data, error }) => {
+          if (error) console.error("Error setting session:", error);
+          else console.log("Session set successfully", data);
+        });
+    }
+  }, []);
 
   const handleSubmitNewPassword = async () => {
     if (newPassword.trim() === "") {
@@ -29,52 +55,35 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
     }
 
     try {
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession();
-      if (sessionError || !sessionData.session) {
-        toast.error(
-          "Phiên xác thực không hợp lệ. Vui lòng xác nhận qua email trước!"
-        );
-        handleBackToForgotPassword;
-        return;
-      }
-
       const { data, error } = await supabase.auth.updateUser({
-        newPassword: confirmPassword,
+        password: newPassword,
       });
 
       if (error) {
+        console.error("[ResetPassword] Supabase error", {
+          error: error.message,
+          code: error.code,
+        });
         toast.error("Cập nhật mật khẩu thất bại: " + error.message);
         return;
       }
 
-      toast.success("Mật khẩu đã được cập nhật thành công!");
-      setCurrentScreen("login"); // Quay lại màn Login
+      alert("Mật khẩu đã được cập nhật thành công!");
+      navigate("/");
     } catch (error) {
       toast.error("Đã có lỗi xảy ra, vui lòng thử lại!");
     }
   };
 
   const handleBackToForgotPassword = () => {
-    setCurrentScreen("forgotPassword"); // Quay lại màn ForgotPassword
+    navigate("/", { state: { screen: "forgotPassword" } });
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", p: 2 }}>
+    <Box sx={{ maxWidth: 400, mx: "auto", p: 2, mt: 5 }}>
       <Typography variant="h6" textAlign="center" mb={2}>
         Đặt lại mật khẩu
       </Typography>
-      <Box>
-        <Typography fontSize="14px">Email</Typography>
-        <TextField
-          id="email"
-          value={email}
-          variant="standard"
-          fullWidth
-          style={{ marginBottom: "20px" }}
-          disabled
-        />
-      </Box>
       <Box sx={{ position: "relative" }}>
         <Typography fontSize="14px">
           Mật khẩu mới<span style={{ color: "red" }}>*</span>
@@ -84,14 +93,22 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
           placeholder="Nhập mật khẩu mới"
           type={showPassword}
           value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          onChange={(e) => {
+            console.log("[ResetPassword] New password input changed", {
+              newValue: e.target.value,
+            });
+            setNewPassword(e.target.value);
+          }}
           variant="standard"
           fullWidth
           style={{ marginBottom: "20px" }}
         />
         {showPassword === "password" ? (
           <VisibilityIcon
-            onClick={() => setShowPassword("text")}
+            onClick={() => {
+              console.log("[ResetPassword] Toggling showPassword to text");
+              setShowPassword("text");
+            }}
             style={{
               position: "absolute",
               right: "10px",
@@ -101,7 +118,10 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
           />
         ) : (
           <VisibilityOffIcon
-            onClick={() => setShowPassword("password")}
+            onClick={() => {
+              console.log("[ResetPassword] Toggling showPassword to password");
+              setShowPassword("password");
+            }}
             style={{
               position: "absolute",
               right: "10px",
@@ -120,7 +140,12 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
           placeholder="Xác nhận mật khẩu"
           type={showPassword}
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={(e) => {
+            console.log("[ResetPassword] Confirm password input changed", {
+              newValue: e.target.value,
+            });
+            setConfirmPassword(e.target.value);
+          }}
           variant="standard"
           fullWidth
           style={{ marginBottom: "20px" }}
@@ -130,19 +155,26 @@ const ResetPassword = ({ setCurrentScreen, email }) => {
         variant="contained"
         fullWidth
         style={{ margin: "20px 0" }}
-        onClick={handleSubmitNewPassword}
+        onClick={() => {
+          console.log("[ResetPassword] Update password button clicked");
+          handleSubmitNewPassword();
+        }}
       >
         Cập nhật mật khẩu
       </Button>
       <Box textAlign="center">
         <Button
           variant="text"
-          onClick={handleBackToForgotPassword}
+          onClick={() => {
+            console.log("[ResetPassword] Back button clicked");
+            handleBackToForgotPassword();
+          }}
           sx={{ textTransform: "none" }}
         >
           Quay lại
         </Button>
       </Box>
+      <ToastContainer />
     </Box>
   );
 };

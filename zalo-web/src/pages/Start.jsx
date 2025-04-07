@@ -320,8 +320,7 @@ import Login from "../components/Login";
 import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
-import ForgotPassword from "./ForgotPassword";
-import ResetPassword from "../components/ResetPassword";
+import ForgotPassword from "../components/ForgotPassword";
 
 const style = {
   position: "absolute",
@@ -367,52 +366,25 @@ const Start = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentScreen, setCurrentScreen] = useState("login");
-
   const [value, setValue] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Kiểm tra URL ngay khi component mount
-    const urlParams = new URLSearchParams(
-      window.location.hash.replace("#", "")
-    );
-    const type = urlParams.get("type");
-
-    if (type === "recovery") {
-      // Ngăn Supabase tự động đăng nhập
-      supabase.auth.signOut(); // Đăng xuất ngay lập tức để tránh chuyển hướng đến /home
-      setCurrentScreen({ screen: "resetPassword", email });
+    console.log("[Start] useEffect triggered", { locationState: location.state, pathname: location.pathname });
+    if (location.pathname !== "/") {
+      console.log("[Start] Not on root path, skipping useEffect logic");
       return;
     }
-
-    // Lắng nghe sự kiện thay đổi trạng thái xác thực từ Supabase
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("Auth event:", event, session);
-        console.log("Current screen:", currentScreen);
-
-        if (event === "PASSWORD_RECOVERY") {
-          supabase.auth.signOut();
-
-          setCurrentScreen({ screen: "resetPassword", email });
-        } else if (event === "SIGNED_IN") {
-          // Chỉ chuyển hướng đến /home nếu không phải luồng reset password
-          navigate("/home");
-        }
-      }
-    );
-
     if (location.state?.message) {
       toast.success(location.state.message);
     }
     if (location.state?.error) {
       toast.error(location.state.error);
     }
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [location.state, navigate]);
+    if (location.state?.screen) {
+      setCurrentScreen(location.state.screen);
+    }
+  }, [location.state, location.pathname]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -577,15 +549,8 @@ const Start = () => {
                   handleLogin={handleLogin}
                   setCurrentScreen={setCurrentScreen}
                 />
-              ) : currentScreen === "forgotPassword" ? (
-                <ForgotPassword setCurrentScreen={setCurrentScreen} />
               ) : (
-                <ResetPassword
-                  setCurrentScreen={setCurrentScreen}
-                  email={
-                    typeof currentScreen === "object" ? currentScreen.email : ""
-                  }
-                />
+                <ForgotPassword setCurrentScreen={setCurrentScreen} />
               )}
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
