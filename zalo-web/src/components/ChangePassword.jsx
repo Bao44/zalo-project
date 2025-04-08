@@ -15,6 +15,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { supabase } from "../../lib/supabase";
 
 const style = {
   position: "absolute",
@@ -73,13 +74,15 @@ export default function ChangePassword() {
       return;
     }
 
-    const data = await UserAPI.updatePassword(password, newPassword);
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
 
-    if (data) {
+    if (!updateError) {
       toast.success("Cập nhật mật khẩu thành công");
       handleCloseModal();
     } else {
-      toast.error("Mật khẩu hiện tại không đúng");
+      toast.error("Cập nhật mật khẩu không thành công");
     }
   };
 

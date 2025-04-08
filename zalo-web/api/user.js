@@ -33,16 +33,6 @@ export const signIn = async (email, password) => {
   }
 };
 
-// export const getUserData = async (userId) => {
-//   try {
-//     const response = await api.get(`/api/users/${userId}`);
-//     return { success: true, data: response.data }; // Đảm bảo trả về định dạng { success, data }
-//   } catch (error) {
-//     console.error("Error fetching user data:", error);
-//     return { success: false, error: error.response?.data || error };
-//   }
-// };
-
 export const getUserData = async (userId) => {
   try {
     const response = await api.get(`/api/users/${userId}`);
