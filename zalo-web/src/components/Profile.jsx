@@ -24,6 +24,13 @@ import { useDispatch, useSelector } from "react-redux";
 
 import ModalImage from "./ModalImage";
 import { supabaseUrl } from "../../constants";
+import { updateUser } from "../../api/user";
+import {
+  getUserBackgroundImageSrc,
+  getUserImageSrc,
+  uploadFile,
+} from "../../api/image";
+import { setUser } from "../redux/userSlice";
 
 const style = {
   position: "absolute",
@@ -45,8 +52,6 @@ const style = {
 
 export default function Profile({ user }) {
   const [openModal, setOpenModal] = useState(false);
-
-  const { user: currentUser } = useSelector((state) => state.user);
 
   const handleOpenModal = () => {
     changeBody("default");
@@ -86,18 +91,21 @@ export default function Profile({ user }) {
             <AvatarEdit
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
+              user={user}
             />
           )}
           {body === "image_editor" && (
             <ImageEdit
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
+              user={user}
             />
           )}
           {body === "image_uploader" && (
             <ImageUploader
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
+              user={user}
             />
           )}
           {body === "info_edit" && (
@@ -314,7 +322,7 @@ function AvatarHome({ name, avatar, background, changeBody }) {
   );
 }
 
-function AvatarEdit({ changeBody, handleCloseModal }) {
+function AvatarEdit({ changeBody, handleCloseModal, user }) {
   return (
     <>
       <Box sx={{ ...style }}>
@@ -328,6 +336,7 @@ function AvatarEdit({ changeBody, handleCloseModal }) {
           <AvatarUploader
             changeBody={changeBody}
             handleCloseModal={handleCloseModal}
+            user={user}
           />
         </Box>
         {/* <Button onClick={handleClose}>Close Child Modal</Button> */}
@@ -336,7 +345,7 @@ function AvatarEdit({ changeBody, handleCloseModal }) {
   );
 }
 
-function ImageEdit({ changeBody, handleCloseModal }) {
+function ImageEdit({ changeBody, handleCloseModal, user }) {
   return (
     <>
       <Box sx={{ ...style }}>
@@ -350,6 +359,7 @@ function ImageEdit({ changeBody, handleCloseModal }) {
           <ImageUploader
             changeBody={changeBody}
             handleCloseModal={handleCloseModal}
+            user={user}
           />
         </Box>
       </Box>
@@ -357,14 +367,13 @@ function ImageEdit({ changeBody, handleCloseModal }) {
   );
 }
 
-function AvatarUploader({ changeBody, handleCloseModal }) {
-  const [open, setOpen] = useState(false); // Hiển thị
+function AvatarUploader({ changeBody, handleCloseModal, user }) {
+  const [open, setOpen] = useState(false);
   const [imageUri, setImageUri] = useState(null);
-  const [fileImg, setFileImg] = useState();
+  const [fileImg, setFileImg] = useState(null);
   const [scale, setScale] = useState(1.2);
-  const { user } = useSelector((state) => state.user);
-  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
 
   const handleScaleChange = (event, newValue) => {
     setScale(newValue);
@@ -372,32 +381,43 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    const url = URL.createObjectURL(file);
-    setFileImg(file);
-    setImageUri(url);
-    setOpen(true);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setFileImg(file);
+      setImageUri(url);
+      setOpen(true);
+    }
   };
 
   const handleUpdateAvatar = async () => {
+    if (!fileImg) return;
+
     setLoading(true);
-    const formData = new FormData();
-    formData.append("image", fileImg);
-    const avatarUrl = await UploadAPI.uploadImage(formData);
-    if (avatarUrl) {
-      const newUser = {
-        name: user.name,
-        gender: user?.gender,
-        email: user?.email,
-        dateOfBirth: user?.dateOfBirth,
-        avatar: user.avatar,
-        coverImage: user?.background,
-      };
-      const data = await UserAPI.updateMe(newUser);
-      if (data) {
-        dispatch(setUser(data));
-        setLoading(false);
-        changeBody("default");
+    try {
+      // Upload file ảnh
+      const uploadResult = await uploadFile("profiles", fileImg, true);
+
+      if (uploadResult.success) {
+        const avatarPath = uploadResult.data.path;
+
+        // Cập nhật user
+        const updatedUserData = {
+          ...user,
+          avatar: avatarPath,
+        };
+
+        const updateResponse = await updateUser(user.id, updatedUserData);
+
+        if (updateResponse.success) {
+          dispatch(setUser({ ...user, avatar: avatarPath }));
+          changeBody("default");
+          handleCloseModal();
+        }
       }
+    } catch (error) {
+      console.error("Error updating avatar:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -407,7 +427,7 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
         <Box>
           <Box>
             <label
-              htmlFor="upload"
+              htmlFor="upload-avatar"
               style={{
                 display: "flex",
                 justifyContent: "center",
@@ -426,28 +446,26 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
               Tải ảnh từ máy lên
             </label>
             <input
-              id="upload"
+              id="upload-avatar"
               type="file"
               accept="image/*"
-              style={{ display: "none", padding: "10px 10px" }}
+              style={{ display: "none" }}
               onChange={handleFileChange}
             />
           </Box>
           <Box marginLeft={2}>
-            <Typography fontWeight={"bold"}>Ảnh đại diện của bạn</Typography>
-            <Box
-              sx={{
-                marginTop: "60px",
-              }}
-            >
-              <Avatar
-                src={user?.avatar ? user.avatar : ""}
+            <Typography fontWeight="bold">Ảnh đại diện của bạn</Typography>
+            <Box sx={{ marginTop: "60px" }}>
+              <img
+                src={getUserImageSrc(user?.avatar)}
                 alt="avatar"
                 style={{
                   width: 200,
                   height: 200,
+                  borderRadius: "50%",
                   border: "1px solid #fff",
                   margin: "0 auto",
+                  display: "block",
                 }}
               />
             </Box>
@@ -456,77 +474,42 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
       )}
 
       {open && (
-        <Box sx={style}>
+        <Box sx={{ padding: "20px" }}>
           <Box
             sx={{
               display: "flex",
-              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingBottom: "10px",
             }}
-          >
+          ></Box>
+
+          {imageUri && (
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "center",
                 alignItems: "center",
-                paddingBottom: "10px",
-                paddingTop: "10px",
-                paddingRight: "10px",
-                paddingLeft: "2px",
+                marginTop: "20px",
               }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "start",
-                  alignItems: "center",
-                  gap: "3px",
-                }}
-              >
-                <IconButton
-                  onClick={() => {
-                    changeBody("avatar_editor");
-                    setOpen(false);
-                  }}
-                >
-                  <ArrowBackIosNewOutlinedIcon />
-                </IconButton>
-                <Typography fontWeight={"bold"}>
-                  Cập nhật ảnh đại diện
-                </Typography>
-              </Box>
-              <IconButton onClick={handleCloseModal} sx={{ color: "black" }}>
-                <CloseIcon />
-              </IconButton>
+              <AvatarEditor
+                image={imageUri}
+                width={250}
+                height={250}
+                border={50}
+                color={[255, 255, 255, 0.6]}
+                scale={scale}
+                rotate={0}
+                borderRadius={150}
+              />
             </Box>
-            <Box />
-            {imageUri && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  width: "100%",
-                  height: "100%",
-                }}
-              >
-                <AvatarEditor
-                  image={imageUri}
-                  width={250}
-                  height={250}
-                  border={50}
-                  color={[255, 255, 255, 0.6]} // RGBA
-                  scale={scale}
-                  rotate={0}
-                  borderRadius={150}
-                />
-              </Box>
-            )}
-          </Box>
+          )}
+
           <Box
             sx={{
               display: "flex",
               justifyContent: "center",
-              alignItems: "center",
               marginTop: "30px",
             }}
           >
@@ -536,27 +519,33 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
               max={3}
               step={0.1}
               onChange={handleScaleChange}
+              sx={{ width: "60%" }}
             />
           </Box>
+
           <Box
             sx={{
               display: "flex",
               justifyContent: "right",
-              alignItems: "center",
-              marginTop: "30px",
               gap: "10px",
-              marginRight: "10px",
+              marginTop: "30px",
             }}
           >
             <Button variant="outlined" onClick={() => setOpen(false)}>
-              Huỷ
+              Hủy
             </Button>
-            <Button onClick={handleUpdateAvatar} variant="contained">
+            <Button
+              variant="contained"
+              onClick={handleUpdateAvatar}
+              disabled={loading}
+            >
               Cập nhật
               {loading && (
-                <Box sx={{ display: "flex", marginLeft: "5px" }}>
-                  <CircularProgress color="inherit" size="20px" />
-                </Box>
+                <CircularProgress
+                  color="inherit"
+                  size={20}
+                  sx={{ marginLeft: "5px" }}
+                />
               )}
             </Button>
           </Box>
@@ -566,14 +555,13 @@ function AvatarUploader({ changeBody, handleCloseModal }) {
   );
 }
 
-function ImageUploader({ changeBody, handleCloseModal }) {
+function ImageUploader({ changeBody, handleCloseModal, user }) {
   const [open, setOpen] = useState(false);
   const [imageUri, setImageUri] = useState(null);
-  const [fileImg, setFileImg] = useState();
+  const [fileImg, setFileImg] = useState(null);
   const [scale, setScale] = useState(1.2);
-  const { user } = useSelector((state) => state.user);
-  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
 
   const handleScaleChange = (event, newValue) => {
     setScale(newValue);
@@ -581,36 +569,44 @@ function ImageUploader({ changeBody, handleCloseModal }) {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    const url = URL.createObjectURL(file);
-    setFileImg(file);
-    setImageUri(url);
-    setOpen(true);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setFileImg(file);
+      setImageUri(url);
+      setOpen(true);
+    }
   };
 
   const handleUpdateImage = async () => {
+    if (!fileImg) return;
+
     setLoading(true);
-    const formData = new FormData();
-    formData.append("image", fileImg);
+    try {
+      // Upload file ảnh bìa
+      const uploadResult = await uploadFile("backgrounds", fileImg, true);
 
-    const imageUrl = await UploadAPI.uploadImage(formData);
+      if (uploadResult.success) {
+        const backgroundPath = uploadResult.data.path;
 
-    if (imageUrl) {
-      const newUser = {
-        name: user?.name,
-        gender: user?.gender,
-        email: user?.email,
-        dateOfBirth: user?.dateOfBirth,
-        avatar: user?.avatar,
-        background: imageUrl,
-      };
+        // Cập nhật user với background mới
+        const updatedUserData = {
+          ...user,
+          background: backgroundPath,
+        };
 
-      const data = await UserAPI.updateMe(newUser);
-      console.log(data);
-      if (data) {
-        dispatch(setUser(data));
-        setLoading(false);
-        changeBody("default");
+        const updateResponse = await updateUser(user.id, updatedUserData);
+
+        if (updateResponse.success) {
+          // Cập nhật Redux store
+          dispatch(setUser({ ...user, background: backgroundPath }));
+          changeBody("default");
+          handleCloseModal();
+        }
       }
+    } catch (error) {
+      console.error("Error updating background:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -620,7 +616,7 @@ function ImageUploader({ changeBody, handleCloseModal }) {
         <Box>
           <Box>
             <label
-              htmlFor="upload"
+              htmlFor="upload-background"
               style={{
                 display: "flex",
                 justifyContent: "center",
@@ -639,27 +635,26 @@ function ImageUploader({ changeBody, handleCloseModal }) {
               Tải ảnh từ máy lên
             </label>
             <input
-              id="upload"
+              id="upload-background"
               type="file"
               accept="image/*"
-              style={{ display: "none", padding: "10px 10px" }}
+              style={{ display: "none" }}
               onChange={handleFileChange}
             />
           </Box>
           <Box marginLeft={2}>
-            <Typography fontWeight={"bold"}>Ảnh bìa của bạn</Typography>
-            <Box
-              sx={{
-                marginTop: "60px",
-              }}
-            >
+            <Typography fontWeight="bold">Ảnh bìa của bạn</Typography>
+            <Box sx={{ marginTop: "60px" }}>
               {user?.background && (
                 <img
-                  src={user?.background ? user.background : ""}
-                  alt="image"
+                  src={getUserBackgroundImageSrc(user.background)}
+                  alt="background"
                   style={{
                     width: 360,
                     height: 320,
+                    objectFit: "cover",
+                    display: "block",
+                    margin: "0 auto",
                   }}
                 />
               )}
@@ -669,74 +664,41 @@ function ImageUploader({ changeBody, handleCloseModal }) {
       )}
 
       {open && (
-        <Box sx={style}>
+        <Box sx={{ padding: "20px" }}>
           <Box
             sx={{
               display: "flex",
-              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingBottom: "10px",
             }}
-          >
+          ></Box>
+
+          {imageUri && (
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "center",
                 alignItems: "center",
-                paddingBottom: "10px",
-                paddingTop: "10px",
-                paddingRight: "10px",
-                paddingLeft: "2px",
+                marginTop: "20px",
               }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "start",
-                  alignItems: "center",
-                  gap: "3px",
-                }}
-              >
-                <IconButton
-                  onClick={() => {
-                    changeBody("image_editor");
-                    setOpen(false);
-                  }}
-                >
-                  <ArrowBackIosNewOutlinedIcon />
-                </IconButton>
-                <Typography fontWeight={"bold"}>Cập nhật ảnh bìa</Typography>
-              </Box>
-              <IconButton onClick={handleCloseModal} sx={{ color: "black" }}>
-                <CloseIcon />
-              </IconButton>
+              <AvatarEditor
+                image={imageUri}
+                width={360} // Điều chỉnh kích thước phù hợp với ảnh bìa
+                height={320}
+                border={50}
+                color={[255, 255, 255, 0.6]}
+                scale={scale}
+                rotate={0}
+              />
             </Box>
-            <Box />
-            {imageUri && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  width: "100%",
-                  height: "100%",
-                }}
-              >
-                <AvatarEditor
-                  image={imageUri}
-                  width={250}
-                  height={250}
-                  border={50}
-                  color={[255, 255, 255, 0.6]} // RGBA
-                  scale={scale}
-                  rotate={0}
-                />
-              </Box>
-            )}
-          </Box>
+          )}
+
           <Box
             sx={{
               display: "flex",
               justifyContent: "center",
-              alignItems: "center",
               marginTop: "30px",
             }}
           >
@@ -746,27 +708,33 @@ function ImageUploader({ changeBody, handleCloseModal }) {
               max={3}
               step={0.1}
               onChange={handleScaleChange}
+              sx={{ width: "60%" }}
             />
           </Box>
+
           <Box
             sx={{
               display: "flex",
               justifyContent: "right",
-              alignItems: "center",
-              marginTop: "30px",
               gap: "10px",
-              marginRight: "10px",
+              marginTop: "30px",
             }}
           >
             <Button variant="outlined" onClick={() => setOpen(false)}>
-              Huỷ
+              Hủy
             </Button>
-            <Button onClick={handleUpdateImage} variant="contained">
+            <Button
+              variant="contained"
+              onClick={handleUpdateImage}
+              disabled={loading}
+            >
               Cập nhật
               {loading && (
-                <Box sx={{ display: "flex", marginLeft: "5px" }}>
-                  <CircularProgress color="inherit" size="20px" />
-                </Box>
+                <CircularProgress
+                  color="inherit"
+                  size={20}
+                  sx={{ marginLeft: "5px" }}
+                />
               )}
             </Button>
           </Box>
