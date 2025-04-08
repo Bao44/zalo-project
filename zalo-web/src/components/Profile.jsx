@@ -53,8 +53,6 @@ const style = {
 
 export default function Profile({ user }) {
   const [openModal, setOpenModal] = useState(false);
-
-
   const handleOpenModal = () => {
     changeBody("default");
     setOpenModal(true);
