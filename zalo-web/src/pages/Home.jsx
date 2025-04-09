@@ -107,7 +107,6 @@ const Home = () => {
 
           const storedLastLoginAt = localStorage.getItem("lastLoginAt");
           if (data.user.last_sign_in_at !== storedLastLoginAt) {
-            console.log("Có đăng nhập mới từ thiết bị khác");
             toast.warn(
               "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác!"
             );
