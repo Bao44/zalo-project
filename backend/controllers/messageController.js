@@ -6,7 +6,7 @@ const cloudinary = require("../config/cloudinary");
 const messageController = {
     async sendMessage(req, res) {
         try {
-            const { idTemp, conversationId, senderId, content, attachments, media, files, replyTo, receiverId } = req.body;
+            const { idTemp, conversationId, senderId, content, attachments, media, file, replyTo, receiverId } = req.body;
 
             if (!conversationId || !senderId) {
                 return res.status(400).json({ error: "conversationId và senderId là bắt buộc" });
@@ -51,12 +51,12 @@ const messageController = {
 
             if (content || images.length > 0) {
                 const newMessage = new Message({
-                    conversationId: conversation._id,
+                    conversationId: conversation?._id,
                     senderId,
                     content: content || "",
                     attachments: images,
-                    media: media || [],
-                    files: [],
+                    media: media || null,
+                    files: null,
                     replyTo: replyTo || null,
                     status: "sent",
                 });
@@ -71,53 +71,48 @@ const messageController = {
                 io.to(conversation._id.toString()).emit("newMessage", populatedMessage, idTemp);
             }
 
-            // Upload và tạo tin nhắn riêng cho từng file
-            if (files && files.length > 0) {
-                const uploadPromises = files.map(async (file) => {
-                    if (!file.uri) {
-                        throw new Error(`Thiếu dữ liệu base64 cho file: ${file.name}`);
-                    }
+            // Upload và tạo tin nhắn riêng cho file (chỉ 1 file duy nhất)
+            if (file) {
+                if (!file.uri) {
+                    throw new Error(`Thiếu dữ liệu base64 cho file: ${file.name}`);
+                }
 
-                    const mimeType = file.type || 'application/octet-stream';
-                    const dataUri = `data:${mimeType};base64,${file.uri}`;
+                const mimeType = file.type || 'application/octet-stream';
+                const dataUri = `data:${mimeType};base64,${file.uri}`;
 
-                    const result = await cloudinary.uploader.upload(dataUri, {
-                        folder: "files",
-                        resource_type: "auto",
-                        public_id: file.name,
-                    });
-
-                    const fileData = {
-                        fileName: file.name,
-                        fileType: file.type,
-                        fileUrl: result.secure_url,
-                    };
-
-                    // Tạo tin nhắn riêng cho file này
-                    const fileMessage = new Message({
-                        conversationId: conversation._id,
-                        senderId,
-                        content: "",
-                        attachments: [],
-                        media: [],
-                        files: [fileData],
-                        replyTo: replyTo || null,
-                        status: "sent",
-                    });
-
-                    const savedFileMessage = await fileMessage.save();
-                    const populatedFileMessage = await Message.findById(savedFileMessage._id)
-                        .populate("senderId", "name avatar")
-                        .populate("replyTo", "content senderId");
-
-                    // Gửi tin nhắn real-time cho file
-                    io.to(conversation._id.toString()).emit("newMessage", populatedFileMessage, idTemp);
-
-                    return savedFileMessage;
+                const result = await cloudinary.uploader.upload(dataUri, {
+                    folder: "files",
+                    resource_type: "auto",
+                    public_id: file.name,
                 });
 
-                const fileMessages = await Promise.all(uploadPromises);
-                savedMessages = savedMessages.concat(fileMessages);
+                const fileData = {
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileUrl: result.secure_url,
+                };
+
+                // Tạo tin nhắn riêng cho file này
+                const fileMessage = new Message({
+                    conversationId: conversation._id,
+                    senderId,
+                    content: "",
+                    attachments: [],
+                    media: media || null,
+                    files: fileData,
+                    replyTo: replyTo || null,
+                    status: "sent",
+                });
+
+                const savedFileMessage = await fileMessage.save();
+                savedMessages.push(savedFileMessage);
+
+                const populatedFileMessage = await Message.findById(savedFileMessage._id)
+                    .populate("senderId", "name avatar")
+                    .populate("replyTo", "content senderId");
+
+                // Gửi tin nhắn real-time cho file
+                io.to(conversation._id.toString()).emit("newMessage", populatedFileMessage, idTemp);
             }
 
             // Cập nhật lastMessage cho conversation

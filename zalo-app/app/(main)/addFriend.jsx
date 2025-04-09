@@ -50,7 +50,7 @@ const AddFriend = () => {
                             <Text style={styles.textAreaCode}>+84</Text>
                             <Icon name="arrowDown" size={28} strokeWidth={1.6} color="black" />
                         </TouchableOpacity>
-                        <TextInput style={{ fontSize: 16, marginLeft: 5 }} placeholder="Nhập số điện thoại" value={phone} onChangeText={(text) => setPhone(text)} />
+                        <TextInput style={{ fontSize: 16, marginLeft: 5, width: "70%" }} placeholder="Nhập số điện thoại" value={phone} onChangeText={(text) => setPhone(text)} />
                     </View>
                     <TouchableOpacity style={styles.buttonNextSearch} onPress={() => handleSearch(phone)}>
                         <Icon name="arrowRight" size={28} strokeWidth={1.6} color={theme.colors.darkLight} />

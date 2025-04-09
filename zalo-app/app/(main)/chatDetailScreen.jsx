@@ -20,6 +20,8 @@ import * as MediaLibrary from "expo-media-library";
 import * as DocumentPicker from 'expo-document-picker';
 import wordImage from "../../assets/images/iconFiles/6296672_microsoft_office_office365_powerpoint_icon.png"
 import ViewFile from "../../components/ViewFile";
+import EmojiPicker from "../../components/EmojiPicker";
+
 
 const ChatDetailScreen = () => {
     const { user } = useAuth();
@@ -28,13 +30,14 @@ const ChatDetailScreen = () => {
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
     const [attachments, setAttachments] = useState([]);
-    const [media, setMedia] = useState([]);
+    const [media, setMedia] = useState(null);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [photos, setPhotos] = useState([]);
     const [showGallery, setShowGallery] = useState(false);
     const [stempId, setStempId] = useState("");
     const [option, setOption] = useState("emoji");
+
 
     // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
@@ -181,20 +184,17 @@ const ChatDetailScreen = () => {
 
     // GỬI TIN NHẮN
     const handleSendMessage = async () => {
-        if (!message && attachments?.length === 0 && media?.length === 0 && files?.length === 0) {
+        if (!message && attachments?.length === 0 && !media) {
             return;
         }
         try {
-            if (!convertId) {
+            let conversationId = conversation?._id;
+
+            if (!conversation) {
                 if (!user?.id || !parsedData?._id) {
                     Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
                     return;
                 }
-            }
-
-            let conversationId = conversation?._id;
-
-            if (!conversation) {
                 const response = await createConversation1vs1(user?.id, parsedData?._id);
                 if (response.success && response.data) {
                     setConversation(response.data);
@@ -211,6 +211,7 @@ const ChatDetailScreen = () => {
                 return;
             }
 
+            // Xử lý ảnh đính kèm (nếu có)
             let images = [];
             if (attachments?.length > 0) {
                 images = await Promise.all(
@@ -228,37 +229,38 @@ const ChatDetailScreen = () => {
                 );
             }
 
-            let t = Date.now().toString();
+            const t = Date.now().toString();
             setStempId(t);
 
             const messageData = {
                 idTemp: t,
                 senderId: user?.id,
-                content: message,
-                attachments: images,
-                media,
-                files,
+                content: message || "",
+                attachments: images.length > 0 ? images : null,
+                media: media || null,
+                file: null, // Không gửi file
                 receiverId: parsedData?._id,
             };
 
-            // set tam tin nhan
+            // Thêm tin nhắn tạm thời vào danh sách
             setMessages((prev) => [
                 {
                     _id: t,
                     senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
-                    content: message,
+                    content: message || "",
                     attachments: attachments.map((img) => img.uri),
                     media,
-                    files,
+                    files: null, // Không có file
                     createdAt: new Date().toISOString(),
                 },
                 ...prev,
             ]);
 
+
+            // Reset trạng thái
             setMessage("");
             setAttachments([]);
-            setMedia([]);
-            setFiles([]);
+            setMedia(null);
             setShowGallery(false);
 
             // Gửi tin nhắn
@@ -369,14 +371,78 @@ const ChatDetailScreen = () => {
                 }
             );
             if (!result.canceled) {
-                result.assets.map(async (file) => {
-                    const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
-                        encoding: FileSystem.EncodingType.Base64,
-                    });
-                    setFiles((prev) => [...prev, { uri: fileBase64, name: file.name, type: file.mimeType }]);
-                    consolelog("setFiles", files);
-                }
+                const selectedFiles = await Promise.all(
+                    result.assets.map(async (file) => {
+                        const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
+                            encoding: FileSystem.EncodingType.Base64,
+                        });
+                        return { uri: fileBase64, name: file.name, type: file.mimeType };
+                    })
                 );
+
+                // Gửi từng file ngay sau khi chọn
+                for (const file of selectedFiles) {
+                    let conversationId = conversation?._id;
+
+                    // Tạo cuộc trò chuyện nếu chưa có
+                    if (!conversation) {
+                        if (!user?.id || !parsedData?._id) {
+                            Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
+                            return;
+                        }
+                        const response = await createConversation1vs1(user?.id, parsedData?._id);
+                        if (response.success && response.data) {
+                            setConversation(response.data);
+                            conversationId = response.data._id;
+                        } else {
+                            const errorMsg = response.data?.message || "Không rõ nguyên nhân";
+                            Alert.alert("Lỗi", `Không thể tạo cuộc trò chuyện: ${errorMsg}`);
+                            return;
+                        }
+                    }
+
+                    if (!conversationId) {
+                        Alert.alert("Lỗi", "Không thể xác định ID cuộc trò chuyện");
+                        return;
+                    }
+
+                    const t = Date.now().toString();
+                    setStempId(t);
+
+                    const messageData = {
+                        idTemp: t,
+                        senderId: user?.id,
+                        content: "", // Nội dung để trống khi gửi file
+                        attachments: null, // Không gửi ảnh kèm file
+                        media: null, // Không gửi media kèm file
+                        file: file, // Gửi file hiện tại
+                        receiverId: parsedData?._id,
+                    };
+
+                    // Thêm tin nhắn tạm thời vào danh sách
+                    setMessages((prev) => [
+                        {
+                            _id: t,
+                            senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
+                            content: "",
+                            attachments: [],
+                            media: null,
+                            files: file, // Đồng bộ với tên biến trong API
+                            createdAt: new Date().toISOString(),
+                        },
+                        ...prev,
+                    ]);
+
+                    // Gửi tin nhắn qua API
+                    const response = await sendMessage(conversationId, messageData);
+                    if (!response.success) {
+                        Alert.alert("Lỗi", `Không thể gửi tin nhắn: ${response.data?.message || "Lỗi không xác định"}`);
+                    }
+                }
+
+                // Reset trạng thái files sau khi gửi
+                setFiles([]);
+                setShowGallery(false);
             } else {
                 console.log("Cancel");
             }
@@ -388,11 +454,6 @@ const ChatDetailScreen = () => {
             );
         }
     };
-
-    // GỬI TIN NHẮN KHI CÓ FILE 
-    if (files?.length > 0 && message === "" && attachments?.length === 0 && media?.length === 0) {
-        handleSendMessage();
-    }
 
     return (
         <ScreenWrapper>
@@ -427,7 +488,7 @@ const ChatDetailScreen = () => {
                     {
                         loading ? (<Loading />) : messages?.length === 0 ? (
                             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                                <Text>Không có tin nhắn</Text>
+                                <Text style={{textAlign: "center"}}>Bạn hãy là người đầu tiên mở đầu cho cuộc trò chuyện này!</Text>
                             </View>
                         ) : (
                             <FlatList
@@ -442,8 +503,8 @@ const ChatDetailScreen = () => {
                                                     {item?.attachments?.length > 0 && (
                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
-                                                    {item?.files?.length > 0 && (
-                                                        <ViewFile file={item?.files[0]} />
+                                                    {item?.files !== null && (
+                                                        <ViewFile file={item?.files} />
                                                     )}
                                                     {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                     {
@@ -459,8 +520,8 @@ const ChatDetailScreen = () => {
                                                     {item?.attachments?.length > 0 && (
                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                     )}
-                                                    {item?.files?.length > 0 && (
-                                                        <ViewFile file={item?.files[0]} />
+                                                    {item?.files !== null && (
+                                                        <ViewFile file={item?.files} />
                                                     )}
                                                     {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                     {
@@ -481,8 +542,8 @@ const ChatDetailScreen = () => {
                                                         {item?.attachments?.length > 0 && (
                                                             <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                         )}
-                                                        {item?.files?.length > 0 && (
-                                                            <ViewFile file={item?.files[0]} />
+                                                        {item?.files !== null && (
+                                                            <ViewFile file={item?.files} />
                                                         )}
                                                         {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                         <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
@@ -499,8 +560,8 @@ const ChatDetailScreen = () => {
                                                             {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
-                                                            {item?.files?.length > 0 && (
-                                                                <ViewFile file={item?.files[0]} />
+                                                            {item?.files !== null && (
+                                                                <ViewFile file={item?.files} />
                                                             )}
                                                             {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                             {(index === messages?.length - 1) ?
@@ -522,8 +583,8 @@ const ChatDetailScreen = () => {
                                                             {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
-                                                            {item?.files?.length > 0 && (
-                                                                <ViewFile file={item?.files[0]} />
+                                                            {item?.files !== null && (
+                                                                <ViewFile file={item?.files} />
                                                             )}
                                                             {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                             {(index === messages?.length - 1) ?
@@ -571,7 +632,7 @@ const ChatDetailScreen = () => {
                     {showGallery && (
                         <View style={styles.galleryContainer}>
                             {option === "emoji" ?
-                                (<Image source={{ uri: wordImage?.src }} style={{ width: 20, height: 20 }} />)
+                                (<EmojiPicker onSelect={emoji => setMessage(prev => prev + emoji)} />)
                                 :
                                 option === "image" ?
                                     (
@@ -767,7 +828,7 @@ const styles = StyleSheet.create({
     },
     galleryContainer: {
         backgroundColor: "#FFF",
-        paddingVertical: 10,
+        paddingVertical: 5,
         borderTopWidth: 1,
         borderColor: "#ddd",
         maxHeight: hp(35),

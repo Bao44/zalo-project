@@ -172,9 +172,9 @@ const MessageScreen = () => {
                     )}
                   {item?.lastMessage?.content ? item?.lastMessage?.content : "" ||
                     item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
-                      item?.lastMessage?.media[0]?.fileName ? `[Media] ${item?.lastMessage?.media[0]?.fileName}` : "" ||
-                        item?.lastMessage?.files[0]?.fileName ? `[File] ${item?.lastMessage?.files[0]?.fileName}` : "" ||
-                  "No messages yet"}
+                      item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||
+                        item?.lastMessage?.files?.fileName ? `[File] ${item?.lastMessage?.files?.fileName}` : "" ||
+                  "Hãy là người đầu tiên nhắn tin!"}
                 </Text>
               </View>
               {iconNotification(item?._id)}
@@ -244,10 +244,10 @@ const MessageScreen = () => {
                   </Text>
                 </View>
                 <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
-                  {item?.lastMessage?.senderId === user?.id ? "Bạn: " : "" || item?.members.find((u) => u._id !== user?.id)?.name ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""}
+                  {item?.lastMessage && ((item?.lastMessage?.senderId === user?.id ? "Bạn: " : "") || (item?.members.find((u) => u._id !== user?.id)?.name ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""))}
                   {item?.lastMessage?.content ? item?.lastMessage?.content : "" || item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
-                    item?.lastMessage?.media[0]?.fileName ? `[Media] ${item?.lastMessage?.media[0]?.fileName}` : "" ||
-                      item?.lastMessage?.files[0]?.fileName ? `[File] ${item?.lastMessage?.files[0]?.fileName}` : "" || "No messages yet"
+                    item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||
+                      item?.lastMessage?.files?.fileName ? `[File] ${item?.lastMessage?.files?.fileName}` : "" || "No messages yet"
                   }
                 </Text>
               </View>

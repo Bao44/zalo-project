@@ -18,20 +18,20 @@ const MessageSchema = new mongoose.Schema({
   attachments: [{
     type: String // Chứa link ảnh
   }],
-  media: [{
-    fileType: { type: String, enum: ["video", "audio"], required: true },
-    fileUrl: { type: String, required: true },
-    duration: { type: Number, default: 0 }
-  }],
-  files: [{
+  media: {
     fileName: String,
     fileType: String,
     fileUrl: String
-  }],
-  reactions: [{
+  },
+  files: {
+    fileName: String,
+    fileType: String,
+    fileUrl: String
+  },
+  reactions: {
     userId: { type: String, ref: "User" },
     emoji: String
-  }],
+  },
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Message",
@@ -40,7 +40,14 @@ const MessageSchema = new mongoose.Schema({
   seen: [{
     type: String,
     ref: "User"
-  }]
+  }],
+  like: [
+    {
+      userId: { type: String, ref: "User" },
+      totalLike: { type: Number }
+    }
+  ],
+  revoked: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Message", MessageSchema);
