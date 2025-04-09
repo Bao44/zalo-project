@@ -8,8 +8,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true, // Dành cho OAuth login
   },
 });
-
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log("Auth event:", event);
-  console.log("Session:", session);
-});

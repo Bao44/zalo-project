@@ -12,6 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { ToastContainer, toast } from "react-toastify";
 import ArrowBackIosNewOutlinedIcon from "@mui/icons-material/ArrowBackIosNewOutlined";
 import BorderColorOutlinedIcon from "@mui/icons-material/BorderColorOutlined";
 import CameraEnhanceOutlinedIcon from "@mui/icons-material/CameraEnhanceOutlined";
@@ -37,8 +38,8 @@ const style = {
   top: "50%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  width: 400,
-  height: "580px",
+  width: 500,
+  height: "670px",
   bgcolor: "background.paper",
   borderRadius: "5px",
   boxShadow: 24,
@@ -112,6 +113,7 @@ export default function Profile({ user }) {
             <InfoEdit
               changeBody={changeBody}
               handleCloseModal={handleCloseModal}
+              user={user}
             />
           )}
         </Box>
@@ -197,6 +199,7 @@ function InfoBody({ changeBody, handleCloseModal, user }) {
         dob={user?.dob ? user.dob : new Date().getTime()}
         phoneNumber={user?.phone ? user.phone : ""}
         email={user?.email ? user.email : ""}
+        address={user?.address ? user.address : ""}
       />
       {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
@@ -744,7 +747,7 @@ function ImageUploader({ changeBody, handleCloseModal, user }) {
   );
 }
 
-function Info({ gender, dob, phoneNumber, email }) {
+function Info({ gender, dob, phoneNumber, email, address }) {
   return (
     <Box marginLeft={2}>
       <Typography fontWeight={"bold"} fontSize="16px" marginBottom="10px">
@@ -784,6 +787,14 @@ function Info({ gender, dob, phoneNumber, email }) {
           >
             Email
           </Typography>
+          <Typography
+            variant="body1"
+            sx={{ color: "gray" }}
+            fontSize="14px"
+            marginBottom="10px"
+          >
+            Địa chỉ
+          </Typography>
         </Grid>
         <Grid item>
           <Typography variant="body1" fontSize="14px" marginBottom="10px">
@@ -798,49 +809,98 @@ function Info({ gender, dob, phoneNumber, email }) {
           <Typography variant="body1" fontSize="14px" marginBottom="10px">
             {email}
           </Typography>
+          <Typography variant="body1" fontSize="14px" marginBottom="10px">
+            {address}
+          </Typography>
         </Grid>
       </Grid>
     </Box>
   );
 }
 
-function InfoEdit({ changeBody, handleCloseModal }) {
-  const { user } = useSelector((state) => state.user);
-  const dispatch = useDispatch();
-  const [fullName, setFullName] = useState(user?.fullName ? user.fullName : "");
+function InfoEdit({ changeBody, handleCloseModal, user }) {
+  const [name, setName] = useState(user?.name ? user.name : "");
   const [email, setEmail] = useState(user?.email ? user.email : "");
   const [gender, setGender] = useState(user?.gender);
-  const [date, setDate] = useState(
-    user?.dateOfBirth
-      ? convertToDateTime(user.dateOfBirth)
-      : convertToDateTime(new Date().getTime())
-  );
+  const [phone, setPhone] = useState(user?.phone ? user.phone : "");
+  const [address, setAddress] = useState(user?.address ? user.address : "");
+  const [date, setDate] = useState(user?.dob ? user.dob : new Date().getTime());
 
   const handleChangeDate = (event) => {
     setDate(event.target.value);
   };
+
   const handleChangeGender = (event) => {
     if (event.target.value === "male") {
-      setGender(true);
+      setGender(0);
     } else {
-      setGender(false);
+      setGender(1);
     }
   };
 
+  const validateForm = () => {
+    const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/; // Chỉ cho phép chữ cái và khoảng trắng (bao gồm tiếng Việt)
+    if (!name.trim()) {
+      toast.error("Tên không được để trống");
+      return false;
+    } else if (name.length < 2) {
+      toast.warning("Tên phải có ít nhất 2 ký tự");
+      return false;
+    } else if (!nameRegex.test(name)) {
+      toast.error("Tên không hợp lệ");
+      return false;
+    }
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phone) {
+      toast.error("Số điện thoại không được để trống");
+      return false;
+    } else if (!phoneRegex.test(phone)) {
+      toast.warning(
+        "Số điện thoại không hợp lệ. Vui lòng nhập lại số điện thoại."
+      );
+      return false;
+    }
+
+    if (!date) {
+      toast.error("Ngày sinh không được để trống");
+      return false;
+    } else {
+      const birthDate = new Date(date);
+      const today = new Date();
+      if (birthDate > today) {
+        toast.warning("Ngày sinh không hợp lệ. Vui lòng nhập lại.");
+        return false;
+      }
+    }
+
+    if (!address.trim()) {
+      toast.error("Địa chỉ không được để trống");
+      return false;
+    }
+    return true;
+  };
+
   const handleChangeProfile = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     const newUser = {
-      fullName,
+      name,
       gender,
       email,
-      dateOfBirth: convertDateToDateObj(date),
-      avatarUrl: user?.avatarUrl,
-      coverImage: user?.coverImage,
+      dob: date,
+      phone: phone,
+      address: address,
     };
 
-    const data = await UserAPI.updateMe(newUser);
-    if (data) {
-      dispatch(setUser(data));
+    const response = await updateUser(user.id, newUser);
+    if (response.success) {
+      toast.success("Cập nhật thông tin thành công");
       changeBody("default");
+      handleCloseModal();
+    } else {
+      console.error("Error updating user:", response.error);
     }
   };
 
@@ -882,8 +942,8 @@ function InfoEdit({ changeBody, handleCloseModal }) {
                 border: "1px solid #A0A0A0",
                 boxSizing: "border-box",
               }}
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </Box>
           <Box>
@@ -901,6 +961,7 @@ function InfoEdit({ changeBody, handleCloseModal }) {
               }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled
             />
           </Box>
           <Box>
@@ -920,7 +981,7 @@ function InfoEdit({ changeBody, handleCloseModal }) {
                   id="male"
                   name="gender"
                   value="male"
-                  checked={gender}
+                  checked={!gender}
                   onChange={handleChangeGender}
                 />
                 <label htmlFor="male">Nam</label>
@@ -931,7 +992,7 @@ function InfoEdit({ changeBody, handleCloseModal }) {
                   id="female"
                   name="gender"
                   value="female"
-                  checked={!gender}
+                  checked={gender}
                   onChange={handleChangeGender}
                 />
                 <label htmlFor="female">Nữ</label>
@@ -953,6 +1014,40 @@ function InfoEdit({ changeBody, handleCloseModal }) {
               }}
               value={date}
               onChange={handleChangeDate}
+            />
+          </Box>
+          <Box>
+            <Typography fontSize="14px" marginBottom="10px">
+              Số điện thoại
+            </Typography>
+            <input
+              type="text"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "5px",
+                border: "1px solid #A0A0A0",
+                boxSizing: "border-box",
+              }}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </Box>
+          <Box>
+            <Typography fontSize="14px" marginBottom="10px">
+              Địa chỉ
+            </Typography>
+            <input
+              type="text"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "5px",
+                border: "1px solid #A0A0A0",
+                boxSizing: "border-box",
+              }}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
             />
           </Box>
         </Box>
