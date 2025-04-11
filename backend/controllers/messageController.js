@@ -394,7 +394,7 @@ const messageController = {
                         }
                     }
                 ];
-            } else if (likeStatus === "unlike") {
+            } else if (likeStatus === "dislike") {
                 updateQuery = { $pull: { like: { userId } } };
             } else {
                 return res.status(400).json({ error: "likeStatus không hợp lệ" });

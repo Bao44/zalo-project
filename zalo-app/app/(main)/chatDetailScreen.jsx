@@ -1187,6 +1187,9 @@ const ChatDetailScreen = () => {
                 onDelete={handleDelete}
                 onRecall={handleRecall}
                 isSender={selectedMessage?.senderId?._id === user?.id} // Only show "Thu hồi" if the user is the sender
+                isLike={selectedMessage?.like?.some(like => like.userId === user?.id)}
+                onDisLike={() => { setModalVisible(false); handleLike(selectedMessage?._id, "dislike", user?.id) }}
+                onLike={() => { setModalVisible(false); handleLike(selectedMessage?._id, "like", user?.id) }}
             />
         </ScreenWrapper>
     )

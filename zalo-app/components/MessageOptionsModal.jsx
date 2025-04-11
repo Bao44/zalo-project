@@ -4,7 +4,7 @@ import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
 import { hp, wp } from "../helpers/common";
 
-const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, onRecall, isSender }) => {
+const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, onRecall, isSender, isLike, onLike, onDisLike }) => {
     return (
         <Modal
             transparent={true}
@@ -30,6 +30,18 @@ const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, o
                         <TouchableOpacity style={styles.option} onPress={onRecall}>
                             <Icon name="eyeHide" size={24} color={theme.colors.dark} />
                             <Text style={styles.optionText}>Thu hồi</Text>
+                        </TouchableOpacity>
+                    )}
+                    {isLike && (
+                        <TouchableOpacity style={styles.option} onPress={onDisLike}>
+                            <Icon name="heartRemove" size={24} color={theme.colors.dark} />
+                            <Text style={styles.optionText}>Bỏ thích</Text>
+                        </TouchableOpacity>
+                    )}
+                    {!isLike && (
+                        <TouchableOpacity style={styles.option} onPress={onLike}>
+                            <Icon name="heart" size={24} color={theme.colors.dark} />
+                            <Text style={styles.optionText}>Thích</Text>
                         </TouchableOpacity>
                     )}
                 </View>
