@@ -22,4 +22,7 @@ router.post("/undo-message/:messageId/:userId", messageController.undoDeleteMess
 
 // API: Tìm kiếm tin nhắn trước đó trong cuộc trò chuyện
 router.get("/search-messagePrevious/:conversationId/:messageId", messageController.findPreviousMessage);
+
+// API: Thích tin nhắn
+router.post("/like-or-dislike-message", messageController.likeMessage);
 module.exports = router;

@@ -4,6 +4,7 @@ const { getSocketInstance } = require("../socket");
 const cloudinary = require("../config/cloudinary");
 
 const messageController = {
+    // Gửi tin nhắn
     async sendMessage(req, res) {
         try {
             const { idTemp, conversationId, senderId, content, attachments, media, file, replyTo, receiverId } = req.body;
@@ -145,6 +146,7 @@ const messageController = {
         }
     },
 
+    // Lấy danh sách tin nhắn trong một cuộc trò chuyện
     async getMessages(req, res) {
         try {
             const { conversationId } = req.params;
@@ -165,6 +167,7 @@ const messageController = {
         }
     },
 
+    // Cập nhật trạng thái đã xem cho tin nhắn
     async addUserSeen(req, res) {
         const { conversationId, userId } = req.body;
         if (!conversationId || !userId) {
@@ -269,7 +272,6 @@ const messageController = {
     },
 
     // Thu hồi tin nhắn (undo delete message)
-    // Trong messageController.js
     async undoDeleteMessage(req, res) {
         const { messageId, userId } = req.params;
 
@@ -350,6 +352,83 @@ const messageController = {
         } catch (error) {
             console.error("Lỗi:", error.message);
             return null;
+        }
+    },
+
+    // Thích tin nhắn
+    async likeMessage(req, res) {
+        const { messageId, likeStatus, userId } = req.body;
+
+        if (!messageId || !userId) {
+            return res.status(400).json({ error: "messageId và userId là bắt buộc" });
+        }
+
+        try {
+            let updateQuery;
+            if (likeStatus === "like") {
+                updateQuery = [
+                    {
+                        $set: {
+                            like: {
+                                $cond: {
+                                    if: { $in: [userId, "$like.userId"] },
+                                    then: {
+                                        $map: {
+                                            input: "$like",
+                                            as: "like",
+                                            in: {
+                                                $cond: {
+                                                    if: { $eq: ["$$like.userId", userId] },
+                                                    then: {
+                                                        userId: "$$like.userId",
+                                                        totalLike: { $add: ["$$like.totalLike", 1] }
+                                                    },
+                                                    else: "$$like"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    else: { $concatArrays: ["$like", [{ userId, totalLike: 1 }]] }
+                                }
+                            }
+                        }
+                    }
+                ];
+            } else if (likeStatus === "unlike") {
+                updateQuery = { $pull: { like: { userId } } };
+            } else {
+                return res.status(400).json({ error: "likeStatus không hợp lệ" });
+            }
+
+            const message = await Message.findByIdAndUpdate(
+                messageId,
+                updateQuery,
+                { new: true }
+            )
+                .populate("senderId", "name avatar")
+                .populate("replyTo", "content senderId");
+
+            if (!message) {
+                return res.status(404).json({ error: "Tin nhắn không tồn tại" });
+            }
+
+            const io = getSocketInstance();
+            io.to(message.conversationId.toString()).emit("messageLiked", {
+                savedMessage: message,
+                senderUserLike: userId,
+                updatedAt: new Date().toISOString() // Thêm thời gian cập nhật
+            });
+
+            return res.status(200).json({
+                message: likeStatus === "like" ? "Thích tin nhắn thành công" : "Bỏ thích tin nhắn thành công",
+                data: {
+                    messageId: message._id,
+                    like: message.like
+                }
+            });
+        } catch (error) {
+            console.error("Lỗi khi thích tin nhắn:", error);
+            return res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
         }
     },
 };

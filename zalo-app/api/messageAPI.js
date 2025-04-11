@@ -76,12 +76,22 @@ export const undoDeleteMessage = async (messageId, userId) => {
     }
 };
 
-export const findPreviousMessage = async (conversationId, messageId) => {
+export const findPreviousMessage = async (conversationId, messageId, user) => {
     try {
-        const response = await axios.get(BACKEND_URL + `/api/messages/search-messagePrevious/${conversationId}/${messageId}`);
+        const response = await axios.get(BACKEND_URL + `/api/messages/search-messagePrevious/${conversationId}/${messageId}`, {user});
         return response.data;
     } catch (error) {
         console.error("Find Previous Message Error:", error.response?.data || error);
+        throw error;
+    }
+};
+
+export const likeMessage = async (messageId, likeStatus, userId) => {
+    try {
+        const response = await axios.post(BACKEND_URL + `/api/messages/like-or-dislike-message`, {messageId, likeStatus, userId });
+        return response.data;
+    } catch (error) {
+        console.error("Like Message Error:", error.response?.data || error);
         throw error;
     }
 };

@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { getConversationBetweenTwoUsers, createConversation1vs1, getConversationsGroup, getConversation } from "../../api/conversationAPI";
-import { getMessages, sendMessage, addUserSeen, deleteMessage, undoDeleteMessage } from "../../api/messageAPI";
+import { getMessages, sendMessage, addUserSeen, deleteMessage, undoDeleteMessage, likeMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
 import Loading from "../../components/Loading";
@@ -22,7 +22,7 @@ import ViewFile from "../../components/ViewFile";
 import EmojiPicker from "../../components/EmojiPicker";
 import MessageOptionsModal from "@/components/MessageOptionsModal";
 import { useIsFocused } from '@react-navigation/native';
-
+import { debounce } from "lodash";
 
 
 const ChatDetailScreen = () => {
@@ -93,7 +93,7 @@ const ChatDetailScreen = () => {
     // PARSE DATA
     const parsedData = typeof data === "string" ? JSON.parse(data) : data;
 
-    // JOIN ROOM
+    // JOIN ROOM SOCKET
     useEffect(() => {
         if (conversation?._id) {
             socket.emit("join", conversation._id); // Tham gia room dựa trên conversationId
@@ -103,17 +103,18 @@ const ChatDetailScreen = () => {
         socket.on("newMessage", (message, tempId) => {
             if (message.conversationId === conversation?._id) {
                 setMessages((prev) => {
-                    const index = prev.findIndex((msg) => msg._id === tempId);
+                    const index = prev.findIndex((msg) => msg._id === tempId || msg._id === message._id);
                     if (index !== -1) {
+                        // Thay thế tin nhắn tạm hoặc tin nhắn trùng
                         const updatedMessages = [...prev];
                         updatedMessages[index] = message;
                         return updatedMessages;
                     } else {
+                        // Thêm tin nhắn mới
                         return [message, ...prev];
                     }
                 });
 
-                // Cập nhật trạng thái đã xem cho tin nhắn mới
                 if (message.senderId !== user?.id && isFocused) {
                     addUserSeen(message.conversationId, user?.id);
                 }
@@ -132,7 +133,6 @@ const ChatDetailScreen = () => {
                         return msg;
                     })
                 );
-                console.log(`${userId} đã xem ${updatedCount} tin nhắn: ${updatedMessageIds}`);
             }
         });
 
@@ -148,10 +148,28 @@ const ChatDetailScreen = () => {
             }
         });
 
+        // Lắng nghe sự kiện messageLiked
+        socket.on("messageLiked", ({ savedMessage, senderUserLike, updatedAt }) => {
+            if (savedMessage.conversationId === conversation?._id) {
+                setMessages((prev) =>
+                    prev.map((msg) => {
+                        if (msg._id.toString() === savedMessage._id.toString()) {
+                            const currentUpdatedAt = msg.updatedAt || msg.createdAt;
+                            if (!currentUpdatedAt || new Date(updatedAt) >= new Date(currentUpdatedAt)) {
+                                return { ...msg, like: savedMessage.like, updatedAt };
+                            }
+                        }
+                        return msg;
+                    })
+                );
+            }
+        });
+
         return () => {
             socket.off("newMessage");
             socket.off("messageSeen");
             socket.off("messageRevoked");
+            socket.off("messageLiked");
             if (conversation?._id) {
                 socket.emit("leave", conversation._id); // Rời room khi thoát
             }
@@ -261,7 +279,7 @@ const ChatDetailScreen = () => {
                 content: message || "",
                 attachments: images.length > 0 ? images : null,
                 media: media || null,
-                file: null, // Không gửi file
+                file: null,
                 receiverId: parsedData?._id,
             };
 
@@ -273,12 +291,11 @@ const ChatDetailScreen = () => {
                     content: message || "",
                     attachments: attachments.map((img) => img.uri),
                     media,
-                    files: null, // Không có file
+                    files: null,
                     createdAt: new Date().toISOString(),
                 },
                 ...prev,
             ]);
-
 
             // Reset trạng thái
             setMessage("");
@@ -288,7 +305,22 @@ const ChatDetailScreen = () => {
 
             // Gửi tin nhắn
             const response = await sendMessage(conversationId, messageData);
-            if (!response.success) {
+            if (response.success && response.data) {
+                // Cập nhật tin nhắn tạm với ID chính thức từ server
+                setMessages((prev) => {
+                    const index = prev.findIndex((msg) => msg._id === t);
+                    if (index !== -1) {
+                        const updatedMessages = [...prev];
+                        updatedMessages[index] = {
+                            ...updatedMessages[index],
+                            _id: response.data._id, // Thay thế idTemp bằng ID chính thức
+                            ...response.data, // Cập nhật các trường khác từ server
+                        };
+                        return updatedMessages;
+                    }
+                    return prev;
+                });
+            } else {
                 Alert.alert("Lỗi", `Không thể gửi tin nhắn: ${response.data?.message || "Lỗi không xác định"}`);
             }
         } catch (error) {
@@ -478,6 +510,29 @@ const ChatDetailScreen = () => {
         }
     };
 
+    // THÍCH TIN NHẮN
+    const handleLike = debounce(async (messageId, statusLike, userId) => {
+        try {
+            const response = await likeMessage(messageId, statusLike, userId);
+            if (response) {
+                setMessages((prev) =>
+                    prev.map((msg) => {
+                        if (msg._id === messageId) {
+                            // Chỉ cập nhật dựa trên dữ liệu từ server
+                            return { ...msg, like: response.data.like };
+                        }
+                        return msg;
+                    })
+                );
+            } else {
+                Alert.alert("Lỗi", "Không thể thích tin nhắn này");
+            }
+        } catch (error) {
+            console.error("Error liking message:", error);
+            Alert.alert("Lỗi", "Không thể thích tin nhắn này");
+        }
+    }, 500);
+
     // MODAL TÙY CHỌN TIN NHẮN
     const handleLongPress = (message) => {
         setSelectedMessage(message);
@@ -642,9 +697,25 @@ const ChatDetailScreen = () => {
                                                                         </View>
                                                                     ) : (
                                                                         <View style={styles.boxSeen}>
-                                                                            <Text>Đã nhận</Text>
+                                                                            <Text style={{ fontSize: 12 }}>Đã nhận</Text>
                                                                         </View>
                                                                     )
+                                                                )
+                                                            }
+                                                            {
+                                                                item?.like?.length > 0 && (
+                                                                    <View style={styles.boxLike}>
+                                                                        {
+                                                                            item?.like?.length > 0 ? (
+                                                                                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                    <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                </TouchableOpacity>) : null
+                                                                        }
+                                                                        <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                            <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                        </TouchableOpacity>
+                                                                    </View>
                                                                 )
                                                             }
                                                         </TouchableOpacity>
@@ -676,9 +747,25 @@ const ChatDetailScreen = () => {
                                                                         </View>
                                                                     ) : (
                                                                         <View style={styles.boxSeen}>
-                                                                            <Text>Đã nhận</Text>
+                                                                            <Text style={{ fontSize: 12 }}>Đã nhận</Text>
                                                                         </View>
                                                                     )
+                                                                )
+                                                            }
+                                                            {
+                                                                index === 0 && (
+                                                                    <View style={styles.boxLike}>
+                                                                        {
+                                                                            item?.like?.length > 0 ? (
+                                                                                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                    <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                </TouchableOpacity>) : null
+                                                                        }
+                                                                        <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                            <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                        </TouchableOpacity>
+                                                                    </View>
                                                                 )
                                                             }
                                                         </TouchableOpacity>
@@ -710,7 +797,7 @@ const ChatDetailScreen = () => {
                                                                         </View>
                                                                     ) : (
                                                                         <View style={styles.boxSeen}>
-                                                                            <Text>Đã nhận</Text>
+                                                                            <Text style={{ fontSize: 12 }}>Đã nhận</Text>
                                                                         </View>
                                                                     )
                                                                 )
@@ -744,9 +831,25 @@ const ChatDetailScreen = () => {
                                                                         </View>
                                                                     ) : (
                                                                         <View style={styles.boxSeen}>
-                                                                            <Text>Đã nhận</Text>
+                                                                            <Text style={{ fontSize: 12 }}>Đã nhận</Text>
                                                                         </View>
                                                                     )
+                                                                )
+                                                            }
+                                                            {
+                                                                index === 0 && (
+                                                                    <View style={styles.boxLike}>
+                                                                        {
+                                                                            item?.like?.length > 0 ? (
+                                                                                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                    <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                </TouchableOpacity>) : null
+                                                                        }
+                                                                        <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                            <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                        </TouchableOpacity>
+                                                                    </View>
                                                                 )
                                                             }
                                                         </TouchableOpacity>
@@ -866,6 +969,22 @@ const ChatDetailScreen = () => {
                                                                             ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                     }
                                                                 </View>
+                                                                {
+                                                                    index === 0 && (
+                                                                        <View style={styles.boxLike}>
+                                                                            {
+                                                                                item?.like?.length > 0 ? (
+                                                                                    <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                        <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                        <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                    </TouchableOpacity>) : null
+                                                                            }
+                                                                            <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    )
+                                                                }
                                                             </TouchableOpacity>
                                                         )
                                                     )
@@ -1040,7 +1159,7 @@ const styles = StyleSheet.create({
         borwderWidth: 1,
         borderColor: "gray",
         maxWidth: wp(80),
-        minWidth: wp(15),
+        minWidth: wp(25),
         minHeight: hp(5),
         position: "relative",
     },
@@ -1050,7 +1169,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         marginHorizontal: 15,
         marginTop: 10,
-        minWidth: wp(15),
+        minWidth: wp(25),
         minHeight: hp(5),
     },
     boxMessageContent: {
@@ -1062,7 +1181,7 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         borderColor: theme.colors.darkLight,
         borderWidth: 0.5,
-        minWidth: wp(15),
+        minWidth: wp(25),
         minHeight: hp(5),
     },
     textMessage: {
@@ -1155,7 +1274,28 @@ const styles = StyleSheet.create({
         alignSelf: "flex-end",
         marginTop: 5,
         position: "absolute",
-        right: -5,
-        bottom: -25,
+        right: -wp(1),
+        bottom: -(wp(7)),
+    },
+
+    //
+    boxLike: {
+        position: "absolute",
+        bottom: -(wp(2)),
+        right: wp(2),
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        // padding: 5,
+    },
+    boxHeart: {
+        backgroundColor: "white",
+        width: wp(5),
+        height: wp(5),
+        borderRadius: wp(5) / 2,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 0.4,
+        borderColor: "gray",
     }
 });
