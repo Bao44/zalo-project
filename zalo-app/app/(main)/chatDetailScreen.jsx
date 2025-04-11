@@ -676,7 +676,7 @@ const ChatDetailScreen = () => {
                                             (
                                                 item?.removed?.includes(user?.id) ? null : (
                                                     item?.revoked ? (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
@@ -703,11 +703,11 @@ const ChatDetailScreen = () => {
                                                                 )
                                                             }
                                                             {
-                                                                item?.like?.length > 0 && (
+                                                                (index === 0 || item?.like?.length > 0) && (
                                                                     <View style={styles.boxLike}>
                                                                         {
                                                                             item?.like?.length > 0 ? (
-                                                                                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                <TouchableOpacity style={styles.boxTotalLike}>
                                                                                     <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
                                                                                     <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
                                                                                 </TouchableOpacity>) : null
@@ -720,7 +720,7 @@ const ChatDetailScreen = () => {
                                                             }
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
@@ -753,11 +753,11 @@ const ChatDetailScreen = () => {
                                                                 )
                                                             }
                                                             {
-                                                                index === 0 && (
+                                                                (index === 0 || item?.like?.length > 0) && (
                                                                     <View style={styles.boxLike}>
                                                                         {
                                                                             item?.like?.length > 0 ? (
-                                                                                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                <TouchableOpacity style={styles.boxTotalLike}>
                                                                                     <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
                                                                                     <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
                                                                                 </TouchableOpacity>) : null
@@ -776,7 +776,7 @@ const ChatDetailScreen = () => {
                                             (
                                                 item?.removed?.includes(user?.id) ? null : (
                                                     item?.revoked ? (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe]}>
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
@@ -802,9 +802,25 @@ const ChatDetailScreen = () => {
                                                                     )
                                                                 )
                                                             }
+                                                            {
+                                                                (index === 0 || item?.like?.length > 0) && (
+                                                                    <View style={styles.boxLike}>
+                                                                        {
+                                                                            item?.like?.length > 0 ? (
+                                                                                <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                    <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                </TouchableOpacity>) : null
+                                                                        }
+                                                                        <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                            <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                )
+                                                            }
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        < TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe]}>
+                                                        < TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
@@ -837,11 +853,11 @@ const ChatDetailScreen = () => {
                                                                 )
                                                             }
                                                             {
-                                                                index === 0 && (
+                                                                (index === 0 || item?.like?.length > 0) && (
                                                                     <View style={styles.boxLike}>
                                                                         {
                                                                             item?.like?.length > 0 ? (
-                                                                                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                <TouchableOpacity style={styles.boxTotalLike}>
                                                                                     <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
                                                                                     <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
                                                                                 </TouchableOpacity>) : null
@@ -862,16 +878,32 @@ const ChatDetailScreen = () => {
                                             (
                                                 item?.removed?.includes(user?.id) ? null : (
                                                     item?.revoked ? (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
                                                             <View style={styles.boxMessageContent}>
                                                                 {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
                                                                 <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                                 <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                {
+                                                                    (index === 0 || item?.like?.length > 0) && (
+                                                                        <View style={styles.boxLike}>
+                                                                            {
+                                                                                item?.like?.length > 0 ? (
+                                                                                    <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                        <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                        <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                    </TouchableOpacity>) : null
+                                                                            }
+                                                                            <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    )
+                                                                }
                                                             </View>
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
                                                             <View style={styles.boxMessageContent}>
                                                                 {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
@@ -883,6 +915,22 @@ const ChatDetailScreen = () => {
                                                                 )}
                                                                 {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                                 <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                {
+                                                                    (index === 0 || item?.like?.length > 0) && (
+                                                                        <View style={styles.boxLike}>
+                                                                            {
+                                                                                item?.like?.length > 0 ? (
+                                                                                    <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                        <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                        <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                    </TouchableOpacity>) : null
+                                                                            }
+                                                                            <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    )
+                                                                }
                                                             </View>
                                                         </TouchableOpacity>
                                                     )
@@ -895,7 +943,7 @@ const ChatDetailScreen = () => {
                                                 (
                                                     item?.removed?.includes(user?.id) ? null : (
                                                         item?.revoked ? (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                                 <Image style={styles.avatar} />
                                                                 <View style={styles.boxMessageContent}>
                                                                     <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
@@ -906,10 +954,26 @@ const ChatDetailScreen = () => {
                                                                             :
                                                                             ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                     }
+                                                                    {
+                                                                        (index === 0 || item?.like?.length > 0) && (
+                                                                            <View style={styles.boxLike}>
+                                                                                {
+                                                                                    item?.like?.length > 0 ? (
+                                                                                        <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                            <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                            <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                        </TouchableOpacity>) : null
+                                                                                }
+                                                                                <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                                </TouchableOpacity>
+                                                                            </View>
+                                                                        )
+                                                                    }
                                                                 </View>
                                                             </TouchableOpacity>
                                                         ) : (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                                 <Image style={styles.avatar} />
                                                                 <View style={styles.boxMessageContent}>
                                                                     {item?.attachments?.length > 0 && (
@@ -926,6 +990,22 @@ const ChatDetailScreen = () => {
                                                                             :
                                                                             ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                     }
+                                                                    {
+                                                                        (index === 0 || item?.like?.length > 0) && (
+                                                                            <View style={styles.boxLike}>
+                                                                                {
+                                                                                    item?.like?.length > 0 ? (
+                                                                                        <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                            <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                            <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                        </TouchableOpacity>) : null
+                                                                                }
+                                                                                <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                                </TouchableOpacity>
+                                                                            </View>
+                                                                        )
+                                                                    }
                                                                 </View>
                                                             </TouchableOpacity>
                                                         )
@@ -936,7 +1016,7 @@ const ChatDetailScreen = () => {
                                                 (
                                                     item?.removed?.includes(user?.id) ? null : (
                                                         item?.revoked ? (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                                 <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
                                                                 <View style={styles.boxMessageContent}>
                                                                     <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
@@ -947,10 +1027,26 @@ const ChatDetailScreen = () => {
                                                                             :
                                                                             ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                     }
+                                                                    {
+                                                                        (index === 0 || item?.like?.length > 0) && (
+                                                                            <View style={styles.boxLike}>
+                                                                                {
+                                                                                    item?.like?.length > 0 ? (
+                                                                                        <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                            <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                            <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                        </TouchableOpacity>) : null
+                                                                                }
+                                                                                <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                    <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                                </TouchableOpacity>
+                                                                            </View>
+                                                                        )
+                                                                    }
                                                                 </View>
                                                             </TouchableOpacity>
                                                         ) : (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                                 <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
                                                                 <View style={styles.boxMessageContent}>
                                                                     {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
@@ -970,11 +1066,11 @@ const ChatDetailScreen = () => {
                                                                     }
                                                                 </View>
                                                                 {
-                                                                    index === 0 && (
+                                                                    (index === 0 || item?.like?.length > 0) && (
                                                                         <View style={styles.boxLike}>
                                                                             {
                                                                                 item?.like?.length > 0 ? (
-                                                                                    <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "white", paddingHorizontal: 3, paddingVertical: 1, borderRadius: 50, marginRight: 5 }}>
+                                                                                    <TouchableOpacity style={styles.boxTotalLike}>
                                                                                         <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
                                                                                         <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
                                                                                     </TouchableOpacity>) : null
@@ -1183,6 +1279,7 @@ const styles = StyleSheet.create({
         borderWidth: 0.5,
         minWidth: wp(25),
         minHeight: hp(5),
+        position: "relative",
     },
     textMessage: {
         fontSize: 14,
@@ -1295,6 +1392,18 @@ const styles = StyleSheet.create({
         borderRadius: wp(5) / 2,
         justifyContent: "center",
         alignItems: "center",
+        borderWidth: 0.4,
+        borderColor: "gray",
+    },
+    boxTotalLike: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 3,
+        backgroundColor: "white",
+        paddingHorizontal: 3,
+        paddingVertical: 1,
+        borderRadius: 50,
+        marginRight: 5,
         borderWidth: 0.4,
         borderColor: "gray",
     }
