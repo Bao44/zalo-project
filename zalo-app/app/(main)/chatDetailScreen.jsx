@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { getConversationBetweenTwoUsers, createConversation1vs1, getConversationsGroup, getConversation } from "../../api/conversationAPI";
-import { getMessages, sendMessage, addUserSeen } from "../../api/messageAPI";
+import { getMessages, sendMessage, addUserSeen, deleteMessage, undoDeleteMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
 import Loading from "../../components/Loading";
@@ -18,9 +18,11 @@ import * as FileSystem from "expo-file-system";
 import RenderImageMessage from "../../components/RenderImageMessage";
 import * as MediaLibrary from "expo-media-library";
 import * as DocumentPicker from 'expo-document-picker';
-import wordImage from "../../assets/images/iconFiles/6296672_microsoft_office_office365_powerpoint_icon.png"
 import ViewFile from "../../components/ViewFile";
 import EmojiPicker from "../../components/EmojiPicker";
+import MessageOptionsModal from "@/components/MessageOptionsModal";
+import { useIsFocused } from '@react-navigation/native';
+
 
 
 const ChatDetailScreen = () => {
@@ -38,6 +40,9 @@ const ChatDetailScreen = () => {
     const [stempId, setStempId] = useState("");
     const [option, setOption] = useState("emoji");
 
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedMessage, setSelectedMessage] = useState(null);
+    const isFocused = useIsFocused();
 
     // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
@@ -106,7 +111,12 @@ const ChatDetailScreen = () => {
                     } else {
                         return [message, ...prev];
                     }
-                })
+                });
+
+                // Cập nhật trạng thái đã xem cho tin nhắn mới
+                if (message.senderId !== user?.id && isFocused) {
+                    addUserSeen(message.conversationId, user?.id);
+                }
             }
         });
 
@@ -126,14 +136,27 @@ const ChatDetailScreen = () => {
             }
         });
 
+        // Lắng nghe sự kiện messageRevoked
+        socket.on("messageRevoked", ({ conversationId, messageId, userId }) => {
+            if (conversationId === conversation?._id) {
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        msg._id.toString() === messageId ? { ...msg, revoked: true } : msg
+                    )
+                );
+                console.log(`Tin nhắn ${messageId} đã được thu hồi bởi ${userId}`);
+            }
+        });
+
         return () => {
             socket.off("newMessage");
             socket.off("messageSeen");
+            socket.off("messageRevoked");
             if (conversation?._id) {
                 socket.emit("leave", conversation._id); // Rời room khi thoát
             }
         };
-    }, [conversation?._id]);
+    }, [conversation?._id, user?.id, isFocused]);
 
     // LẤY CUỘC TRÒ CHUYỆN
     useEffect(() => {
@@ -148,7 +171,7 @@ const ChatDetailScreen = () => {
                         if (messagesResponse.success) {
                             const deleteHistory = response.data.delete_history.find((entry) => entry.userId === user?.id);
                             if (deleteHistory) {
-                                setMessages(messagesResponse.data.filter((msg) => new Date(msg.createdAt) > new Date(response.data.delete_history.find((entry) => entry.userId === user?.id).time_delete)));
+                                setMessages(messagesResponse.data.filter((msg) => new Date(msg.createdAt) > new Date(deleteHistory.time_delete)));
                             } else {
                                 setMessages(messagesResponse.data);
                             }
@@ -455,6 +478,103 @@ const ChatDetailScreen = () => {
         }
     };
 
+    // MODAL TÙY CHỌN TIN NHẮN
+    const handleLongPress = (message) => {
+        setSelectedMessage(message);
+        setModalVisible(true);
+    };
+
+    // TRẢ LỜI TIN NHẮN
+    const handleReply = () => {
+        console.log("Reply to message:", selectedMessage);
+        setModalVisible(false);
+        // Add your reply logic here
+    };
+
+    // CHUYỂN TIẾP TIN NHẮN
+    const handleForward = () => {
+        console.log("Forward message:", selectedMessage);
+        setModalVisible(false);
+        // Add your forward logic here
+    };
+
+    // XÓA TIN NHẮN
+    const handleDelete = () => {
+        setModalVisible(false); // Đóng modal ngay khi nhấn "Xóa"
+        Alert.alert("Xóa tin nhắn", "Bạn có chắc chắn muốn xóa tin nhắn này không?", [
+            { text: "Hủy", style: "cancel" },
+            {
+                text: "Xóa",
+                onPress: async () => {
+                    if (!selectedMessage?._id || !user?.id) {
+                        Alert.alert("Lỗi", "Không thể xác định tin nhắn hoặc người dùng");
+                        return;
+                    }
+
+                    try {
+                        const response = await deleteMessage(selectedMessage._id, user.id);
+                        // Backend trả về status 200 khi thành công
+                        setMessages((prev) =>
+                            prev.map((msg) =>
+                                msg._id === selectedMessage._id
+                                    ? { ...msg, removed: [...(msg.removed || []), user.id] }
+                                    : msg
+                            )
+                        );
+                    } catch (error) {
+                        console.error("Lỗi khi xóa tin nhắn:", error);
+                        if (error.response?.status === 404) {
+                            Alert.alert("Lỗi", "Tin nhắn không tồn tại");
+                        } else if (error.response?.status === 400) {
+                            Alert.alert("Lỗi", error.response.data.error || "Yêu cầu không hợp lệ");
+                        } else {
+                            Alert.alert("Lỗi", "Không thể xóa tin nhắn, vui lòng thử lại");
+                        }
+                    }
+                },
+            },
+        ]);
+    };
+
+    // THU HỒI TIN NHẮN
+    const handleRecall = () => {
+        // Xử lý thu hồi tin nhắn ở đây
+        setModalVisible(false);
+        Alert.alert("Thu hồi tin nhắn", "Bạn có chắc chắn muốn thu hồi tin nhắn này không?", [
+            { text: "Hủy", style: "cancel" },
+            {
+                text: "Thu hồi",
+                onPress: async () => {
+                    if (!selectedMessage?._id || !user?.id) {
+                        Alert.alert("Lỗi", "Không thể xác định tin nhắn hoặc người dùng");
+                        return;
+                    }
+
+                    try {
+                        const response = await undoDeleteMessage(selectedMessage._id, user.id);
+                        // Backend trả về status 200 khi thành công
+                        setMessages((prev) =>
+                            prev.map((msg) =>
+                                msg._id === selectedMessage._id
+                                    ? { ...msg, revoked: true }
+                                    : msg
+                            )
+                        );
+                    } catch (error) {
+                        console.error("Lỗi khi thu hồi tin nhắn:", error);
+                        if (error.response?.status === 404) {
+                            Alert.alert("Lỗi", "Tin nhắn không tồn tại");
+                        } else if (error.response?.status === 400) {
+                            Alert.alert("Lỗi", error.response.data.error || "Yêu cầu không hợp lệ");
+                        } else {
+                            Alert.alert("Lỗi", "Không thể thu hồi tin nhắn, vui lòng thử lại");
+                        }
+                    }
+                },
+            },
+        ]);
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -488,7 +608,7 @@ const ChatDetailScreen = () => {
                     {
                         loading ? (<Loading />) : messages?.length === 0 ? (
                             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                                <Text style={{textAlign: "center"}}>Bạn hãy là người đầu tiên mở đầu cho cuộc trò chuyện này!</Text>
+                                <Text style={{ textAlign: "center" }}>Bạn hãy là người đầu tiên mở đầu cho cuộc trò chuyện này!</Text>
                             </View>
                         ) : (
                             <FlatList
@@ -499,109 +619,262 @@ const ChatDetailScreen = () => {
                                         ?
                                         ((index !== messages?.length - 1 && item?.senderId?._id === messages[index + 1]?.senderId?._id) ?
                                             (
-                                                <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfMe, { marginTop: 5 }]}>
-                                                    {item?.attachments?.length > 0 && (
-                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                    )}
-                                                    {item?.files !== null && (
-                                                        <ViewFile file={item?.files} />
-                                                    )}
-                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
-                                                    {
-                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                            :
-                                                            (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                    }
-                                                </TouchableOpacity>
+                                                item?.removed?.includes(user?.id) ? null : (
+                                                    item?.revoked ? (
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                            <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
+                                                            {
+                                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    :
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                            }
+                                                            {
+                                                                index === 0 && (
+                                                                    (item?.seen?.length > 0) ? (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <FlatList
+                                                                                data={item?.seen}
+                                                                                keyExtractor={(item) => item.toString()}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                horizontal
+                                                                                showsHorizontalScrollIndicator={false}
+                                                                            />
+                                                                        </View>
+                                                                    ) : (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <Text>Đã nhận</Text>
+                                                                        </View>
+                                                                    )
+                                                                )
+                                                            }
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5 }]}>
+                                                            {item?.attachments?.length > 0 && (
+                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                            )}
+                                                            {item?.files !== null && (
+                                                                <ViewFile file={item?.files} />
+                                                            )}
+                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                            {
+                                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    :
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                            }
+                                                            {
+                                                                index === 0 && (
+                                                                    (item?.seen?.length > 0) ? (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <FlatList
+                                                                                data={item?.seen}
+                                                                                keyExtractor={(item) => item.toString()}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                horizontal
+                                                                                showsHorizontalScrollIndicator={false}
+                                                                            />
+                                                                        </View>
+                                                                    ) : (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <Text>Đã nhận</Text>
+                                                                        </View>
+                                                                    )
+                                                                )
+                                                            }
+                                                        </TouchableOpacity>
+                                                    )
+                                                )
                                             )
                                             :
                                             (
-                                                <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfMe]}>
-                                                    {item?.attachments?.length > 0 && (
-                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                    )}
-                                                    {item?.files !== null && (
-                                                        <ViewFile file={item?.files} />
-                                                    )}
-                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
-                                                    {
-                                                        index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                            :
-                                                            (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                    }
-                                                </TouchableOpacity>
+                                                item?.removed?.includes(user?.id) ? null : (
+                                                    item?.revoked ? (
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe]}>
+                                                            <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
+                                                            {
+                                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    :
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                            }
+                                                            {
+                                                                index === 0 && (
+                                                                    (item?.seen?.length > 0) ? (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <FlatList
+                                                                                data={item?.seen}
+                                                                                keyExtractor={(item) => item.toString()}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                horizontal
+                                                                                showsHorizontalScrollIndicator={false}
+                                                                            />
+                                                                        </View>
+                                                                    ) : (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <Text>Đã nhận</Text>
+                                                                        </View>
+                                                                    )
+                                                                )
+                                                            }
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        < TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe]}>
+                                                            {item?.attachments?.length > 0 && (
+                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                            )}
+                                                            {item?.files !== null && (
+                                                                <ViewFile file={item?.files} />
+                                                            )}
+                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                            {
+                                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    :
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                            }
+                                                            {
+                                                                index === 0 && (
+                                                                    (item?.seen?.length > 0) ? (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <FlatList
+                                                                                data={item?.seen}
+                                                                                keyExtractor={(item) => item.toString()}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                horizontal
+                                                                                showsHorizontalScrollIndicator={false}
+                                                                            />
+                                                                        </View>
+                                                                    ) : (
+                                                                        <View style={styles.boxSeen}>
+                                                                            <Text>Đã nhận</Text>
+                                                                        </View>
+                                                                    )
+                                                                )
+                                                            }
+                                                        </TouchableOpacity>
+                                                    )
+                                                )
                                             )
                                         )
                                         :
                                         (index === messages?.length - 1) ?
                                             (
-                                                <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfOther]}>
-                                                    <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                    <View style={styles.boxMessageContent}>
-                                                        {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
-                                                        {item?.attachments?.length > 0 && (
-                                                            <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                        )}
-                                                        {item?.files !== null && (
-                                                            <ViewFile file={item?.files} />
-                                                        )}
-                                                        {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
-                                                        <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                    </View>
-                                                </TouchableOpacity>
+                                                item?.removed?.includes(user?.id) ? null : (
+                                                    item?.revoked ? (
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                            <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
+                                                            <View style={styles.boxMessageContent}>
+                                                                {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
+                                                                <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
+                                                                <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                            </View>
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                            <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
+                                                            <View style={styles.boxMessageContent}>
+                                                                {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
+                                                                {item?.attachments?.length > 0 && (
+                                                                    <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                                )}
+                                                                {item?.files !== null && (
+                                                                    <ViewFile file={item?.files} />
+                                                                )}
+                                                                {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                            </View>
+                                                        </TouchableOpacity>
+                                                    )
+                                                )
+
                                             )
                                             :
                                             (item?.senderId?._id === messages[index + 1]?.senderId?._id) ?
 
                                                 (
-                                                    <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfOther, { marginTop: 5 }]}>
-                                                        <Image style={styles.avatar} />
-                                                        <View style={styles.boxMessageContent}>
-                                                            {item?.attachments?.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                            )}
-                                                            {item?.files !== null && (
-                                                                <ViewFile file={item?.files} />
-                                                            )}
-                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
-                                                            {(index === messages?.length - 1) ?
-                                                                ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
-                                                                :
-                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                                    :
-                                                                    ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
-                                                            }
-                                                        </View>
-                                                    </TouchableOpacity>
+                                                    item?.removed?.includes(user?.id) ? null : (
+                                                        item?.revoked ? (
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                                <Image style={styles.avatar} />
+                                                                <View style={styles.boxMessageContent}>
+                                                                    <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
+                                                                    {(index === messages?.length - 1) ?
+                                                                        ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                        :
+                                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                            :
+                                                                            ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                    }
+                                                                </View>
+                                                            </TouchableOpacity>
+                                                        ) : (
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5 }]}>
+                                                                <Image style={styles.avatar} />
+                                                                <View style={styles.boxMessageContent}>
+                                                                    {item?.attachments?.length > 0 && (
+                                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                                    )}
+                                                                    {item?.files !== null && (
+                                                                        <ViewFile file={item?.files} />
+                                                                    )}
+                                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                    {(index === messages?.length - 1) ?
+                                                                        ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                        :
+                                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                            :
+                                                                            ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                    }
+                                                                </View>
+                                                            </TouchableOpacity>
+                                                        )
+                                                    )
+
                                                 )
                                                 :
                                                 (
-                                                    <TouchableOpacity onLongPress={() => console.log("OnLongPress")} style={[styles.messageOfOther]}>
-                                                        <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                        <View style={styles.boxMessageContent}>
-                                                            {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
-                                                            {item?.attachments?.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                            )}
-                                                            {item?.files !== null && (
-                                                                <ViewFile file={item?.files} />
-                                                            )}
-                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
-                                                            {(index === messages?.length - 1) ?
-                                                                ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
-                                                                :
-                                                                (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                                    :
-                                                                    ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
-                                                            }
-                                                        </View>
-                                                    </TouchableOpacity>
+                                                    item?.removed?.includes(user?.id) ? null : (
+                                                        item?.revoked ? (
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                                <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
+                                                                <View style={styles.boxMessageContent}>
+                                                                    <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
+                                                                    {(index === messages?.length - 1) ?
+                                                                        ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                        :
+                                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                            :
+                                                                            ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                    }
+                                                                </View>
+                                                            </TouchableOpacity>
+                                                        ) : (
+                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther]}>
+                                                                <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
+                                                                <View style={styles.boxMessageContent}>
+                                                                    {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
+                                                                    {item?.attachments?.length > 0 && (
+                                                                        <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                                    )}
+                                                                    {item?.files !== null && (
+                                                                        <ViewFile file={item?.files} />
+                                                                    )}
+                                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                    {(index === messages?.length - 1) ?
+                                                                        ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                        :
+                                                                        (index === 0) ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                            :
+                                                                            ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
+                                                                    }
+                                                                </View>
+                                                            </TouchableOpacity>
+                                                        )
+                                                    )
                                                 )
                                 )}
                                 // Để hiển thị tin nhắn mới nhất
                                 inverted
                                 ListFooterComponent={<View style={{ height: 20 }} />}
-                                ListHeaderComponent={<View style={{ height: 20 }} />}
+                                ListHeaderComponent={<View style={{ height: 35 }} />}
                             />
                         )
                     }
@@ -691,6 +964,15 @@ const ChatDetailScreen = () => {
                     )}
                 </View>
             </View>
+            <MessageOptionsModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                onReply={handleReply}
+                onForward={handleForward}
+                onDelete={handleDelete}
+                onRecall={handleRecall}
+                isSender={selectedMessage?.senderId?._id === user?.id} // Only show "Thu hồi" if the user is the sender
+            />
         </ScreenWrapper>
     )
 };
@@ -760,6 +1042,7 @@ const styles = StyleSheet.create({
         maxWidth: wp(80),
         minWidth: wp(15),
         minHeight: hp(5),
+        position: "relative",
     },
     messageOfOther: {
         alignSelf: "flex-start",
@@ -861,5 +1144,18 @@ const styles = StyleSheet.create({
         justifyContent: "space-evenly",
         width: "20%",
         height: "100%",
+    },
+
+    //
+    boxSeen: {
+        backgroundColor: theme.colors.lightGray,
+        paddingVertical: 3,
+        paddingHorizontal: 8,
+        borderRadius: 20,
+        alignSelf: "flex-end",
+        marginTop: 5,
+        position: "absolute",
+        right: -5,
+        bottom: -25,
     }
 });

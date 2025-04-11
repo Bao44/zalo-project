@@ -124,7 +124,7 @@ const messageController = {
             // Populate conversation và gửi cập nhật
             const conversationUpdate = await Conversation.findById(conversation._id)
                 .populate("members", "name avatar")
-                .populate("lastMessage", "type content createdAt attachments media files senderId seen");
+                .populate("lastMessage", "type content createdAt attachments media files senderId seen replyTo revoked");
 
             conversation.members.forEach(memberId => {
                 const memberSocketId = io.onlineUsers?.get(memberId);
@@ -148,7 +148,6 @@ const messageController = {
     async getMessages(req, res) {
         try {
             const { conversationId } = req.params;
-            const { page = 1, limit = 20 } = req.query;
 
             if (!conversationId) {
                 return res.status(400).json({ error: "conversationId là bắt buộc" });
@@ -156,8 +155,6 @@ const messageController = {
 
             const messages = await Message.find({ conversationId })
                 .sort({ createdAt: 1 })
-                .skip((page - 1) * limit)
-                .limit(Number(limit))
                 .populate("senderId", "name avatar")
                 .populate("replyTo", "content senderId");
 
@@ -230,7 +227,131 @@ const messageController = {
             console.error("Error counting unread messages:", error);
             res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
         }
-    }
+    },
+
+    // Xoa tin nhan(add user xoa tin nhan)
+    async deleteMessage(req, res) {
+        const { messageId, userId } = req.params;
+
+        // Kiểm tra đầu vào
+        if (!messageId || !userId) {
+            return res.status(400).json({ error: "messageId và userId là bắt buộc" });
+        }
+
+        try {
+            // Tìm tin nhắn theo ID
+            const message = await Message.findById(messageId);
+            if (!message) {
+                return res.status(404).json({ error: "Tin nhắn không tồn tại" });
+            }
+
+            // Kiểm tra xem người dùng đã đánh dấu tin nhắn này là "đã xóa" chưa
+            if (message.removed.includes(userId)) {
+                return res.status(400).json({ error: "Người dùng đã xóa tin nhắn này rồi" });
+            }
+
+            // Thêm userId vào mảng removed (xóa mềm)
+            message.removed.push(userId);
+            await message.save();
+
+            // Trả về phản hồi thành công
+            return res.status(200).json({
+                message: "Xóa tin nhắn thành công",
+                data: {
+                    messageId: message._id,
+                    removed: message.removed
+                }
+            });
+        } catch (error) {
+            console.error("Lỗi khi xóa tin nhắn:", error);
+            return res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
+        }
+    },
+
+    // Thu hồi tin nhắn (undo delete message)
+    // Trong messageController.js
+    async undoDeleteMessage(req, res) {
+        const { messageId, userId } = req.params;
+
+        // Kiểm tra đầu vào
+        if (!messageId || !userId) {
+            return res.status(400).json({ error: "messageId và userId là bắt buộc" });
+        }
+
+        try {
+            // Tìm tin nhắn theo ID
+            const message = await Message.findById(messageId);
+            if (!message) {
+                return res.status(404).json({ error: "Tin nhắn không tồn tại" });
+            }
+
+            // Kiểm tra tư cách người dùng có quyền thu hồi tin nhắn này không
+            if (message.senderId.toString() !== userId) {
+                return res.status(403).json({ error: "Bạn không có quyền thu hồi tin nhắn này" });
+            }
+
+            // Kiểm tra xem tin nhắn đã bị thu hồi chưa
+            if (message.revoked) {
+                return res.status(400).json({ error: "Tin nhắn đã được thu hồi trước đó" });
+            }
+
+            // Cập nhật trạng thái thu hồi
+            message.revoked = true;
+            await message.save();
+
+            // Gửi sự kiện socket thông báo thu hồi tin nhắn
+            const io = getSocketInstance();
+            io.to(message.conversationId.toString()).emit("messageRevoked", {
+                conversationId: message.conversationId.toString(),
+                messageId: message._id.toString(),
+                userId,
+            });
+
+            // Trả về phản hồi thành công
+            return res.status(200).json({
+                message: "Thu hồi tin nhắn thành công",
+                data: {
+                    messageId: message._id,
+                    revoked: message.revoked,
+                },
+            });
+        } catch (error) {
+            console.error("Lỗi khi thu hồi tin nhắn:", error);
+            return res.status(500).json({ error: "Lỗi server, vui lòng thử lại sau" });
+        }
+    },
+
+    // Tìm tin nhắn trước đó trong cùng một cuộc trò chuyện
+    async findPreviousMessage(req, res) {
+        const { messageId, conversationId } = req.params;
+        try {
+            // Lấy thông tin tin nhắn chỉ định
+            const specifiedMessage = await Message.findById(messageId);
+            if (!specifiedMessage) {
+                throw new Error("Tin nhắn chỉ định không tồn tại");
+            }
+
+            // Tìm tin nhắn ngay trước nó trong cùng conversationId
+            const previousMessage = await Message.findOne({
+                conversationId: conversationId, // Lọc theo conversationId
+                _id: { $ne: messageId }, // Loại bỏ chính tin nhắn chỉ định
+                createdAt: { $lt: specifiedMessage.createdAt }, // Tin nhắn có thời gian trước tin nhắn chỉ định
+            })
+                .sort({ createdAt: -1 }) // Sắp xếp giảm dần để lấy tin nhắn gần nhất
+                .exec();
+
+            if (!previousMessage) {
+                console.log("Không có tin nhắn nào trước tin nhắn này trong cuộc hội thoại.");
+                return null;
+            }
+
+            console.log("Tin nhắn trước đó:", previousMessage);
+            return previousMessage;
+        } catch (error) {
+            console.error("Lỗi:", error.message);
+            return null;
+        }
+    },
 };
 
 module.exports = messageController;

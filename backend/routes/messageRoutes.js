@@ -13,4 +13,13 @@ router.post("/add-user-seen", messageController.addUserSeen);
 
 // API: Đếm số lượng tin nhắn chưa đọc
 router.get("/count-unread-messages", messageController.countUnreadMessages);
+
+// API: Xóa tin nhắn
+router.post("/delete-message/:messageId/:userId", messageController.deleteMessage);
+
+// API: Thu hồi tin nhắn
+router.post("/undo-message/:messageId/:userId", messageController.undoDeleteMessage);
+
+// API: Tìm kiếm tin nhắn trước đó trong cuộc trò chuyện
+router.get("/search-messagePrevious/:conversationId/:messageId", messageController.findPreviousMessage);
 module.exports = router;

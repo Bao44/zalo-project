@@ -8,7 +8,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import Avatar from "../../components/Avatar";
 import socket from "../../utils/socket";
 import { useCallback } from "react";
-import { countUnreadMessages } from "../../api/messageAPI";
+import { countUnreadMessages, findPreviousMessage } from "../../api/messageAPI";
+import Loading from "@/components/Loading";
 
 const MessageScreen = () => {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ const MessageScreen = () => {
   useFocusEffect(
     useCallback(() => {
       const fetchConversations = async () => {
+        if (!user?.id) return;
         try {
           const data = await getConversations(user?.id);
           if (data.success) {
@@ -91,7 +93,7 @@ const MessageScreen = () => {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Loading...</Text>
+        <Loading />
       </View>
     );
   }
@@ -112,6 +114,7 @@ const MessageScreen = () => {
 
 
   const iconNotification = async (conversationId) => {
+    if (!user?.id) return; // Kiểm tra xem người dùng đã đăng nhập hay chưa
     // Đếm số lượng tin nhắn chưa đọc
     const count = await countUnreadMessages(conversationId, user?.id);
     if (count?.success) {
@@ -134,6 +137,17 @@ const MessageScreen = () => {
       console.log("Lỗi khi đếm số lượng tin nhắn chưa đọc:", count.error);
     }
   }
+
+  // Tin nhắn Previous
+  const handlePreviousMessage = async (conversationId, messageId) => {
+    if (!user?.id) return; // Kiểm tra xem người dùng đã đăng nhập hay chưa
+    try {
+      const response = await findPreviousMessage(conversationId, messageId);
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi gọi API tìm kiếm tin nhắn trước đó:", error);
+    }
+  };
 
   return (
     <View>
@@ -170,11 +184,13 @@ const MessageScreen = () => {
                     : (
                       item?.lastMessage?.senderId === user?.id ? "Bạn: " : `${item?.members.find((u) => u._id !== user?.id)?.name}: `
                     )}
-                  {item?.lastMessage?.content ? item?.lastMessage?.content : "" ||
-                    item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
-                      item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||
-                        item?.lastMessage?.files?.fileName ? `[File] ${item?.lastMessage?.files?.fileName}` : "" ||
-                  "Hãy là người đầu tiên nhắn tin!"}
+                  {item?.lastMessage?.revoked ? "[Tin nhắn đã được thu hồi]" : (
+                    item?.lastMessage?.content ? item?.lastMessage?.content : "" ||
+                      item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
+                        item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||
+                          item?.lastMessage?.files?.fileName ? `[File] ${item?.lastMessage?.files?.fileName}` : "" ||
+                    "Hãy là người đầu tiên nhắn tin!"
+                  )}
                 </Text>
               </View>
               {iconNotification(item?._id)}
@@ -245,10 +261,11 @@ const MessageScreen = () => {
                 </View>
                 <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
                   {item?.lastMessage && ((item?.lastMessage?.senderId === user?.id ? "Bạn: " : "") || (item?.members.find((u) => u._id !== user?.id)?.name ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""))}
-                  {item?.lastMessage?.content ? item?.lastMessage?.content : "" || item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
-                    item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||
-                      item?.lastMessage?.files?.fileName ? `[File] ${item?.lastMessage?.files?.fileName}` : "" || "No messages yet"
-                  }
+                  {item?.lastMessage?.revoked ? "[Tin nhắn đã được thu hồi]" : (
+                    item?.lastMessage?.content ? item?.lastMessage?.content : "" || item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
+                      item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||
+                        item?.lastMessage?.files?.fileName ? `[File] ${item?.lastMessage?.files?.fileName}` : "" || "No messages yet"
+                  )}
                 </Text>
               </View>
               {iconNotification(item?._id)}

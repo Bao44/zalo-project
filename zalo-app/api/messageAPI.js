@@ -48,10 +48,40 @@ export const addUserSeen = async (conversationId, userId) => {
 
 export const countUnreadMessages = async (conversationId, userId) => {
     try {
-        const response = await axios.get(BACKEND_URL + "/api/messages/count-unread-messages", {params: { conversationId, userId }});
+        const response = await axios.get(BACKEND_URL + "/api/messages/count-unread-messages", { params: { conversationId, userId } });
         return { success: true, data: response.data };
     } catch (error) {
         console.error("Count Unread Messages Error:", error.response?.data || error);
         throw error;
     }
 }
+
+export const deleteMessage = async (messageId, userId) => {
+    try {
+        const response = await axios.post(BACKEND_URL + `/api/messages/delete-message/${messageId}/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Delete Message Error:", error.response?.data || error);
+        throw error;
+    }
+};
+
+export const undoDeleteMessage = async (messageId, userId) => {
+    try {
+        const response = await axios.post(BACKEND_URL + `/api/messages/undo-message/${messageId}/${userId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Undo Delete Message Error:", error.response?.data || error);
+        throw error;
+    }
+};
+
+export const findPreviousMessage = async (conversationId, messageId) => {
+    try {
+        const response = await axios.get(BACKEND_URL + `/api/messages/search-messagePrevious/${conversationId}/${messageId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Find Previous Message Error:", error.response?.data || error);
+        throw error;
+    }
+};
