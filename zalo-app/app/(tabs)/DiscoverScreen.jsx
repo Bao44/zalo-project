@@ -47,14 +47,14 @@ const styles = {
   item: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 25, // Giảm padding để các item sát nhau hơn
+    paddingVertical: 15, // Giảm padding để các item sát nhau hơn
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
   },
   text: {
     color: "black",
-    fontSize: 20, // Điều chỉnh kích thước chữ để phù hợp
+    fontSize: 18, // Điều chỉnh kích thước chữ để phù hợp
     marginLeft: 30,
   },
 };

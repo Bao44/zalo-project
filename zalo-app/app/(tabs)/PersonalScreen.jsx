@@ -1,10 +1,38 @@
-import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
-import { useRouter } from "expo-router"; // Thay đổi từ useNavigation sang useRouter
-import { Ionicons, FontAwesome5, MaterialCommunityIcons, Entypo } from "@expo/vector-icons";
+import React, { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+} from "react-native";
+import { useRouter, useFocusEffect } from "expo-router"; // 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  Ionicons,
+  FontAwesome5,
+  MaterialCommunityIcons,
+  Entypo,
+} from "@expo/vector-icons";
 
 const PersonalScreen = () => {
-  const router = useRouter(); // Thay vì useNavigation, dùng useRouter
+  const router = useRouter();
+  const [avatarUri, setAvatarUri] = useState(null);
+
+  // ✅ Tải avatar khi quay lại màn hình
+  useFocusEffect(
+    useCallback(() => {
+      const fetchAvatar = async () => {
+        try {
+          const uri = await AsyncStorage.getItem("avatarUri");
+          if (uri) setAvatarUri(uri);
+        } catch (error) {
+          console.log("Lỗi tải avatar:", error);
+        }
+      };
+      fetchAvatar();
+    }, [])
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -12,10 +40,14 @@ const PersonalScreen = () => {
         {/* Hồ sơ cá nhân */}
         <TouchableOpacity
           style={styles.profileCard}
-          onPress={() => router.push("editProfileUser")} // Điều hướng đến trang chỉnh sửa hồ sơ
+          onPress={() => router.push("editProfileUser")}
         >
           <Image
-            source={require("../../assets/images/defaultUser.png")}
+            source={
+              avatarUri
+                ? { uri: avatarUri }
+                : require("../../assets/images/defaultUser.png")
+            }
             style={styles.avatar}
           />
           <View style={{ flex: 1, marginLeft: 10 }}>
@@ -30,12 +62,14 @@ const PersonalScreen = () => {
           <TouchableOpacity
             key={index}
             style={styles.item}
-            onPress={() => router.push(item.screen)} // Điều hướng đến màn hình của item
+            onPress={() => router.push(item.screen)}
           >
             <item.icon name={item.iconName} size={24} color={item.color} />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={styles.text}>{item.title}</Text>
-              {item.subtitle && <Text style={styles.subText}>{item.subtitle}</Text>}
+              {item.subtitle && (
+                <Text style={styles.subText}>{item.subtitle}</Text>
+              )}
             </View>
           </TouchableOpacity>
         ))}
@@ -51,7 +85,7 @@ const menuItems = [
     icon: FontAwesome5,
     iconName: "magic",
     color: "#007AFF",
-    screen: "zStyleScreen", // Đảm bảo rằng bạn có một màn hình với tên này trong expo-router
+    screen: "zStyleScreen",
   },
   {
     title: "Ví QR",
@@ -111,8 +145,8 @@ const styles = {
     borderRadius: 10,
   },
   avatar: { width: 70, height: 70, borderRadius: 50 },
-  profileName: { color: "#000", fontSize: 20, fontWeight: "bold" },
-  profileSubtitle: { color: "#555", fontSize: 16 },
+  profileName: { color: "#000", fontSize: 18, fontWeight: "bold" },
+  profileSubtitle: { color: "#555", fontSize: 15 },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -120,7 +154,7 @@ const styles = {
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
   },
-  text: { color: "#000", fontSize: 19 },
+  text: { color: "#000", fontSize: 15 },
   subText: { color: "#555", fontSize: 15 },
 };
 
