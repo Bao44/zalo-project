@@ -1,40 +1,34 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  Modal,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { Ionicons, Entypo } from "@expo/vector-icons";
+import React, { useState, useCallback } from "react";
+import { View, Text, Image, TouchableOpacity, ScrollView, Modal, StatusBar, StyleSheet } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons, Entypo } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
 
-const editProfileUser = () => {
-  const navigation = useNavigation();
-  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
-  const [coverModalVisible, setCoverModalVisible] = useState(false);
+const EditProfileUser = () => {
+  const router = useRouter();
   const [avatarUri, setAvatarUri] = useState(null);
   const [coverUri, setCoverUri] = useState(null);
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [coverModalVisible, setCoverModalVisible] = useState(false);
+  const [username, setUsername] = useState(""); // State to store user's name
 
-  useEffect(() => {
-    loadSavedImages();
-  }, []);
+  // Load saved images and name from AsyncStorage
+  useFocusEffect(
+    useCallback(() => {
+      const loadImagesAndName = async () => {
+        const savedAvatar = await AsyncStorage.getItem("avatarUri");
+        const savedCover = await AsyncStorage.getItem("coverUri");
+        const savedName = await AsyncStorage.getItem("username"); // Retrieve saved username
+        if (savedAvatar) setAvatarUri(savedAvatar);
+        if (savedCover) setCoverUri(savedCover);
+        if (savedName) setUsername(savedName); // Set the username
+      };
+      loadImagesAndName();
+    }, [])
+  );
 
-  const loadSavedImages = async () => {
-    try {
-      const savedAvatar = await AsyncStorage.getItem("avatarUri");
-      const savedCover = await AsyncStorage.getItem("coverUri");
-      if (savedAvatar) setAvatarUri(savedAvatar);
-      if (savedCover) setCoverUri(savedCover);
-    } catch (error) {
-      console.log("Error loading saved images:", error);
-    }
-  };
-
+  // Function to pick avatar image
   const pickAvatar = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -45,11 +39,12 @@ const editProfileUser = () => {
     if (!result.canceled) {
       const uri = result.assets[0].uri;
       setAvatarUri(uri);
-      handleSaveAvatar(uri);
+      await AsyncStorage.setItem("avatarUri", uri);
     }
     setAvatarModalVisible(false);
   };
 
+  // Function to pick cover image
   const pickCover = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -60,117 +55,67 @@ const editProfileUser = () => {
     if (!result.canceled) {
       const uri = result.assets[0].uri;
       setCoverUri(uri);
-      handleSaveCover(uri);
+      await AsyncStorage.setItem("coverUri", uri);
     }
     setCoverModalVisible(false);
   };
 
-  const handleSaveAvatar = async (uri) => {
-    try {
-      await AsyncStorage.setItem("avatarUri", uri);
-      console.log("Avatar saved successfully.");
-    } catch (error) {
-      console.log("Failed to save avatar:", error);
-    }
-  };
-
-  const handleSaveCover = async (uri) => {
-    try {
-      await AsyncStorage.setItem("coverUri", uri);
-      console.log("Cover saved successfully.");
-    } catch (error) {
-      console.log("Failed to save cover:", error);
-    }
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      <StatusBar barStyle="dark-content" hidden={false} />
-      <ScrollView style={{ flex: 1 }}>
-        {/* Ảnh bìa */}
+      <StatusBar barStyle="dark-content" />
+      <ScrollView>
         <View style={styles.coverContainer}>
           <TouchableOpacity onPress={() => setCoverModalVisible(true)}>
             {coverUri ? (
               <Image source={{ uri: coverUri }} style={styles.coverImage} />
             ) : (
-              <Image
-                source={require("../../assets/images/defaultUser.png")}
-                style={styles.coverImage}
-              />
+              <Image source={require("../../assets/images/defaultUser.png")} style={styles.coverImage} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => navigation.navigate("SettingsScreen")}
-          >
+          <TouchableOpacity style={styles.menuButton} onPress={() => router.push("/settingsProfile")}>
             <Entypo name="dots-three-horizontal" size={24} color="#000" />
           </TouchableOpacity>
         </View>
 
-        {/* Ảnh đại diện */}
         <View style={styles.avatarContainer}>
           <TouchableOpacity onPress={() => setAvatarModalVisible(true)}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatar} />
             ) : (
-              <Image
-                source={require("../../assets/images/defaultUser.png")}
-                style={styles.avatar}
-              />
+              <Image source={require("../../assets/images/defaultUser.png")} style={styles.avatar} />
             )}
           </TouchableOpacity>
+          {/* Display the username */}
+          <Text style={styles.usernameText}>{username || "Nguyen Minh Hai"}</Text>
         </View>
 
-        {/* Thông tin người dùng */}
-        <View style={styles.profileInfo}>
-          <Text style={[styles.profileName, { color: "#000" }]}>
-            Nguyễn Minh Hải
-          </Text>
-          <TouchableOpacity style={styles.editButton}>
-            <Ionicons name="create-outline" size={20} color="#007AFF" />
-            <Text style={styles.editText}>Cập nhật giới thiệu bản thân</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Modal ảnh đại diện */}
+        {/* Avatar Modal */}
         <Modal visible={avatarModalVisible} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
-              <TouchableOpacity
-                onPress={() => setAvatarModalVisible(false)}
-                style={styles.closeButton}
-              >
+              <TouchableOpacity onPress={() => setAvatarModalVisible(false)} style={styles.closeButton}>
                 <Entypo name="cross" size={24} color="#000" />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: "#000" }]}>
-                Ảnh đại diện
-              </Text>
+              <Text style={styles.modalTitle}>Ảnh đại diện</Text>
               <TouchableOpacity style={styles.modalItem} onPress={pickAvatar}>
                 <Ionicons name="image" size={24} color="#34C759" />
-                <Text style={[styles.modalText, { color: "#000" }]}>
-                  Chọn ảnh trên máy
-                </Text>
+                <Text style={styles.modalText}>Chọn ảnh từ thư viện</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
 
-        {/* Modal ảnh bìa */}
+        {/* Cover Modal */}
         <Modal visible={coverModalVisible} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
-              <TouchableOpacity
-                onPress={() => setCoverModalVisible(false)}
-                style={styles.closeButton}
-              >
+              <TouchableOpacity onPress={() => setCoverModalVisible(false)} style={styles.closeButton}>
                 <Entypo name="cross" size={24} color="#000" />
               </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: "#000" }]}>Ảnh bìa</Text>
+              <Text style={styles.modalTitle}>Ảnh bìa</Text>
               <TouchableOpacity style={styles.modalItem} onPress={pickCover}>
                 <Ionicons name="image" size={24} color="#34C759" />
-                <Text style={[styles.modalText, { color: "#000" }]}>
-                  Chọn ảnh trên máy
-                </Text>
+                <Text style={styles.modalText}>Chọn ảnh từ thư viện</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -181,58 +126,18 @@ const editProfileUser = () => {
 };
 
 const styles = {
-  coverContainer: { position: "relative", height: 200, width: "100%" },
-  coverImage: { width: "100%", height: "100%", resizeMode: "cover" },
-  menuButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    padding: 8,
-    borderRadius: 20,
-  },
-  avatarContainer: {
-    position: "absolute",
-    top: 160,
-    left: "50%",
-    marginLeft: -40,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
-  profileInfo: { alignItems: "center", marginTop: 50 },
-  profileName: { fontSize: 18, fontWeight: "bold" },
-  editButton: { flexDirection: "row", alignItems: "center", marginTop: 10 },
-  editText: { color: "#007AFF", marginLeft: 5 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    width: "80%",
-    borderRadius: 10,
-    padding: 20,
-  },
-  closeButton: { position: "absolute", top: 10, right: 10 },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  modalText: { fontSize: 16, marginLeft: 10 },
+  coverContainer: { position: "relative" },
+  coverImage: { width: "100%", height: 200 },
+  menuButton: { position: "absolute", top: 10, right: 10 },
+  avatarContainer: { alignItems: "center", marginTop: -50 },
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: "#fff" },
+  usernameText: { marginTop: 10, fontSize: 18, fontWeight: "bold", color: "#333" }, // Style for the username
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center" },
+  modalContainer: { backgroundColor: "#fff", marginHorizontal: 30, borderRadius: 10, padding: 20 },
+  closeButton: { alignSelf: "flex-end" },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 20 },
+  modalItem: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
+  modalText: { marginLeft: 10, fontSize: 16 },
 };
 
-export default editProfileUser;
+export default EditProfileUser;
