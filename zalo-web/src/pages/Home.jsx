@@ -21,7 +21,7 @@ import Loading from "../components/Loading";
 import Profile from "../components/Profile";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
-import { getUserData } from "../../api/user";
+import * as UserAPI from "../../api/user";
 import { logout, setUser } from "../redux/userSlice";
 import UserAvatar from "../components/Avatar";
 
@@ -31,7 +31,7 @@ const Contact = lazy(() => import("./Contact"));
 const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user, setAuth } = useAuth();
+  const { user, setAuth, isAuthInitialized } = useAuth();
 
   // Sử dụng useRef để theo dõi trạng thái đã fetch dữ liệu hay chưa
   const hasDataBeenFetched = useRef(false);
@@ -45,20 +45,19 @@ const Home = () => {
   const id = open ? "simple-popover" : undefined;
   const [isUserLoaded, setIsUserLoaded] = useState(false);
 
-  // Fetch user data chỉ một lần khi component mount
   useEffect(() => {
+    if (!isAuthInitialized) return; // Sử dụng isAuthInitialized từ useAuth
     if (!user?.id) {
       navigate("/");
       return;
     }
 
-    // Hàm fetch dữ liệu người dùng
     const fetchUser = async () => {
       if (hasDataBeenFetched.current) return;
 
       setIsLoading(true);
       try {
-        const result = await getUserData(user.id);
+        const result = await UserAPI.getUserData(user.id);
         if (result?.success) {
           dispatch(setUser(result.data));
           hasDataBeenFetched.current = true;
@@ -74,13 +73,12 @@ const Home = () => {
     };
 
     fetchUser();
-  }, [user?.id, dispatch, navigate]);
+  }, [user?.id, dispatch, navigate, isAuthInitialized]);
 
   // Xử lý kiểm tra đăng nhập trên thiết bị khác
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !isAuthInitialized) return; // Sử dụng isAuthInitialized từ useAuth
 
-    // Lấy last_sign_in_at ban đầu ngay sau khi vào Home
     const initializeLastLoginAt = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data?.user) {
@@ -95,7 +93,6 @@ const Home = () => {
 
     initializeLastLoginAt();
 
-    // Thiết lập interval chỉ một lần
     if (!lastLoginCheckInterval.current) {
       lastLoginCheckInterval.current = setInterval(async () => {
         if (!initialCheckDone) return;
@@ -113,6 +110,7 @@ const Home = () => {
               "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác!"
             );
             await supabase.auth.signOut();
+            await UserAPI.logout(user.id, "web");
             localStorage.removeItem("lastLoginAt");
             dispatch(logout());
             setAuth(null);
@@ -124,18 +122,25 @@ const Home = () => {
       }, 10000);
     }
 
-    // Dọn dẹp interval khi component unmount
     return () => {
       if (lastLoginCheckInterval.current) {
         clearInterval(lastLoginCheckInterval.current);
         lastLoginCheckInterval.current = null;
       }
     };
-  }, [user?.id, initialCheckDone, dispatch, navigate, setAuth]);
+  }, [
+    user?.id,
+    isAuthInitialized,
+    initialCheckDone,
+    dispatch,
+    navigate,
+    setAuth,
+  ]);
 
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
+      await UserAPI.logout(user.id, "web");
       if (error) throw new Error(error.message);
 
       dispatch(logout());

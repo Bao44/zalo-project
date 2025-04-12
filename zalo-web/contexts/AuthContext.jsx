@@ -68,6 +68,12 @@ export const AuthProvider = ({ children }) => {
         // Kiểm tra session hiện tại
         const { data: { session } } = await supabase.auth.getSession();
 
+        if (error) {
+          console.error("Error getting session:", error);
+          setIsAuthInitialized(true);
+          return;
+        }
+
         if (session) {
           setAuth(session.user);
           await updateUserData(session.user, session.user.email);

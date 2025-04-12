@@ -1,10 +1,4 @@
-import {
-  Box,
-  Container,
-  Tab,
-  Tabs,
-  Typography,
-} from "@mui/material";
+import { Box, Container, Tab, Tabs, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -14,6 +8,7 @@ import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
 import ForgotPassword from "../components/ForgotPassword";
+import { getDeviceId } from "../../utils/device";
 
 const style = {
   position: "absolute",
@@ -123,7 +118,8 @@ const Start = () => {
     setLoading(true);
 
     try {
-      const response = await UserAPI.signIn(email, password);
+      const deviceId = getDeviceId(); // ✅ lấy deviceId duy nhất từ localStorage
+      const response = await UserAPI.signIn(email, password, "web", deviceId);
 
       if (!response || !response.data || response.error) {
         toast.error(
