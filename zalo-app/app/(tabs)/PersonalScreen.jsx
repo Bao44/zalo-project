@@ -1,10 +1,10 @@
 import React from "react";
 import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router"; // Thay đổi từ useNavigation sang useRouter
 import { Ionicons, FontAwesome5, MaterialCommunityIcons, Entypo } from "@expo/vector-icons";
 
 const PersonalScreen = () => {
-  const navigation = useNavigation();
+  const router = useRouter(); // Thay vì useNavigation, dùng useRouter
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -12,7 +12,7 @@ const PersonalScreen = () => {
         {/* Hồ sơ cá nhân */}
         <TouchableOpacity
           style={styles.profileCard}
-          onPress={() => navigation.navigate("ProfileScreen")}
+          onPress={() => router.push("editProfileUser")} // Điều hướng đến trang chỉnh sửa hồ sơ
         >
           <Image
             source={require("../../assets/images/defaultUser.png")}
@@ -27,7 +27,11 @@ const PersonalScreen = () => {
 
         {/* Danh sách các mục */}
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.item}>
+          <TouchableOpacity
+            key={index}
+            style={styles.item}
+            onPress={() => router.push(item.screen)} // Điều hướng đến màn hình của item
+          >
             <item.icon name={item.iconName} size={24} color={item.color} />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={styles.text}>{item.title}</Text>
@@ -47,6 +51,7 @@ const menuItems = [
     icon: FontAwesome5,
     iconName: "magic",
     color: "#007AFF",
+    screen: "zStyleScreen", // Đảm bảo rằng bạn có một màn hình với tên này trong expo-router
   },
   {
     title: "Ví QR",
@@ -54,6 +59,7 @@ const menuItems = [
     icon: FontAwesome5,
     iconName: "qrcode",
     color: "#007AFF",
+    screen: "QRCodeScreen",
   },
   {
     title: "zCloud",
@@ -61,6 +67,7 @@ const menuItems = [
     icon: Entypo,
     iconName: "cloud",
     color: "#007AFF",
+    screen: "zCloudScreen",
   },
   {
     title: "Cloud của tôi",
@@ -68,6 +75,7 @@ const menuItems = [
     icon: Ionicons,
     iconName: "cloud",
     color: "#007AFF",
+    screen: "MyCloudScreen",
   },
   {
     title: "Dữ liệu trên máy",
@@ -75,18 +83,21 @@ const menuItems = [
     icon: MaterialCommunityIcons,
     iconName: "database",
     color: "#FF9500",
+    screen: "LocalDataScreen",
   },
   {
     title: "Tài khoản và bảo mật",
     icon: FontAwesome5,
     iconName: "shield-alt",
     color: "#007AFF",
+    screen: "AccountSecurityScreen",
   },
   {
     title: "Quyền riêng tư",
     icon: Ionicons,
     iconName: "lock-closed",
     color: "#007AFF",
+    screen: "PrivacyScreen",
   },
 ];
 
