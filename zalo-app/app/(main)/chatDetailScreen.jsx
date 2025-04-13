@@ -531,7 +531,7 @@ const ChatDetailScreen = () => {
             console.error("Error liking message:", error);
             Alert.alert("Lỗi", "Không thể thích tin nhắn này");
         }
-    }, 500);
+    }, 300);
 
     // MODAL TÙY CHỌN TIN NHẮN
     const handleLongPress = (message) => {

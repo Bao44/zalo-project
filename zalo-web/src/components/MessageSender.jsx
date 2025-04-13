@@ -8,16 +8,16 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { convertToTime } from "../../utils/formatTime";
 import RenderImageMessage from "./RenderImageMessage";
-// import { useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 // import { likeMessage } from "../../api/messageAPI";
 
-const MessageSender = ({ message }) => {
+const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
   const { content, createdAt } = message;
   const [anchorEl, setAnchorEl] = useState(null);
   const [opening, setOpening] = useState(false);
   const isRevoked = false;
   const [isHovered, setIsHovered] = useState(false);
-  // const { user } = useSelector((state) => state.user);
+  const { user } = useSelector((state) => state.user);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -136,46 +136,63 @@ const MessageSender = ({ message }) => {
       </Box>
       {!isRevoked && (
         <>
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: "-15px",
-              right: "10px",
-              backgroundColor: "#fff",
-              padding: "5px",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 99,
-              boxShadow: "0 0 5px 0px #000",
-              borderRadius: "50%",
-              cursor: "pointer",
+          <Button
+            sx={{ position: "absolute", bottom: "0px", right: "0px" }}
+            onClick={(even) => {
+              even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+              handleLikeMessage(message._id, user?.id)
             }}
           >
-            <FavoriteIcon
-              fontSize="small"
-              color={(message?.like?.length > 0) ? "error" : "disabled"}
-            />
-          </Box>
-          {message?.like?.length > 0 && (
             <Box
               sx={{
                 position: "absolute",
                 bottom: "-15px",
-                right: "50px",
+                right: "10px",
                 backgroundColor: "#fff",
-                padding: "4px",
+                padding: "5px",
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
                 zIndex: 99,
                 boxShadow: "0 0 5px 0px #000",
-                borderRadius: "10px",
+                borderRadius: "50%",
+                cursor: "pointer",
               }}
             >
-              <FavoriteIcon fontSize="small" color="error" />
-              <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+              <FavoriteIcon
+                fontSize="small"
+                color={(message?.like?.length > 0) ? "error" : "disabled"}
+              />
             </Box>
+          </Button>
+
+          {message?.like?.length > 0 && (
+            <Button
+              sx={{ position: "absolute", bottom: "0px", right: "50px" }}
+              onClick={(even) => {
+                even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+                handleUnLikeMessage(message._id, user?.id)
+              }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: "-15px",
+                  right: "50px",
+                  backgroundColor: "#fff",
+                  padding: "4px",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  zIndex: 99,
+                  boxShadow: "0 0 5px 0px #000",
+                  borderRadius: "10px",
+                }}
+              >
+                <FavoriteIcon fontSize="small" color="error" />
+                <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+              </Box>
+            </Button>
           )}
         </>
       )}
@@ -283,6 +300,8 @@ MessageSender.propTypes = {
     updatedAt: PropTypes.string,
     __v: PropTypes.number,
   }).isRequired,
+  handleLikeMessage: PropTypes.func.isRequired,
+  handleUnLikeMessage: PropTypes.func.isRequired,
 };
 
 export default MessageSender;

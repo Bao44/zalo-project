@@ -7,10 +7,12 @@ import { convertToTime } from "../../utils/formatTime";
 import PropTypes from "prop-types";
 import RenderImageMessage from "./RenderImageMessage";
 import UserAvatar from "./Avatar";
+import { useSelector } from "react-redux";
 
-const MessageReceiver = ({ message }) => {
+const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
   const { content, createdAt, senderId } = message;
   const [open, setOpen] = useState(false);
+  const { user } = useSelector((state) => state.user);
 
   return (
     <Box
@@ -120,47 +122,64 @@ const MessageReceiver = ({ message }) => {
         )}
         {!message?.revoked && (
           <>
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: "-15px",
-                right: "10px",
-                backgroundColor: "#fff",
-                padding: "5px",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                zIndex: 99,
-                boxShadow: "0 0 5px 0px #000",
-                borderRadius: "50%",
-                cursor: "pointer",
+            <Button
+              sx={{ position: "absolute", bottom: "0px", right: "0px" }}
+              onClick={(even) => {
+                even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+                handleLikeMessage(message._id, user?.id)
               }}
             >
-              <FavoriteIcon
-                fontSize="small"
-                color={message?.like?.length > 0 ? "error" : "disabled"}
-              />
-            </Box>
-            {message?.like?.length > 0 && (
               <Box
                 sx={{
                   position: "absolute",
                   bottom: "-15px",
-                  right: "50px",
+                  right: "10px",
                   backgroundColor: "#fff",
-                  padding: "4px",
+                  padding: "5px",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                   zIndex: 99,
                   boxShadow: "0 0 5px 0px #000",
-                  borderRadius: "10px",
+                  borderRadius: "50%",
                   cursor: "pointer",
                 }}
               >
-                <FavoriteIcon fontSize="small" color="error" />
-                <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+                <FavoriteIcon
+                  fontSize="small"
+                  color={message?.like?.length > 0 ? "error" : "disabled"}
+                />
               </Box>
+            </Button>
+
+            {message?.like?.length > 0 && (
+              <Button
+                sx={{ position: "absolute", bottom: "0px", right: "50px" }}
+                onClick={(even) => {
+                  even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+                  handleUnLikeMessage(message._id, user?.id)
+                }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: "-15px",
+                    right: "50px",
+                    backgroundColor: "#fff",
+                    padding: "4px",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 99,
+                    boxShadow: "0 0 5px 0px #000",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <FavoriteIcon fontSize="small" color="error" />
+                  <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+                </Box>
+              </Button>
             )}
           </>
         )}
@@ -245,6 +264,8 @@ MessageReceiver.propTypes = {
     updatedAt: PropTypes.string,
     __v: PropTypes.number,
   }).isRequired,
+  handleLikeMessage: PropTypes.func.isRequired,
+  handleUnLikeMessage: PropTypes.func.isRequired,
 };
 
 export default MessageReceiver;

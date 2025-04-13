@@ -37,7 +37,7 @@ import CircleIcon from "@mui/icons-material/Circle";
 import PersonIcon from "@mui/icons-material/Person";
 
 //
-import { getMessages, sendMessage, addUserSeen } from "../../api/messageAPI";
+import { getMessages, sendMessage, addUserSeen, likeMessage } from "../../api/messageAPI";
 import UserAvatar from "./Avatar";
 import socket from "../../socket/socket";
 
@@ -99,6 +99,23 @@ const Chat = ({ conversation, setConversation }) => {
           // Nếu người gửi không phải là người dùng hiện tại và tab đang được chọn
           addUserSeen(message.conversationId, user?.id);
         }
+      }
+    });
+
+    //Lắng nghe sự kiện like tin nhắn
+    socket.on("messageLiked", ({ savedMessage, senderUserLike, updatedAt }) => {
+      if (savedMessage.conversationId === conversation?._id) {
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg._id.toString() === savedMessage._id.toString()) {
+              const currentUpdatedAt = msg.updatedAt || msg.createdAt;
+              if (!currentUpdatedAt || new Date(updatedAt) >= new Date(currentUpdatedAt)) {
+                return { ...msg, like: savedMessage.like, updatedAt };
+              }
+            }
+            return msg;
+          })
+        );
       }
     });
 
@@ -307,12 +324,21 @@ const Chat = ({ conversation, setConversation }) => {
 
   };
 
-  const handleLikeMessage = (messageId) => {
-
+  //LIKE TIN NHẮN
+  const handleLikeMessage = async (messageId, userId) => {
+    try {
+      await likeMessage(messageId, "like", userId);
+    } catch (error) {
+      console.error("Error liking message:", error);
+    }
   };
 
-  const handleUnlikeMessage = (messageId) => {
-
+  const handleUnlikeMessage = async (messageId, userId) => {
+    try {
+      await likeMessage(messageId, "dislike", userId);
+    } catch (error) {
+      console.error("Error unliking message:", error);
+    }
   };
 
   const handleSendImage = async (event) => {
@@ -436,6 +462,8 @@ const Chat = ({ conversation, setConversation }) => {
                   <MessageSender
                     key={msg.id}
                     message={msg}
+                    handleLikeMessage={handleLikeMessage}
+                    handleUnlikeMessage={handleUnlikeMessage}
                     handleRevokeMessage={handleRevokeMessage}
                   />
                 );
@@ -445,6 +473,7 @@ const Chat = ({ conversation, setConversation }) => {
                     key={msg.id}
                     message={msg}
                     handleLikeMessage={handleLikeMessage}
+                    handleRevokeMessage={handleRevokeMessage}
                     handleUnlikeMessage={handleUnlikeMessage}
                   />
                 );
