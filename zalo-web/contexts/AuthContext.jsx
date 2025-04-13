@@ -113,6 +113,7 @@ export const AuthProvider = ({ children }) => {
             } else {
               console.log("[AuthProvider] Signed out, but staying on /reset-password");
             }
+          }
         });
 
         setIsAuthInitialized(true);
