@@ -56,7 +56,7 @@ const Messager = () => {
   const { user } = useSelector((state) => state.user);
   const [conversation, setConversation] = useState(null);
 
-  // console.log("user message", user);
+  console.log("Conversation", conversation);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -126,7 +126,7 @@ const Messager = () => {
                   conver?.type === "private" ? (
                     <CardItemUser key={conver?._id} conver={conver} setConversation={setConversation} converSeleted={conversation} />
                   ) : (
-                    <CardItemGroup key={conver._id} conver={conver} setConversation={setConversation} />
+                    <CardItemGroup key={conver._id} conver={conver} setConversation={setConversation} converSeleted={conversation} />
                   )
                 )
               ) : (
@@ -136,19 +136,7 @@ const Messager = () => {
           </CustomTabPanel>
           <CustomTabPanel value={value} index={1}>
             <List sx={{ maxHeight: "calc(100vh - 150px)", overflow: "auto" }}>
-              {loading ? (
-                <Typography>Đang tải...</Typography>
-              ) : unreadConversations.length > 0 ? (
-                unreadConversations.map((conver) =>
-                  conver.type === "private" ? (
-                    <CardItemUser key={conver._id} conver={conver} setConversation={setConversation} />
-                  ) : (
-                    <CardItemGroup key={conver._id} conver={conver} setConversation={setConversation} />
-                  )
-                )
-              ) : (
-                <Typography>Không có tin nhắn chưa đọc</Typography>
-              )}
+              <Typography>Không có tin nhắn chưa đọc</Typography>
             </List>
           </CustomTabPanel>
         </Box>

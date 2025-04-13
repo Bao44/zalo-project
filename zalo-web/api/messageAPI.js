@@ -55,3 +55,13 @@ export const countUnreadMessages = async (conversationId, userId) => {
         throw error;
     }
 }
+
+export const likeMessage = async (messageId, likeStatus, userId) => {
+    try {
+        const response = await axios.post(BACKEND_URL + `/api/messages/like-or-dislike-message`, {messageId, likeStatus, userId });
+        return response.data;
+    } catch (error) {
+        console.error("Like Message Error:", error.response?.data || error);
+        throw error;
+    }
+};

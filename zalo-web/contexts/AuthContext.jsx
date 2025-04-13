@@ -107,16 +107,6 @@ export const AuthProvider = ({ children }) => {
             } else {
               console.log("[AuthProvider] Signed out, but staying on /reset-password");
             }
-          } else if (_event === "SIGNED_OUT") {
-            setAuth(null);
-            // Chỉ redirect về "/" nếu không ở "/reset-password"
-            if (window.location.pathname !== "/reset-password") {
-              console.log("[AuthProvider] Signed out, redirecting to /");
-              navigate("/");
-            } else {
-              console.log("[AuthProvider] Signed out, but staying on /reset-password");
-            }
-          }
         });
 
         setIsAuthInitialized(true);

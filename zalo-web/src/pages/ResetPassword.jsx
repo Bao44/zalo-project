@@ -15,8 +15,6 @@ const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState("password");
-  const email = location.state?.email || "";
-  console.log("[ResetPassword] Component initialized", { email, newPassword, confirmPassword, showPassword });
 
   console.log("Email từ props:", email); // Kiểm tra giá trị email nhận được từ props
 

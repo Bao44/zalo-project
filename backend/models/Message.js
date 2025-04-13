@@ -28,10 +28,6 @@ const MessageSchema = new mongoose.Schema({
     fileType: String,
     fileUrl: String
   },
-  reactions: {
-    userId: { type: String, ref: "User" },
-    emoji: String
-  },
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Message",

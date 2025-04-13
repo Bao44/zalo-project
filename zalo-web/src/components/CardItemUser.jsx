@@ -18,11 +18,11 @@ const CardItemUser = ({ conver, setConversation, converSeleted }) => {
 
   useEffect(() => {
     if (user) {
-      const member = members.filter((mem) => mem?._id !== user.id);
+      const member = members.filter((mem) => mem?._id !== user?.id);
       setFriend(member[0]);
     }
   }, [members, user]);
-  
+
   useEffect(() => {
     if (lastMessage) {
       setMessage(lastMessage);
@@ -50,10 +50,10 @@ const CardItemUser = ({ conver, setConversation, converSeleted }) => {
         }}
         onClick={() => handleSelectConversation(conver)}
       >
-        <Box sx={{ display: "flex", alignItems: "center"}}>
+        <Box sx={{ display: "flex", alignItems: "center" }}>
           <UserAvatar uri={friend?.avatar} width={60} height={60} />
         </Box>
-        <Box sx={{ flexGrow: 1, marginLeft: "10px"}}>
+        <Box sx={{ flexGrow: 1, marginLeft: "10px" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
             <Typography fontWeight="bold" fontSize={16}>{friend?.name}</Typography>
             <Typography fontSize="14px" color="gray">{convertToTime(lastMessage?.createdAt)}</Typography>
@@ -62,8 +62,8 @@ const CardItemUser = ({ conver, setConversation, converSeleted }) => {
             {message && (message?.senderId === user.id ? "Bạn: " : "")}
             {message && (message?.content ? message?.content : "" ||
               message?.attachments?.length > 0 ? "Đã gửi ảnh" : "" ||
-                message?.media[0]?.fileName ? `[Video] ${message?.media[0]?.fileName}` : "" ||
-                  message?.files[0]?.fileName ? `[File] ${message?.files[0]?.fileName}` : "" ||
+                message?.media?.fileName ? `[Video] ${message?.media?.fileName}` : "" ||
+                  message?.files?.fileName ? `[File] ${message?.files?.fileName}` : "" ||
             "Chưa có tin nhắn"
             )}
           </Typography>
@@ -96,21 +96,17 @@ CardItemUser.propTypes = {
           fileUrl: PropTypes.string,
         })
       ),
-      media: PropTypes.arrayOf(
-        PropTypes.shape({
-          fileName: PropTypes.string,
-          fileType: PropTypes.string,
-          fileUrl: PropTypes.string,
-        })
-      ),
-      files: PropTypes.arrayOf(
-        PropTypes.shape({
-          fileName: PropTypes.string,
-          fileType: PropTypes.string,
-          fileUrl: PropTypes.string,
-          _id: PropTypes.string,
-        })
-      ),
+      media: PropTypes.shape({
+        fileName: PropTypes.string,
+        fileType: PropTypes.string,
+        fileUrl: PropTypes.string,
+      }),
+      files: PropTypes.shape({
+        fileName: PropTypes.string,
+        fileType: PropTypes.string,
+        fileUrl: PropTypes.string,
+        _id: PropTypes.string,
+      }),
       seen: PropTypes.arrayOf(PropTypes.string),
       createdAt: PropTypes.string,
     }),

@@ -13,6 +13,7 @@ import {
   Drawer,
   ListItemIcon,
   CircularProgress,
+  useIsFocusVisible,
 } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import ImageIcon from "@mui/icons-material/Image";
@@ -36,12 +37,13 @@ import CircleIcon from "@mui/icons-material/Circle";
 import PersonIcon from "@mui/icons-material/Person";
 
 //
-import { getMessages } from "../../api/messageAPI";
+import { getMessages, sendMessage, addUserSeen } from "../../api/messageAPI";
 import UserAvatar from "./Avatar";
+import socket from "../../socket/socket";
 
 
 const Chat = ({ conversation, setConversation }) => {
-  const { name, members, admin, type, _id } = conversation;
+  const { name, members, type } = conversation;
   const { user } = useSelector((state) => state.user);
   const [friend, setFriend] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -49,6 +51,7 @@ const Chat = ({ conversation, setConversation }) => {
   const [online, isOnline] = useState(true);
   const [typing, setTyping] = useState(false);
   const [userTyping, setUserTyping] = useState("");
+  const isFocused = useIsFocusVisible();
   let typingTimer = null;
 
   const [open, setOpen] = useState(false);
@@ -60,6 +63,55 @@ const Chat = ({ conversation, setConversation }) => {
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
   };
+
+  //SOCKET CHECK ONLINE
+  useEffect(() => {
+    socket.emit("checkOnline", user?.id);
+    socket.on("statusOnline", (status) => {
+      isOnline(status);
+    });
+
+    return () => {
+      if (socket) {
+        socket.off("statusOnline");
+      }
+    };
+  }, [user?.id]);
+
+  //SOCKET NHẬN TIN NHẮN MỚI
+  useEffect(() => {
+    if (conversation?._id) {
+      socket.emit("join", conversation?._id);
+    }
+
+    //Lắng ng nghe sự kiện tin nhắn mới
+    socket.on("newMessage", (message) => {
+      console.log("Tin nhắn mới:", message);
+      if (message?.conversationId === conversation?._id) {
+        // Nếu tin nhắn thuộc hội thoại hiện tại
+        setMessages((prevMessages) => {
+          const updatedMessages = [...prevMessages, message];
+          // Sắp xếp lại danh sách tin nhắn theo thời gian gửi
+          return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        });
+
+        if (message?.senderId !== user?.id && isFocused) {
+          // Nếu người gửi không phải là người dùng hiện tại và tab đang được chọn
+          addUserSeen(message.conversationId, user?.id);
+        }
+      }
+    });
+
+    return () => {
+      if (socket) {
+        socket.off("newMessage");
+        if (conversation?._id) {
+          socket.emit("leave", conversation?._id);
+        }
+      }
+    };
+  }, [conversation?._id, user?.id, isFocused]);
+
 
 
   const DrawerList = (
@@ -84,10 +136,10 @@ const Chat = ({ conversation, setConversation }) => {
       >
         {conversation.type === "private" ? (
           <>
-            <Avatar
-              src={friend?.avatarUrl}
-              alt="avatar"
-              sx={{ width: 60, height: 60 }}
+            <UserAvatar
+              uri={friend?.avatar}
+              width={60}
+              height={60}
             />
             <Typography
               textAlign="center"
@@ -100,10 +152,10 @@ const Chat = ({ conversation, setConversation }) => {
           </>
         ) : (
           <>
-            <AvatarGroup max={2}>
+            <AvatarGroup max={2} >
               {members?.length > 0 &&
                 members?.map((mem) => (
-                  <Avatar key={mem?.id} alt={mem?.fullName} src={mem?.avatarUrl} />
+                  <UserAvatar key={mem?._id} uri={mem?.avatar} width={60} height={60} />
                 ))}
             </AvatarGroup>
             <Typography
@@ -177,7 +229,7 @@ const Chat = ({ conversation, setConversation }) => {
             <ListItem
               key={"Giải tán nhóm"}
               disablePadding
-              onClick={handleDeleteConversation}
+            // onClick={handleDeleteConversation}
             >
               <ListItemButton sx={{ color: "red" }}>
                 <ListItemIcon>
@@ -227,8 +279,28 @@ const Chat = ({ conversation, setConversation }) => {
 
   //GỬI TIN NHẮN
   const handleSendMessage = async () => {
-    //Logic xử lý
+    if (!content.trim()) return; // Không gửi nếu nội dung rỗng
+    setLoading(true);
 
+    try {
+      const messageData = {
+        idTemp: Math.random().toString(36).substring(2, 15),
+        senderId: user.id,
+        content: content,
+        attachments: [],
+        media: null,
+        files: null,
+        receiverId: type === "private" ? friend._id : null,
+      };
+
+      await sendMessage(conversation._id, messageData);
+      setContent("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+    finally {
+      setLoading(false);
+    }
   }
 
   const handleRevokeMessage = (messageId) => {
@@ -289,7 +361,7 @@ const Chat = ({ conversation, setConversation }) => {
               <AvatarGroup max={2}>
                 {members?.length > 0 &&
                   members?.map((mem) => (
-                    <UserAvatar key={mem.id} uri={mem?.avatar} />
+                    <UserAvatar key={mem?.id} uri={mem?.avatar} />
                   ))}
               </AvatarGroup>
             )}
@@ -331,7 +403,7 @@ const Chat = ({ conversation, setConversation }) => {
             ) : (
               <>
                 <Typography fontWeight="bold" fontSize="18px">
-                  {friend?.name}
+                  {name}
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <PersonIcon fontSize="medium" color="black" />
@@ -458,7 +530,11 @@ Chat.propTypes = {
       })
     ).isRequired,
     name: PropTypes.string,
-    admin: PropTypes.string,
+    admin: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      avatar: PropTypes.string,
+    }),
     avatar: PropTypes.string,
     lastMessage: PropTypes.shape({
       _id: PropTypes.string,

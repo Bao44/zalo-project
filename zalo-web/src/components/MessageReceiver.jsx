@@ -11,8 +11,6 @@ import UserAvatar from "./Avatar";
 const MessageReceiver = ({ message }) => {
   const { content, createdAt, senderId } = message;
   const [open, setOpen] = useState(false);
-  const isRevoked = false;
-  const statusLike = false;
 
   return (
     <Box
@@ -43,7 +41,7 @@ const MessageReceiver = ({ message }) => {
         <Typography color={"gray"} fontSize={14} marginBottom="15px">
           {senderId?.name}
         </Typography>
-        {isRevoked ? (
+        {message?.revoked ? (
           <Typography color={"gray"} fontStyle={"italic"}>
             Tin nhắn đã được thu hồi
           </Typography>
@@ -81,7 +79,7 @@ const MessageReceiver = ({ message }) => {
                 }}
               >
                 <video width="600" height="400" controls>
-                  <source src={message?.media[0].fileUrl} type="video/mp4" />
+                  <source src={message?.media.fileUrl} type="video/mp4" />
                 </video>
                 <Button href={message?.media?.fileUrl} download style={{ marginTop: "10px" }}>
                   <FileDownloadIcon fontSize="small" />
@@ -89,7 +87,7 @@ const MessageReceiver = ({ message }) => {
                 </Button>
               </Box>
             )}
-            {message?.files?.length > 0 && (
+            {message?.files && (
               <Box
                 sx={{
                   display: "flex",
@@ -100,10 +98,10 @@ const MessageReceiver = ({ message }) => {
                 <DescriptionIcon fontSize="large" />
                 <Box marginLeft="10px">
                   <Typography fontSize={14} fontWeight="bold">
-                    {message?.files[0].fileName}
+                    {message?.files?.fileName}
                   </Typography>
                   <Button
-                    href={message?.files[0].fileUrl}
+                    href={message?.files?.fileUrl}
                     download
                     style={{
                       marginTop: "5px",
@@ -120,7 +118,7 @@ const MessageReceiver = ({ message }) => {
             <Typography fontSize={14}>{convertToTime(createdAt)}</Typography>
           </>
         )}
-        {!isRevoked && (
+        {!message?.revoked && (
           <>
             <Box
               sx={{
@@ -135,31 +133,35 @@ const MessageReceiver = ({ message }) => {
                 zIndex: 99,
                 boxShadow: "0 0 5px 0px #000",
                 borderRadius: "50%",
+                cursor: "pointer",
               }}
             >
               <FavoriteIcon
                 fontSize="small"
-                color={statusLike ? "error" : "disabled"}
+                color={message?.like?.length > 0 ? "error" : "disabled"}
               />
             </Box>
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: "-15px",
-                right: "50px",
-                backgroundColor: "#fff",
-                padding: "4px",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                zIndex: 99,
-                boxShadow: "0 0 5px 0px #000",
-                borderRadius: "10px",
-              }}
-            >
-              <FavoriteIcon fontSize="small" color="error" />
-              <Typography fontSize={14} color="gray" marginRight="5px">5</Typography>
-            </Box>
+            {message?.like?.length > 0 && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: "-15px",
+                  right: "50px",
+                  backgroundColor: "#fff",
+                  padding: "4px",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  zIndex: 99,
+                  boxShadow: "0 0 5px 0px #000",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                }}
+              >
+                <FavoriteIcon fontSize="small" color="error" />
+                <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+              </Box>
+            )}
           </>
         )}
       </Box>
@@ -230,8 +232,15 @@ MessageReceiver.propTypes = {
       })
     ),
     replyTo: PropTypes.oneOfType([PropTypes.object, PropTypes.oneOf([null])]),
+    revoked: PropTypes.bool,
     seen: PropTypes.arrayOf(PropTypes.string),
     reactions: PropTypes.arrayOf(PropTypes.any),
+    like: PropTypes.arrayOf(
+      PropTypes.shape({
+        userId: PropTypes.string,
+        totalLike: PropTypes.number,
+      })
+    ), // Added validation for 'like'
     createdAt: PropTypes.string.isRequired,
     updatedAt: PropTypes.string,
     __v: PropTypes.number,
