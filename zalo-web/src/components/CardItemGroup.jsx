@@ -1,4 +1,5 @@
 import {
+  Avatar,
   AvatarGroup,
   Box,
   ListItem,
@@ -8,13 +9,17 @@ import {
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
-import UserAvatar from "./Avatar";
+import UserAvatar from "../components/Avatar";
 import { convertToTime } from "../../utils/formatTime";
 
 const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
-  let { name, members, lastMessage } = conver;
+  let { name, members, lastMessage, avatar } = conver;
   const [message, setMessage] = useState(null);
   const { user } = useSelector((state) => state.user);
+
+
+  console.log("Avatar", avatar);
+
 
   useEffect(() => {
     if (lastMessage) {
@@ -44,8 +49,10 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
         onClick={() => handleSelectConversation(conver)}
       >
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {conver?.avatar ? (
-            <UserAvatar uri={conver?.avatar} />
+          {avatar ? (
+            <Box sx={{ display: "flex", alignItems: "center", paddingLeft: "20px" }}>
+              <Avatar src={avatar} alt="Avatar" style={{ width: 60, height: 60 }} />
+            </Box>
           ) : (
             <AvatarGroup
               max={2}

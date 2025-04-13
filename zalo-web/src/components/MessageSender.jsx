@@ -168,7 +168,7 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
 
           {message?.like?.length > 0 && (
             <Button
-              sx={{ position: "absolute", bottom: "0px", right: "50px" }}
+              sx={{ position: "absolute", bottom: "0px", right: "0px" }}
               onClick={(even) => {
                 even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
                 handleUnLikeMessage(message._id, user?.id)

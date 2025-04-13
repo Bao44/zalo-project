@@ -1,8 +1,21 @@
 import React from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Ionicons, Entypo, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth } from "../../contexts/AuthContext"; // Giả sử bạn có một AuthContext để quản lý trạng thái xác thực
+import { supabase } from "../../lib/supabase";
+import socket from "../../utils/socket";
+
 
 const DiscoverScreen = () => {
+  const { user, setAuth } = useAuth();
+  const handleLogout = async () => {
+    setAuth(null);
+    const { error } = await supabase.auth.signOut();
+    socket.emit("user-offline", user.id);
+    if (error) {
+      console.log("Error logging out:", error.message);
+    }
+  };
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Bọc danh sách trong ScrollView để tránh lỗi tràn màn hình */}
@@ -36,6 +49,9 @@ const DiscoverScreen = () => {
           <TouchableOpacity style={styles.item}>
             <Ionicons name="layers" size={24} color="lightblue" />
             <Text style={styles.text}>Mini App</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.item} onPress={handleLogout}>
+            <Text style={styles.text}>Logout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
