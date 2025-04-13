@@ -92,7 +92,9 @@ const Start = () => {
 
     try {
       const deviceId = getDeviceId(); // ✅ lấy deviceId duy nhất từ localStorage
-      const response = await UserAPI.signIn(email, password, "web", deviceId);
+      // const response = await UserAPI.signIn(email, password, "web", deviceId);
+      const response = await UserAPI.signIn(email, password);
+
 
       if (!response || !response.data || response.error) {
         toast.error(

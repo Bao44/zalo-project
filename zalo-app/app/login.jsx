@@ -18,7 +18,6 @@ import Icon from "../assets/icons";
 import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signIn } from "../api/user";
-import { getDeviceId } from "../utils/device";
 
 const Login = () => {
   const router = useRouter();
@@ -28,7 +27,12 @@ const Login = () => {
 
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ các trường");
+      alert("Please fill in all fields");
+      return;
+    }
+
+    if (passwordRef.current.length < 10) {
+      Alert.alert("Error", "Mật khẩu phải có ít nhất 10 ký tự!");
       return;
     }
 
@@ -37,61 +41,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Xóa toàn bộ dữ liệu phiên cũ
-      await AsyncStorage.multiRemove([
-        "supabase.auth.token",
-        "lastLoginAt",
-        "isManualLogin",
-        "refreshToken",
-      ]);
-      console.log("Cleared AsyncStorage");
-
-      // Đăng xuất phiên cũ
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) {
-        console.warn("Sign out error:", signOutError);
-      }
-      console.log("Attempted to clear old session");
-
-      const deviceId = await getDeviceId();
-      const result = await signIn(email, password, "mobile", deviceId);
-      console.log("SignIn result:", result);
-
-      if (result.message === "Login successful") {
-        const { user, session, device_replaced } = result.data;
-        console.log("Login response - last_sign_in_at:", user.last_sign_in_at);
-
-        const { data: sessionData, error: sessionError } =
-          await supabase.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          });
-
-        if (sessionError) {
-          throw new Error("Không thể thiết lập phiên đăng nhập");
-        }
-
-        await AsyncStorage.multiSet([
-          ["supabase.auth.token", JSON.stringify(result.data)],
-          ["lastLoginAt", user.last_sign_in_at || ""],
-          ["isManualLogin", "true"],
-          ["refreshToken", session.refresh_token],
-        ]);
-
-        if (device_replaced) {
-          Alert.alert(
-            "Thông báo",
-            "Một thiết bị khác cùng loại đã bị đăng xuất."
-          );
-        }
-
-        router.replace("/home");
+      const result = await signIn(email, password);
+      if (result.success) {
+        const { user, session } = result.data;
+        await supabase.auth.setSession(session); // Đồng bộ session
+        await AsyncStorage.setItem(
+          "supabase.auth.token",
+          JSON.stringify(result.data)
+        );
       } else {
-        throw new Error(result.error || "Đăng nhập thất bại");
+        Alert.alert("Error", result.message);
       }
     } catch (error) {
-      console.error("Login error:", error);
-      Alert.alert("Lỗi", error.message || "Đăng nhập thất bại");
+      Alert.alert("Error", error.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -106,11 +68,14 @@ const Login = () => {
           <Text style={{ fontSize: hp(2), marginLeft: 16 }}>Đăng nhập</Text>
         </View>
 
+        {/* welcome */}
+
         <View>
           <Text style={styles.welcomeText}>Hi,</Text>
           <Text style={styles.welcomeText}>Chào mừng bạn trở lại</Text>
         </View>
 
+        {/* form */}
         <View style={styles.form}>
           <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
             Vui lòng nhập email và mật khẩu để đăng nhập
@@ -130,9 +95,11 @@ const Login = () => {
             <Text style={styles.forgotPassword}>Lấy lại mật khẩu</Text>
           </Pressable>
 
+          {/* button */}
           <Button title={"Login"} loading={loading} onPress={onSubmit} />
         </View>
 
+        {/* footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Bạn chưa có tài khoản?</Text>
           <Pressable onPress={() => router.push("signUp")}>

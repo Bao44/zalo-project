@@ -193,82 +193,63 @@ const MainLayout = () => {
     return () => Linking.removeEventListener("url", handleDeepLink);
   }, [router]);
 
-  useEffect(() => {
-    // Khôi phục phiên từ AsyncStorage khi ứng dụng khởi động
-    const restoreSession = async () => {
-      try {
-        const tokenData = await AsyncStorage.getItem("supabase.auth.token");
-        if (tokenData) {
-          const { session } = JSON.parse(tokenData);
-          if (session?.access_token && session?.refresh_token) {
-            console.log("Restoring session from AsyncStorage");
-            const { data, error } = await supabase.auth.setSession({
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
-            });
-            if (error) {
-              console.error("Error restoring session:", error);
-              // Xóa AsyncStorage nếu khôi phục thất bại
-              await AsyncStorage.multiRemove([
-                "supabase.auth.token",
-                "lastLoginAt",
-                "isManualLogin",
-                "refreshToken",
-              ]);
-              console.log("Cleared AsyncStorage due to invalid session");
-            } else {
-              console.log("Session restored successfully:", !!data);
-            }
-          } else {
-            console.log("Invalid session data in AsyncStorage, clearing");
-            await AsyncStorage.multiRemove([
-              "supabase.auth.token",
-              "lastLoginAt",
-              "isManualLogin",
-              "refreshToken",
-            ]);
-          }
-        }
-      } catch (error) {
-        console.error("Error checking AsyncStorage:", error);
-        await AsyncStorage.multiRemove([
-          "supabase.auth.token",
-          "lastLoginAt",
-          "isManualLogin",
-          "refreshToken",
-        ]);
-      }
-    };
+  // Xử lý trạng thái auth và kiểm tra last_login_at
+  // useEffect(() => {
+  //   const authListener = supabase.auth.onAuthStateChange(
+  //     async (_event, session) => {
+  //       if (session) {
+  //         setAuth(session?.user);
 
-    restoreSession();
+  //         // Lưu last_login_at khi đăng nhập
+  //         const lastLoginAt = session.user.last_sign_in_at;
+  //         console.log("Last login at:", lastLoginAt);
+  //         await AsyncStorage.setItem("lastLoginAt", lastLoginAt);
 
-    const authListener = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log("Auth state changed:", _event, session);
-        if (session) {
-          setAuth(session?.user);
-          const lastLoginAt = session.user.last_sign_in_at;
-          console.log("Last login at:", lastLoginAt);
-          await AsyncStorage.setItem("lastLoginAt", lastLoginAt);
-          updateUserData(session?.user, session?.user?.email);
-          router.replace("/home");
-        } else {
-          setAuth(null);
-          await AsyncStorage.multiRemove([
-            "supabase.auth.token",
-            "lastLoginAt",
-            "isManualLogin",
-            "refreshToken",
-          ]);
-          router.replace("/welcome");
-        }
-      }
-    );
+  //         // Kiểm tra định kỳ last_login_at
+  //         const interval = setInterval(async () => {
+  //           const { data: userData, error } = await supabase.auth.getUser();
+  //           if (error || !userData?.user) {
+  //             // console.log("Lỗi khi kiểm tra user:", error);
+  //             return;
+  //           }
 
-    return () => {
-      authListener?.data?.subscription?.unsubscribe();
-    };
-  }, [router]);
+  //           const storedLastLoginAt = await AsyncStorage.getItem("lastLoginAt");
+  //           if (userData.user.last_sign_in_at !== storedLastLoginAt) {
+  //             // Có đăng nhập mới từ thiết bị khác
+  //             Alert.alert(
+  //               "Cảnh báo",
+  //               "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác. Bạn sẽ bị đăng xuất!",
+  //               [
+  //                 {
+  //                   text: "OK",
+  //                   onPress: async () => {
+  //                     await supabase.auth.signOut();
+  //                     await AsyncStorage.removeItem("lastLoginAt");
+  //                     router.replace("/welcome");
+  //                   },
+  //                 },
+  //               ]
+  //             );
+  //             clearInterval(interval);
+  //           }
+  //         }, 10000); // Kiểm tra mỗi 10 giây
+
+  //         updateUserData(session?.user, session?.user?.email);
+  //         router.replace("/home");
+
+  //         return () => clearInterval(interval);
+  //       } else {
+  //         setAuth(null);
+  //         await AsyncStorage.removeItem("lastLoginAt");
+  //         router.replace("/welcome");
+  //       }
+  //     }
+  //   );
+
+  //   return () => {
+  //     authListener?.data?.subscription?.unsubscribe();
+  //   };
+  // }, [router]);
 
   const updateUserData = async (user, email) => {
     let res = await getUserData(user?.id);

@@ -21,7 +21,7 @@ import Loading from "../components/Loading";
 import Profile from "../components/Profile";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
-import * as UserAPI from "../../api/user";
+import { getUserData } from "../../api/user";
 import { logout, setUser } from "../redux/userSlice";
 import UserAvatar from "../components/Avatar";
 
@@ -31,32 +31,31 @@ const Contact = lazy(() => import("./Contact"));
 const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user, setAuth, isAuthInitialized } = useAuth();
+  const { user, setAuth } = useAuth();
 
   // Sử dụng useRef để theo dõi trạng thái đã fetch dữ liệu hay chưa
   const hasDataBeenFetched = useRef(false);
-  const lastLoginCheckInterval = useRef(null);
 
   const [showMess, setShowMess] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
 
+  // Fetch user data chỉ một lần khi component mount
   useEffect(() => {
-    if (!isAuthInitialized) return; // Sử dụng isAuthInitialized từ useAuth
     if (!user?.id) {
       navigate("/");
       return;
     }
 
+    // Hàm fetch dữ liệu người dùng
     const fetchUser = async () => {
       if (hasDataBeenFetched.current) return;
 
       setIsLoading(true);
       try {
-        const result = await UserAPI.getUserData(user.id);
+        const result = await getUserData(user.id);
         if (result?.success) {
           dispatch(setUser(result.data));
           hasDataBeenFetched.current = true;
@@ -71,74 +70,11 @@ const Home = () => {
     };
 
     fetchUser();
-  }, [user?.id, dispatch, navigate, isAuthInitialized]);
-
-  // Xử lý kiểm tra đăng nhập trên thiết bị khác
-  useEffect(() => {
-    if (!user?.id || !isAuthInitialized) return; // Sử dụng isAuthInitialized từ useAuth
-
-    const initializeLastLoginAt = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data?.user) {
-        console.log("Lỗi khi lấy user ban đầu:", error);
-        return;
-      }
-
-      const currentLastLoginAt = data.user.last_sign_in_at;
-      localStorage.setItem("lastLoginAt", currentLastLoginAt);
-      setInitialCheckDone(true);
-    };
-
-    initializeLastLoginAt();
-
-    if (!lastLoginCheckInterval.current) {
-      lastLoginCheckInterval.current = setInterval(async () => {
-        if (!initialCheckDone) return;
-
-        try {
-          const { data, error } = await supabase.auth.getUser();
-          if (error || !data?.user) {
-            console.log("Lỗi khi kiểm tra user:", error);
-            return;
-          }
-
-          const storedLastLoginAt = localStorage.getItem("lastLoginAt");
-          if (data.user.last_sign_in_at !== storedLastLoginAt) {
-            toast.warn(
-              "Tài khoản của bạn đã được đăng nhập ở một thiết bị khác!"
-            );
-            await supabase.auth.signOut();
-            await UserAPI.logout(user.id, "web");
-            localStorage.removeItem("lastLoginAt");
-            dispatch(logout());
-            setAuth(null);
-            navigate("/");
-          }
-        } catch (error) {
-          console.log("Lỗi trong quá trình kiểm tra:", error);
-        }
-      }, 10000);
-    }
-
-    return () => {
-      if (lastLoginCheckInterval.current) {
-        clearInterval(lastLoginCheckInterval.current);
-        lastLoginCheckInterval.current = null;
-      }
-    };
-  }, [
-    user?.id,
-    isAuthInitialized,
-    initialCheckDone,
-    dispatch,
-    navigate,
-    setAuth,
-  ]);
+  }, [user?.id, dispatch, navigate]);
 
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      await UserAPI.logout(user.id, "web");
       if (error) throw new Error(error.message);
 
       dispatch(logout());

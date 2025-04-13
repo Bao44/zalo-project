@@ -81,66 +81,68 @@ export const AuthProvider = ({ children }) => {
         // Kiểm tra session hiện tại
         const {
           data: { session },
-          error,
         } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("Error getting session:", error);
-          setIsAuthInitialized(true);
-          return;
-        }
 
         if (session) {
           setAuth(session.user);
           await updateUserData(session.user, session.user.email);
+          if (
+            // window.location.pathname !== "/home" &&
+            window.location.pathname !== "/" &&
+            window.location.pathname !== "/reset-password"
+          ) {
+            // Add this check
+            navigate("/home");
+          }
         } else {
-          // Kiểm tra query params cho email confirmation hoặc password recovery
+          // Handle password reset parameters if present
           const query = new URLSearchParams(window.location.search);
           const type = query.get("type");
 
-          if (type === "recovery") {
+          if (
+            type === "recovery" &&
+            window.location.pathname !== "/reset-password"
+          ) {
             navigate("/reset-password", {
               state: { email: query.get("email") || "" },
             });
-          } else if (type === "signup") {
-            navigate("/", {
-              state: {
-                message:
-                  "Xác thực email thành công! Vui lòng đăng nhập để tiếp tục.",
-              },
-            });
+            return;
           }
         }
 
         // Thiết lập listener cho các sự kiện auth
         authListener = supabase.auth.onAuthStateChange(
           async (_event, session) => {
-            if (_event === "INITIAL_SESSION") {
-              // Xử lý khi session được khôi phục lúc khởi tạo
-              if (session) {
-                setAuth(session.user);
-                await updateUserData(session.user, session.user.email);
-                if (window.location.pathname !== "/reset-password") {
-                  navigate("/home");
-                }
+            if (_event === "PASSWORD_RECOVERY") {
+              if (session?.user?.email) {
+                navigate("/reset-password", {
+                  state: { email: session.user.email },
+                });
               }
-            } else if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
+              return;
+            }
+
+            if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
               if (session) {
                 setAuth(session.user);
                 await updateUserData(session.user, session.user.email);
-                if (window.location.pathname !== "/reset-password") {
-                  navigate("/home");
+
+                const currentPath = window.location.pathname;
+                if (currentPath === "/reset-password") {
+                  return;
                 }
+
+                navigate("/home");
               }
             } else if (_event === "SIGNED_OUT") {
               setAuth(null);
               if (window.location.pathname !== "/reset-password") {
                 navigate("/");
+              } else {
+                navigate("/reset-password", {
+                  state: { email: session?.user?.email || "" },
+                });
               }
-            } else if (_event === "PASSWORD_RECOVERY") {
-              navigate("/reset-password", {
-                state: { email: session?.user?.email || "" },
-              });
             }
           }
         );

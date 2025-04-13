@@ -1,16 +1,16 @@
-import axios from 'axios';
-import { BACKEND_URL } from '../constants/ip';
+import axios from "axios";
+import { BACKEND_URL } from "../constants/ip";
 
 const api = axios.create({
   baseURL: BACKEND_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const signUp = async (email, password, name) => {
   try {
-    const response = await api.post('/api/auth/signup', {
+    const response = await api.post("/api/auth/signup", {
       email,
       password,
       name,
@@ -21,13 +21,25 @@ export const signUp = async (email, password, name) => {
   }
 };
 
-export const signIn = async (email, password, deviceType, deviceId) => {
+// export const signIn = async (email, password, deviceType, deviceId) => {
+//   try {
+//     const response = await api.post("/api/auth/signin", {
+//       email,
+//       password,
+//       device_type: deviceType,
+//       device_id: deviceId,
+//     });
+//     return response.data;
+//   } catch (error) {
+//     throw error.response?.data || error;
+//   }
+// };
+
+export const signIn = async (email, password) => {
   try {
     const response = await api.post("/api/auth/signin", {
       email,
       password,
-      device_type: deviceType,
-      device_id: deviceId,
     });
     return response.data;
   } catch (error) {
