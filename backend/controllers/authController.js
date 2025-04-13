@@ -59,48 +59,7 @@ const authController = {
     }
   },
 
-  async signInWithMobile(req, res) {
-    try {
-      const { email, password } = req.body;
-
-      const { data, error } = await authService.signInWithPassword(
-        email,
-        password
-      );
-
-      if (error) {
-        return res.status(401).json({ success: false, message: error.message });
-      }
-
-      if (data?.user) {
-        try {
-          let mongoUser = await User.findOne({ _id: data.user.id });
-
-          if (!mongoUser) {
-            mongoUser = new User({
-              _id: data.user.id,
-              email: data.user.email,
-              name: data.user.user_metadata?.name || "",
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
-            await mongoUser.save();
-          }
-        } catch (dbError) {
-          console.error("Error syncing to MongoDB:", dbError);
-        }
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: { user: data.user, session: data.session },
-      });
-    } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-
-  async signInWithWeb(req, res) {
+  async signIn(req, res) {
     const { email, password, device_id, device_type } = req.body;
 
     if (!email || !password || !device_id || !device_type) {
@@ -108,64 +67,100 @@ const authController = {
     }
 
     try {
-      // Đăng nhập bằng Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error || !data.user || !data.session) {
-        return res.status(401).json({ error: "Invalid email or password" });
+        console.log("Supabase auth error:", error);
+        return res
+          .status(401)
+          .json({ error: error?.message || "Invalid email or password" });
       }
 
       const userId = data.user.id;
 
-      // Chỉ xóa thiết bị cũ cùng device_type
-      const { error: deleteError } = await supabase
+      // Lấy danh sách thiết bị
+      const { data: userDevices, error: devicesError } = await supabase
         .from("devices")
-        .delete()
-        .eq("user_id", userId)
-        .eq("device_type", device_type);
+        .select("*")
+        .eq("user_id", userId);
 
-      if (deleteError) {
-        console.error("Error deleting old device:", deleteError);
-      } else {
-        console.log(`Deleted old ${device_type} device for user ${userId}`);
+      if (devicesError) {
+        console.error("Error fetching user devices:", devicesError);
+        return res.status(500).json({ error: "Failed to fetch user devices" });
       }
 
-      // Thêm thiết bị mới
-      const { error: deviceError } = await supabase.from("devices").insert([
+      // Kiểm tra xem đã có thiết bị cùng loại hay chưa
+      const hasWebDevice = userDevices.some(
+        (device) => device.device_type === "web"
+      );
+      const hasMobileDevice = userDevices.some(
+        (device) => device.device_type === "mobile"
+      );
+
+      // Nếu đã có thiết bị cùng loại, xóa thiết bị cũ trước khi thêm mới
+      if (device_type === "mobile" && hasMobileDevice) {
+        const { error: deleteError } = await supabase
+          .from("devices")
+          .delete()
+          .eq("user_id", userId)
+          .eq("device_type", "mobile");
+
+        if (deleteError) {
+          console.error("Failed to delete old mobile device:", deleteError);
+          return res.status(500).json({ error: "Failed to replace device" });
+        }
+      } else if (device_type === "web" && hasWebDevice) {
+        const { error: deleteError } = await supabase
+          .from("devices")
+          .delete()
+          .eq("user_id", userId)
+          .eq("device_type", "web");
+
+        if (deleteError) {
+          console.error("Failed to delete old web device:", deleteError);
+          return res.status(500).json({ error: "Failed to replace device" });
+        }
+      }
+
+      const lastSignInAt = new Date(data.user.last_sign_in_at).toISOString();
+      const { error: insertError } = await supabase.from("devices").insert([
         {
           user_id: userId,
           id: device_id,
           device_type: device_type,
-          last_sign_in_at: new Date(data.user.last_sign_in_at),
+          last_sign_in_at: lastSignInAt,
+          refresh_token: data.session.refresh_token,
         },
       ]);
 
-      if (deviceError) {
-        console.error("Failed to store device info:", deviceError);
+      if (insertError) {
+        console.error("Failed to store device info:", insertError);
         return res.status(500).json({ error: "Failed to store device info" });
       }
 
       console.log(`Inserted new ${device_type} device: ${device_id}`);
 
-      // Trả về thông tin đăng nhập
-      return res.status(200).json({
+      const response = {
         message: "Login successful",
         data: {
           user: {
             id: data.user.id,
             email: data.user.email,
-            last_sign_in_at: data.user.last_sign_in_at,
+            last_sign_in_at: lastSignInAt,
           },
           session: {
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token,
             expires_in: data.session.expires_in,
           },
+          device_replaced: hasMobileDevice || hasWebDevice, // Báo rằng thiết bị cũ đã bị thay thế
         },
-      });
+      };
+      console.log("SignIn response:", response);
+      return res.status(200).json(response);
     } catch (err) {
       console.error("Sign-in error:", err);
       return res
@@ -178,11 +173,52 @@ const authController = {
     try {
       const { userId, deviceType } = req.body;
 
-      await deviceService.deleteDevice(userId, deviceType);
+      if (!userId || !deviceType) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Thiếu userId hoặc deviceType" });
+      }
+
+      // Kiểm tra xem thiết bị có tồn tại không
+      const { data: device, error: deviceError } = await supabase
+        .from("devices")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("device_type", deviceType)
+        .single();
+
+      if (deviceError || !device) {
+        console.warn(
+          `Không tìm thấy thiết bị ${deviceType} cho user ${userId}:`,
+          deviceError?.message
+        );
+        return res.status(200).json({
+          success: true,
+          message:
+            "Không tìm thấy thiết bị để đăng xuất, nhưng quá trình hoàn tất.",
+        });
+      }
+
+      // Xóa thiết bị khỏi bảng devices
+      const { error: deleteError } = await supabase
+        .from("devices")
+        .delete()
+        .eq("user_id", userId)
+        .eq("device_type", deviceType);
+
+      if (deleteError) {
+        console.error("Không thể xóa thiết bị:", deleteError);
+        return res
+          .status(500)
+          .json({ success: false, message: "Không thể xóa thiết bị" });
+      }
+
+      console.log(`Đã xóa thiết bị ${deviceType} của user ${userId}`);
       return res
         .status(200)
-        .json({ success: true, message: "Logged out successfully." });
+        .json({ success: true, message: "Đăng xuất thành công" });
     } catch (error) {
+      console.error("Lỗi đăng xuất:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
   },

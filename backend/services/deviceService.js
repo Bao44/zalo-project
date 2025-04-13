@@ -2,7 +2,6 @@ const { createClient } = require("@supabase/supabase-js");
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ROLE_KEY;
-
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const deviceService = {
@@ -12,21 +11,24 @@ const deviceService = {
       .select("*")
       .eq("user_id", userId)
       .eq("device_type", deviceType)
-      .single(); // chỉ lấy 1 nếu tồn tại
+      .maybeSingle();
 
+    console.log("getDeviceByUserAndType:", { data, error });
     return { data, error };
   },
 
-  async createDevice(userId, deviceType, refreshToken) {
+  async createDevice(userId, deviceId, deviceType, lastSignInAt, refreshToken) {
     const { data, error } = await supabase.from("devices").insert([
       {
         user_id: userId,
+        id: deviceId,
         device_type: deviceType,
+        last_sign_in_at: lastSignInAt || new Date(),
         refresh_token: refreshToken,
-        last_sign_in_at: new Date(),
       },
     ]);
 
+    console.log("createDevice:", { data, error });
     return { data, error };
   },
 
@@ -37,6 +39,7 @@ const deviceService = {
       .eq("user_id", userId)
       .eq("device_type", deviceType);
 
+    console.log("deleteDevice:", { error });
     return { success: !error, error };
   },
 };

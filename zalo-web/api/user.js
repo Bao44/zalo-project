@@ -119,7 +119,7 @@ export const signUp = async (email, password, name) => {
 
 export const signIn = async (email, password, deviceType, deviceId) => {
   try {
-    const response = await api.post("/api/auth/signinweb", {
+    const response = await api.post("/api/auth/signin", {
       email,
       password,
       device_type: deviceType,
