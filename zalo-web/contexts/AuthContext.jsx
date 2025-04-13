@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { supabase } from "../lib/supabase";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getUserData } from "../api/user";
@@ -46,19 +52,26 @@ export const AuthProvider = ({ children }) => {
   );
 
   // Hàm xử lý query params từ URL (chỉ xác thực email, không đăng nhập)
+
   const handleAuthFromEmail = useCallback(async () => {
     const query = new URLSearchParams(location.search);
     const type = query.get("type");
 
     if (type === "signup") {
-      console.log("Email verification link detected:", location.search);
-
-      // Không cần thiết lập session, chỉ cần chuyển hướng về trang đăng nhập
       navigate("/", {
-        state: { message: "Xác thực email thành công! Vui lòng đăng nhập để tiếp tục." },
+        state: {
+          message: "Xác thực email thành công! Vui lòng đăng nhập để tiếp tục.",
+        },
+      });
+    } else if (type === "recovery") {
+      // Add this to handle password reset
+      // Extract the email from query if needed
+      const email = query.get("email") || "";
+      navigate("/reset-password", {
+        state: { email: email },
       });
     }
-  }, [navigate]);
+  }, [navigate, location.search]);
 
   useEffect(() => {
     let authListener;
@@ -66,55 +79,74 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       try {
         // Kiểm tra session hiện tại
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("Error getting session:", error);
-          setIsAuthInitialized(true);
-          return;
-        }
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         if (session) {
           setAuth(session.user);
           await updateUserData(session.user, session.user.email);
-          if (window.location.pathname !== "/home") {
+          if (
+            // window.location.pathname !== "/home" &&
+            window.location.pathname !== "/" &&
+            window.location.pathname !== "/reset-password"
+          ) {
+            // Add this check
             navigate("/home");
           }
         } else {
-          // Kiểm tra xem có query params từ email không
-          await handleAuthFromEmail();
+          // Handle password reset parameters if present
+          const query = new URLSearchParams(window.location.search);
+          const type = query.get("type");
 
-          if (!user) {
-            setAuth(null);
-            // Chỉ redirect về "/" nếu không ở "/" hoặc "/reset-password"
-            if (window.location.pathname !== "/" && window.location.pathname !== "/reset-password") {
-              console.log("[AuthProvider] No session, redirecting to /");
-              navigate("/");
-            } else {
-              console.log("[AuthProvider] No session, but staying on current path", { pathname: window.location.pathname });
-            }
+          if (
+            type === "recovery" &&
+            window.location.pathname !== "/reset-password"
+          ) {
+            navigate("/reset-password", {
+              state: { email: query.get("email") || "" },
+            });
+            return;
           }
         }
 
         // Thiết lập listener cho các sự kiện auth
-        authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
-          if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
-            if (session) {
-              setAuth(session.user);
-              await updateUserData(session.user, session.user.email);
-              navigate("/home");
+        authListener = supabase.auth.onAuthStateChange(
+          async (_event, session) => {
+
+            if (_event === "PASSWORD_RECOVERY") {
+              if (session?.user?.email) {
+                navigate("/reset-password", {
+                  state: { email: session.user.email },
+                });
+              }
+              return;
             }
-          } else if (_event === "SIGNED_OUT") {
-            setAuth(null);
-            // Chỉ redirect về "/" nếu không ở "/reset-password"
-            if (window.location.pathname !== "/reset-password") {
-              console.log("[AuthProvider] Signed out, redirecting to /");
-              navigate("/");
-            } else {
-              console.log("[AuthProvider] Signed out, but staying on /reset-password");
+
+            if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
+              if (session) {
+                setAuth(session.user);
+                await updateUserData(session.user, session.user.email);
+
+                const currentPath = window.location.pathname;
+                if (currentPath === "/reset-password") {
+                  return;
+                }
+
+                navigate("/home");
+              }
+            } else if (_event === "SIGNED_OUT") {
+              setAuth(null);
+              if (window.location.pathname !== "/reset-password") {
+                navigate("/");
+              } else {
+                navigate("/reset-password", {
+                  state: { email: session?.user?.email || "" },
+                });
+              }
             }
           }
-        });
+        );
 
         setIsAuthInitialized(true);
       } catch (error) {
@@ -133,7 +165,9 @@ export const AuthProvider = ({ children }) => {
   }, [navigate, setAuth, updateUserData, handleAuthFromEmail]);
 
   return (
-    <AuthContext.Provider value={{ user, setAuth, setUserData, isAuthInitialized }}>
+    <AuthContext.Provider
+      value={{ user, setAuth, setUserData, isAuthInitialized }}
+    >
       {children}
     </AuthContext.Provider>
   );
