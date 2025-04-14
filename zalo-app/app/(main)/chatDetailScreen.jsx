@@ -1280,6 +1280,8 @@ const ChatDetailScreen = () => {
                         )
                     }
                 </View>
+
+                {/* Giao diện nhập tin nhắn */}
                 <View style={styles.inputContainer}>
                     {/* Hộp nhập tin nhắn */}
                     <View style={styles.sendMessage}>
@@ -1372,6 +1374,8 @@ const ChatDetailScreen = () => {
                     )}
                 </View>
             </View>
+
+            {/* Modal hiển thị các tùy chọn khi nhấn giữ tin nhắn */}
             <MessageOptionsModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
