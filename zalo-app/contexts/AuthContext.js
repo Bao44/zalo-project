@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { supabase } from "../lib/supabase";
 import { getUserData } from "../api/user";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import socket from "../utils/socket";
-import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext();
 
@@ -46,19 +46,14 @@ export const AuthProvider = ({ children }) => {
           await updateUserData(session.user, session.user.email);
           router.replace("/home");
         } else {
-          const userId = await AsyncStorage.getItem("userId");
-          const sessionToken = await AsyncStorage.getItem("sessionToken");
-          console.log(
-            "userId from AsyncStorage:",
-            userId,
-            "sessionToken:",
-            sessionToken
-          );
-          if (userId && sessionToken) {
-            router.replace("/home");
-          } else {
-            router.replace("/welcome");
-          }
+          // Nếu không có session, xóa AsyncStorage và chuyển hướng đến /welcome
+          console.warn("No valid session found, clearing AsyncStorage");
+          await AsyncStorage.removeItem("userId");
+          await AsyncStorage.removeItem("sessionToken");
+          await AsyncStorage.removeItem("user");
+          await AsyncStorage.removeItem("supabase.auth.token");
+          await AsyncStorage.removeItem("lastLoginAt");
+          router.replace("/welcome");
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -68,24 +63,40 @@ export const AuthProvider = ({ children }) => {
 
     initializeAuth();
 
-    const authListener = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log("Auth state change event:", _event, "session:", session);
-        if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
-          if (session) {
-            setAuth(session.user);
-            await updateUserData(session.user, session.user.email);
-            router.replace("/home");
-          }
-        } else if (_event === "SIGNED_OUT") {
-          setAuth(null);
-          router.replace("/welcome");
+    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth state change event:", _event, "session:", session);
+      if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
+        if (session) {
+          setAuth(session.user);
+          await updateUserData(session.user, session.user.email);
+          router.replace("/home");
         }
+      } else if (_event === "SIGNED_OUT" || _event === "SESSION_EXPIRED") {
+        setAuth(null);
+        router.replace("/welcome");
       }
-    );
+    });
+
+    // Kiểm tra session định kỳ
+    const interval = setInterval(async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session && user) {
+        console.warn("Session lost unexpectedly, logging out");
+        setAuth(null);
+        await AsyncStorage.removeItem("userId");
+        await AsyncStorage.removeItem("sessionToken");
+        await AsyncStorage.removeItem("user");
+        await AsyncStorage.removeItem("supabase.auth.token");
+        await AsyncStorage.removeItem("lastLoginAt");
+        router.replace("/welcome");
+      }
+    }, 30000); // Kiểm tra mỗi 30 giây
 
     return () => {
       authListener?.data?.subscription?.unsubscribe();
+      clearInterval(interval);
     };
   }, [router]);
 
