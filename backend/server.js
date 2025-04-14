@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { initSocket } = require("./socket");
-const { mariadb, mongoose } = require("./config/database");
+const { mongoose } = require("./config/database");
 
 // Routes import
 const authRoutes = require("./routes/authRoutes");
@@ -43,15 +43,15 @@ app.use('/api', postRoutes);
 app.use("/api/friendships", friendRoutes);
 app.use("/api/messages", messageRoutes);
 
-// Kiểm tra kết nối MariaDB
-app.get("/check-mariadb", async (req, res) => {
-  try {
-    const [rows] = await mariadb.query("SELECT 1");
-    res.json({ success: true, message: "✅ MariaDB Connected!", data: rows });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "❌ MariaDB Connection Failed", error });
-  }
-});
+// // Kiểm tra kết nối MariaDB
+// app.get("/check-mariadb", async (req, res) => {
+//   try {
+//     const [rows] = await mariadb.query("SELECT 1");
+//     res.json({ success: true, message: "✅ MariaDB Connected!", data: rows });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "❌ MariaDB Connection Failed", error });
+//   }
+// });
 
 // Kiểm tra kết nối MongoDB
 app.get("/check-mongodb", (req, res) => {

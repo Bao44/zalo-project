@@ -94,7 +94,7 @@ const getUserConversations = async (req, res) => {
     // Tìm tất cả các cuộc trò chuyện có userId trong danh sách members
     const conversations = await Conversation.find({ members: userId })
       .populate("members", "name avatar")
-      .populate("lastMessage", "type content createdAt attachments media files senderId seen")
+      .populate("lastMessage", "type content createdAt attachments media files senderId seen replyTo revoked")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);

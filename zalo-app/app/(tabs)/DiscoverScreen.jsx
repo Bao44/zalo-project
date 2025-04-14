@@ -1,10 +1,14 @@
-import { View, Text, Button } from "react-native";
+import { View, Text, Button, Alert, ScrollView, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
-import { Alert } from "react-native";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { useAuth } from "../../contexts/AuthContext";
+import {
+  Ionicons,
+  Entypo,
+  FontAwesome5,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
-import Header from "../../components/Header";
 import socket from "../../utils/socket";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -33,7 +37,9 @@ const DiscoverScreen = () => {
       }
 
       // Kiểm tra session trước khi đăng xuất
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       console.log("Session before signOut:", session);
 
       if (session) {
@@ -77,13 +83,66 @@ const DiscoverScreen = () => {
   };
 
   return (
-    <ScreenWrapper>
-      <Header title="Discover" />
-      <View>
-        <Button title="OUT" onPress={handleLogout} disabled={loading} />
-      </View>
-    </ScreenWrapper>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* Bọc danh sách trong ScrollView để tránh lỗi tràn màn hình */}
+      <ScrollView style={{ marginTop: 0 }}>
+        <View style={{ marginTop: 0 }}>
+          <TouchableOpacity style={styles.item}>
+            <Ionicons name="videocam" size={24} color="#FF5722" />
+            <Text style={styles.text}>Zalo Video</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item}>
+            <FontAwesome5 name="gamepad" size={24} color="green" />
+            <Text style={styles.text}>Game Center</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item}>
+            <Entypo name="calendar" size={24} color="orange" />
+            <Text style={styles.text}>Dịch vụ đời sống</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item}>
+            <MaterialCommunityIcons name="finance" size={24} color="red" />
+            <Text style={styles.text}>Tiện ích tài chính</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item}>
+            <FontAwesome5 name="building" size={24} color="blue" />
+            <Text style={styles.text}>Dịch vụ công</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item}>
+            <Ionicons name="layers" size={24} color="lightblue" />
+            <Text style={styles.text}>Mini App</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.item}
+            onPress={handleLogout}
+            disabled={loading}
+          >
+            <Text style={styles.text}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
+};
+
+const styles = {
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15, // Giảm padding để các item sát nhau hơn
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  text: {
+    color: "black",
+    fontSize: 18, // Điều chỉnh kích thước chữ để phù hợp
+    marginLeft: 30,
+  },
 };
 
 export default DiscoverScreen;

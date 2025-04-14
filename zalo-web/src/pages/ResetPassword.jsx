@@ -39,25 +39,42 @@ const ResetPassword = () => {
   }, []);
 
   const handleSubmitNewPassword = async () => {
+    console.log("[ResetPassword] handleSubmitNewPassword called", { email, newPassword, confirmPassword });
+
     if (newPassword.trim() === "") {
+      console.log("[ResetPassword] New password is empty");
       toast.error("Vui lòng nhập mật khẩu mới");
       return;
     }
 
     if (newPassword.length < 10) {
+      console.log("[ResetPassword] New password too short", { length: newPassword.length });
       toast.error("Mật khẩu phải có ít nhất 10 ký tự!");
       return;
     }
 
     if (newPassword !== confirmPassword) {
+      console.log("[ResetPassword] Passwords do not match", { newPassword, confirmPassword });
       toast.error("Mật khẩu không khớp!");
       return;
     }
 
     try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        toast.error(
+          "Phiên xác thực không hợp lệ. Vui lòng xác nhận qua email trước!"
+        );
+        handleBackToForgotPassword;
+        return;
+      }
+
       const { data, error } = await supabase.auth.updateUser({
         password: newPassword,
       });
+
+      console.log("[ResetPassword] Supabase response", { data, error });
 
       if (error) {
         console.error("[ResetPassword] Supabase error", {
@@ -71,6 +88,7 @@ const ResetPassword = () => {
       alert("Mật khẩu đã được cập nhật thành công!");
       navigate("/");
     } catch (error) {
+      console.error("[ResetPassword] Error in handleSubmitNewPassword", { error: error.message, stack: error.stack });
       toast.error("Đã có lỗi xảy ra, vui lòng thử lại!");
     }
   };

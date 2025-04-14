@@ -41,6 +41,11 @@ const Login = () => {
       return;
     }
 
+    if (passwordRef.current.length < 10) {
+      Alert.alert("Error", "Mật khẩu phải có ít nhất 10 ký tự!");
+      return;
+    }
+
     let email = emailRef.current.trim();
     let password = passwordRef.current.trim();
     setLoading(true);

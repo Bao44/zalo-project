@@ -34,7 +34,7 @@ const InfoChat1vs1 = () => {
                         .then((res) => {
                             if (res.success) {
                                 Alert.alert("Thành công", "Cuộc trò chuyện đã được xóa thành công.");
-                                router.back();
+                                router.push("home");
                             } else {
                                 Alert.alert("Lỗi", res.data.message || "Không thể xóa cuộc trò chuyện.");
                             }
@@ -51,7 +51,7 @@ const InfoChat1vs1 = () => {
     const handleInfo = async () => {
         const info = await getUserFromMongoDB(friendInfo?._id);
         if (info) {
-           router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(info)}});
+            router.push({ pathname: "bioUserAddFriend", params: { user: JSON.stringify(info) } });
         } else {
             Alert.alert("Lỗi", info?.data.message || "Không thể tìm thấy thông tin người dùng.");
         }

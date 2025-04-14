@@ -68,6 +68,7 @@ import Star from "./Star";
 import CallIncoming from "./CallIncoming";
 import AlarmClock from "./AlarmClock";
 import Block from "./Block";
+import HeartRemove from "./HeartRemove";
 
 
 const icons = {
@@ -138,7 +139,8 @@ const icons = {
   star : Star,
   callInComing : CallIncoming,
   alarmClock : AlarmClock,
-  block : Block
+  block : Block,
+  heartRemove: HeartRemove
 };
 
 const Icon = ({ name, ...props }) => {

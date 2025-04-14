@@ -163,7 +163,7 @@ const Start = () => {
         password,
         options: {
           data: {
-            name: fullName,
+            fullName,
           },
           emailRedirectTo: redirectTo,
         },

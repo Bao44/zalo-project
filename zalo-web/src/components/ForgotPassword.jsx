@@ -8,18 +8,21 @@ const ForgotPassword = ({ setCurrentScreen }) => {
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-
+  
   const handleResetPassword = async () => {
+    console.log("[ForgotPassword] handleResetPassword called", { email });
     if (email.trim() === "") {
+      console.log("[ForgotPassword] Email is empty");
       toast.error("Vui lòng nhập email");
       return;
     }
-
+  
     if (!email.match(/.+@gmail.com/)) {
+      console.log("[ForgotPassword] Email invalid", { email });
       toast.error("Email không hợp lệ");
       return;
     }
-
+  
     try {
       const redirectTo = "http://localhost:5173/reset-password";
 
@@ -40,7 +43,7 @@ const ForgotPassword = ({ setCurrentScreen }) => {
       console.log("finally");
     }
   };
-
+  
   const handleBackToLogin = () => {
     setCurrentScreen("login");
   };
