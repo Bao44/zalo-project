@@ -36,7 +36,7 @@ const messageController = {
 
                     const resourceType = attachment.isImage ? "image" : "raw";
                     const result = await cloudinary.uploader.upload(`data:image/png;base64,${attachment.fileUri}`, {
-                        folder: attachment.folderName || "uploads",
+                        folder: "zalo/messages/hinh-anh",
                         resource_type: resourceType,
                     });
 
@@ -82,9 +82,9 @@ const messageController = {
                 const dataUri = `data:${mimeType};base64,${file.uri}`;
 
                 const result = await cloudinary.uploader.upload(dataUri, {
-                    folder: "files",
+                    folder: "zalo/messages/files",
                     resource_type: "auto",
-                    public_id: file.name,
+                    // public_id: file.name,
                 });
 
                 const fileData = {
@@ -114,6 +114,50 @@ const messageController = {
 
                 // Gửi tin nhắn real-time cho file
                 io.to(conversation._id.toString()).emit("newMessage", populatedFileMessage, idTemp);
+            }
+
+            // Upload và tạo tin nhắn riêng cho video (nếu có)
+            if (media) {
+                if (!media.uri) {
+                    throw new Error(`Thiếu dữ liệu base64 cho video: ${media.name}`);
+                }
+
+                const mimeType = media.type || 'video/mp4';
+                const dataUri = `data:${mimeType};base64,${media.uri}`;
+
+                const result = await cloudinary.uploader.upload(dataUri, {
+                    folder: "zalo/messages/videos",
+                    resource_type: "video",
+                    // public_id: media.name,
+                });
+
+                const videoData = {
+                    fileName: media.name,
+                    fileType: media.type,
+                    fileUrl: result.secure_url,
+                };
+
+                // Tạo tin nhắn riêng cho video này
+                const videoMessage = new Message({
+                    conversationId: conversation._id,
+                    senderId,
+                    content: "",
+                    attachments: [],
+                    media: videoData,
+                    files: null,
+                    replyTo: replyTo || null,
+                    status: "sent",
+                });
+
+                const savedVideoMessage = await videoMessage.save();
+                savedMessages.push(savedVideoMessage);
+
+                const populatedVideoMessage = await Message.findById(savedVideoMessage._id)
+                    .populate("senderId", "name avatar")
+                    .populate("replyTo", "content senderId");
+
+                // Gửi tin nhắn real-time cho video
+                io.to(conversation._id.toString()).emit("newMessage", populatedVideoMessage, idTemp);
             }
 
             // Cập nhật lastMessage cho conversation

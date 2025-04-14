@@ -23,6 +23,7 @@ import EmojiPicker from "../../components/EmojiPicker";
 import MessageOptionsModal from "@/components/MessageOptionsModal";
 import { useIsFocused } from '@react-navigation/native';
 import { debounce } from "lodash";
+import { Video } from "expo-av";
 
 
 const ChatDetailScreen = () => {
@@ -225,7 +226,7 @@ const ChatDetailScreen = () => {
 
     // GỬI TIN NHẮN
     const handleSendMessage = async () => {
-        if (!message && attachments?.length === 0 && !media) {
+        if (!message && attachments?.length === 0) {
             return;
         }
         try {
@@ -278,7 +279,7 @@ const ChatDetailScreen = () => {
                 senderId: user?.id,
                 content: message || "",
                 attachments: images.length > 0 ? images : null,
-                media: media || null,
+                media: null,
                 file: null,
                 receiverId: parsedData?._id,
             };
@@ -290,7 +291,7 @@ const ChatDetailScreen = () => {
                     senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
                     content: message || "",
                     attachments: attachments.map((img) => img.uri),
-                    media,
+                    media: null,
                     files: null,
                     createdAt: new Date().toISOString(),
                 },
@@ -300,7 +301,6 @@ const ChatDetailScreen = () => {
             // Reset trạng thái
             setMessage("");
             setAttachments([]);
-            setMedia(null);
             setShowGallery(false);
 
             // Gửi tin nhắn
@@ -510,6 +510,115 @@ const ChatDetailScreen = () => {
         }
     };
 
+    // GỬI VIDEO
+    const handlePickVideo = async () => {
+        try {
+            // Kiểm tra quyền truy cập thư viện video
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== "granted") {
+                Alert.alert("Quyền truy cập video", "Vui lòng cấp quyền truy cập video để chọn video.");
+                return;
+            }
+
+            // Chọn video từ thư viện
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ["video/*"], // Chỉ chọn các file video
+                copyToCacheDirectory: true,
+            });
+
+            if (!result.canceled && result.assets?.length > 0) {
+                const maxSizeMB = 50; // Giới hạn kích thước tối đa (50MB)
+                const maxSizeBytes = maxSizeMB * 1024 * 1024; // Chuyển đổi sang bytes
+
+                const selectedVideos = await Promise.all(
+                    result.assets.map(async (video) => {
+                        // Kiểm tra kích thước file
+                        const fileInfo = await FileSystem.getInfoAsync(video.uri);
+                        if (fileInfo.size > maxSizeBytes) {
+                            throw new Error(`Video "${video.name}" vượt quá giới hạn ${maxSizeMB}MB.`);
+                        }
+
+                        const fileBase64 = await FileSystem.readAsStringAsync(video.uri, {
+                            encoding: FileSystem.EncodingType.Base64,
+                        });
+                        return { uri: fileBase64, name: video.name, type: video.mimeType };
+                    })
+                );
+
+                // Gửi từng video ngay sau khi chọn
+                for (const video of selectedVideos) {
+                    let conversationId = conversation?._id;
+
+                    // Tạo cuộc trò chuyện nếu chưa có
+                    if (!conversation) {
+                        if (!user?.id || !parsedData?._id) {
+                            Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
+                            return;
+                        }
+                        const response = await createConversation1vs1(user?.id, parsedData?._id);
+                        if (response.success && response.data) {
+                            setConversation(response.data);
+                            conversationId = response.data._id;
+                        } else {
+                            const errorMsg = response.data?.message || "Không rõ nguyên nhân";
+                            Alert.alert("Lỗi", `Không thể tạo cuộc trò chuyện: ${errorMsg}`);
+                            return;
+                        }
+                    }
+
+                    if (!conversationId) {
+                        Alert.alert("Lỗi", "Không thể xác định ID cuộc trò chuyện");
+                        return;
+                    }
+
+                    const t = Date.now().toString();
+                    setStempId(t);
+
+                    const messageData = {
+                        idTemp: t,
+                        senderId: user?.id,
+                        content: "", // Nội dung để trống khi gửi video
+                        attachments: null, // Không gửi ảnh kèm video
+                        media: video, // Gửi video dưới dạng media
+                        file: null, // Không gửi file kèm video
+                        receiverId: parsedData?._id,
+                    };
+
+                    // Thêm tin nhắn tạm thời vào danh sách
+                    setMessages((prev) => [
+                        {
+                            _id: t,
+                            senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
+                            content: "",
+                            attachments: [],
+                            media: video, // Đồng bộ với tên biến trong API
+                            files: null,
+                            createdAt: new Date().toISOString(),
+                        },
+                        ...prev,
+                    ]);
+
+                    // Gửi tin nhắn qua API
+                    const response = await sendMessage(conversationId, messageData);
+                    if (!response.success) {
+                        Alert.alert("Lỗi", `Không thể gửi video: ${response.data?.message || "Lỗi không xác định"}`);
+                        // Xóa tin nhắn tạm nếu gửi thất bại
+                        setMessages((prev) => prev.filter((msg) => msg._id !== t));
+                    }
+                }
+
+                // Reset trạng thái sau khi gửi
+                setMedia(null);
+                setShowGallery(false);
+            } else {
+                console.log("Video selection canceled");
+            }
+        } catch (error) {
+            console.error("Error in handlePickVideo:", error);
+            Alert.alert("Lỗi", error.message || "Không thể gửi video: Lỗi không xác định");
+        }
+    };
+
     // THÍCH TIN NHẮN
     const handleLike = debounce(async (messageId, statusLike, userId) => {
         try {
@@ -681,7 +790,7 @@ const ChatDetailScreen = () => {
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index -1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -727,11 +836,20 @@ const ChatDetailScreen = () => {
                                                             {item?.files !== null && (
                                                                 <ViewFile file={item?.files} />
                                                             )}
+                                                            {item?.media && (
+                                                                <Video
+                                                                    style={{ width: wp(73), height: hp(20) }}
+                                                                    source={{uri: item?.media?.fileUrl}}
+                                                                    useNativeControls
+                                                                    resizeMode="contain"
+                                                                    isLooping
+                                                                />
+                                                            )}
                                                             {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index -1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -781,7 +899,7 @@ const ChatDetailScreen = () => {
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index -1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -827,11 +945,20 @@ const ChatDetailScreen = () => {
                                                             {item?.files !== null && (
                                                                 <ViewFile file={item?.files} />
                                                             )}
+                                                            {item?.media && (
+                                                                <Video
+                                                                    style={{ width: wp(73), height: hp(20) }}
+                                                                    source={{uri: item?.media?.fileUrl}}
+                                                                    useNativeControls
+                                                                    resizeMode="contain"
+                                                                    isLooping
+                                                                />
+                                                            )}
                                                             {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -913,6 +1040,15 @@ const ChatDetailScreen = () => {
                                                                 {item?.files !== null && (
                                                                     <ViewFile file={item?.files} />
                                                                 )}
+                                                                {item?.media && (
+                                                                    <Video
+                                                                        style={{ width: wp(73), height: hp(20) }}
+                                                                        source={{uri: item?.media?.fileUrl}}
+                                                                        useNativeControls
+                                                                        resizeMode="contain"
+                                                                        isLooping
+                                                                    />
+                                                                )}
                                                                 {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                                 <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                 {
@@ -981,6 +1117,15 @@ const ChatDetailScreen = () => {
                                                                     )}
                                                                     {item?.files !== null && (
                                                                         <ViewFile file={item?.files} />
+                                                                    )}
+                                                                    {item?.media && (
+                                                                        <Video
+                                                                            style={{ width: wp(73), height: hp(20) }}
+                                                                            source={{uri: item?.media?.fileUrl}}
+                                                                            useNativeControls
+                                                                            resizeMode="contain"
+                                                                            isLooping
+                                                                        />
                                                                     )}
                                                                     {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                                     {(index === messages?.length - 1) ?
@@ -1055,6 +1200,15 @@ const ChatDetailScreen = () => {
                                                                     )}
                                                                     {item?.files !== null && (
                                                                         <ViewFile file={item?.files} />
+                                                                    )}
+                                                                    {item?.media && (
+                                                                        <Video
+                                                                            style={{ width: wp(73), height: hp(20) }}
+                                                                            source={{uri: item?.media?.fileUrl}}
+                                                                            useNativeControls
+                                                                            resizeMode="contain"
+                                                                            isLooping
+                                                                        />
                                                                     )}
                                                                     {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                                     {(index === messages?.length - 1) ?
@@ -1161,7 +1315,7 @@ const ChatDetailScreen = () => {
                                                         </View>
                                                         <Text>Audio</Text>
                                                     </TouchableOpacity>
-                                                    <TouchableOpacity style={styles.buttonExtend}>
+                                                    <TouchableOpacity style={styles.buttonExtend} onPress={handlePickVideo}>
                                                         <View style={[styles.boxIcon, { backgroundColor: "#2196F3" }]}>
                                                             <Icon name="bussinessCard" size={26} color="#fff" />
                                                         </View>
@@ -1276,7 +1430,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 4,
-        maxWidth: wp(75),
+        maxWidth: wp(80),
         marginLeft: 10,
         borderColor: theme.colors.darkLight,
         borderWidth: 0.5,

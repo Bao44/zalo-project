@@ -51,7 +51,7 @@ const createGroup = async (req, res) => {
 
         const resourceType = avatar.isImage ? "image" : "raw";
         const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
-          folder: avatar.folderName || "uploads",
+          folder: "zalo/avatar-group-chat",
           resource_type: resourceType,
         });
         return result.secure_url;
