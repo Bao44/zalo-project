@@ -64,8 +64,6 @@ export const AuthProvider = ({ children }) => {
         },
       });
     } else if (type === "recovery") {
-      // Add this to handle password reset
-      // Extract the email from query if needed
       const email = query.get("email") || "";
       navigate("/reset-password", {
         state: { email: email },
@@ -87,15 +85,24 @@ export const AuthProvider = ({ children }) => {
           setAuth(session.user);
           await updateUserData(session.user, session.user.email);
           if (
-            // window.location.pathname !== "/home" &&
             window.location.pathname !== "/" &&
             window.location.pathname !== "/reset-password"
           ) {
-            // Add this check
             navigate("/home");
           }
         } else {
-          // Handle password reset parameters if present
+          // Kiểm tra localStorage nếu không có session
+          const userId = localStorage.getItem("userId");
+          const sessionToken = localStorage.getItem("sessionToken");
+          if (
+            userId &&
+            sessionToken &&
+            window.location.pathname !== "/reset-password"
+          ) {
+            navigate("/home"); // Chuyển hướng nếu đã có thông tin đăng nhập
+          }
+
+          // Handle password reset parameters nếu có
           const query = new URLSearchParams(window.location.search);
           const type = query.get("type");
 
@@ -113,7 +120,6 @@ export const AuthProvider = ({ children }) => {
         // Thiết lập listener cho các sự kiện auth
         authListener = supabase.auth.onAuthStateChange(
           async (_event, session) => {
-
             if (_event === "PASSWORD_RECOVERY") {
               if (session?.user?.email) {
                 navigate("/reset-password", {

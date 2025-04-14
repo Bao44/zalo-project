@@ -27,7 +27,12 @@ const Login = () => {
 
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
-      alert("Please fill in all fields");
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    if (passwordRef.current.length < 10) {
+      Alert.alert("Error", "Mật khẩu phải có ít nhất 10 ký tự!");
       return;
     }
 
@@ -44,15 +49,38 @@ const Login = () => {
       const result = await signIn(email, password);
       if (result.success) {
         const { user, session } = result.data;
-        await supabase.auth.setSession(session); // Đồng bộ session
+
+        // Thiết lập phiên làm việc với Supabase
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          Alert.alert(
+            "Error",
+            "Lỗi xác thực phiên làm việc: " + sessionError.message
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Lưu userId và sessionToken vào AsyncStorage
+        await AsyncStorage.setItem("userId", user.id);
+        await AsyncStorage.setItem("sessionToken", session.session_token);
+        await AsyncStorage.setItem("user", JSON.stringify(user));
         await AsyncStorage.setItem(
           "supabase.auth.token",
           JSON.stringify(result.data)
         );
+
+        // Chuyển hướng sẽ được xử lý bởi AuthContext
       } else {
-        Alert.alert("Error", result.message);
+        Alert.alert("Error", result.message || "Đăng nhập thất bại!");
       }
     } catch (error) {
+      console.error("Login error:", error);
       Alert.alert("Error", error.message || "Login failed");
     } finally {
       setLoading(false);
@@ -96,7 +124,12 @@ const Login = () => {
           </Pressable>
 
           {/* button */}
-          <Button title={"Login"} loading={loading} onPress={onSubmit} />
+          <Button
+            title={"Login"}
+            loading={loading}
+            onPress={onSubmit}
+            disabled={loading}
+          />
         </View>
 
         {/* footer */}

@@ -1,16 +1,16 @@
-import axios from 'axios';
-import { BACKEND_URL } from '../constants/ip';
+import axios from "axios";
+import { BACKEND_URL } from "../constants/ip";
 
 const api = axios.create({
   baseURL: BACKEND_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const signUp = async (email, password, name) => {
   try {
-    const response = await api.post('/api/auth/signup', {
+    const response = await api.post("/api/auth/signup", {
       email,
       password,
       name,
@@ -23,15 +23,55 @@ export const signUp = async (email, password, name) => {
 
 export const signIn = async (email, password) => {
   try {
-    const response = await api.post('/api/auth/signin', {
+    const response = await api.post("/api/auth/signinWithDevice", {
       email,
       password,
+      device_type: "mobile", // Gán cứng cho mobile
     });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
+
+export const logout = async (userId, sessionToken) => {
+  try {
+    const response = await api.post("/api/auth/signout", {
+      user_id: userId,
+      device_type: "mobile", // Gán cứng cho mobile
+      session_token: sessionToken,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Logout API error:", error);
+    throw error.response?.data || error;
+  }
+};
+
+// export const signIn = async (email, password) => {
+//   try {
+//     const response = await api.post("/api/auth/signin", {
+//       email,
+//       password,
+//     });
+//     return response.data;
+//   } catch (error) {
+//     throw error.response?.data || error;
+//   }
+// };
+
+// export const logout = async (userId, deviceType) => {
+//   try {
+//     const response = await api.post("/api/auth/logout", {
+//       userId,
+//       deviceType,
+//     });
+//     return response.data;
+//   } catch (error) {
+//     console.error("Logout API error:", error);
+//     throw error.response?.data || error;
+//   }
+// };
 
 export const getUserData = async (userId) => {
   try {
@@ -45,46 +85,6 @@ export const getUserData = async (userId) => {
 export const updateUser = async (userId, data) => {
   try {
     const response = await api.put(`/api/users/${userId}`, data);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const getUserFromMongoDB = async (userId) => {
-  try {
-    const response = await api.get(`/api/users/mongo/${userId}`);
-    return response.data.user;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const getUserByEmailFromMongoDB = async (email) => {
-  try {
-    const response = await api.get(`/api/users/email/${email}`);
-    return response.data.user;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const addFriendInMongoDB = async (supabaseId, friendId) => {
-  try {
-    const response = await api.post(`/api/users/${supabaseId}/friends`, {
-      friendId,
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-};
-
-export const addConversationInMongoDB = async (supabaseId, conversationId) => {
-  try {
-    const response = await api.post(`/api/users/${supabaseId}/conversations`, {
-      conversationId,
-    });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
