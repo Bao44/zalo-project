@@ -17,10 +17,57 @@ import CreateGroup from "../components/CreateGroup";
 import ListFriend from "../components/ListFriend";
 import ListGroup from "../components/ListGroup";
 import RequestFriend from "../components/RequestFriend";
+import { getConversations } from "../../api/conversationAPI";
+import { useSelector } from "react-redux";
 
 const Contact = () => {
   const [show, setShow] = useState("ListFriend");
   const [conversation, setConversation] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const { user } = useSelector((state) => state.auth);
+
+  // LẤY DANH SÁCH CUỘC TRÒ CHUYỆN
+  useEffect(() => {
+    const fetchConversations = async () => {
+      const response = await getConversations(user?.id) // Thay đổi URL theo API của bạn
+      setConversations(response.data);
+    };
+
+    fetchConversations();
+  }, [user?.id]);
+
+  // HÀM MỞ DANH SÁCH BẠN BÈ
+  const handleOpenFriendChat = async (id) => {
+    const conv = conversations.find((conver) => {
+      if (
+        conver.type === "private" &&
+        conver.members.find((mem) => mem.id === user?.id)
+      ) {
+        return conver;
+      }
+    });
+    if (conv) {
+      setConversation(conv);
+      setShow("Chat");
+    } else {
+      // const newConver = {
+      //   type: "private",
+      //   members: [user.id, id],
+      //   admin: user.id,
+      // };
+
+      // if (socket) {
+      //   socket.emit("send_create_conversation", newConver);
+      // }
+    }
+  };
+
+  // HÀM THAY ĐỔI TRANG HIỂN THỊ
+  const handleOpenGroupChat = (conver) => {
+    setConversation(conver);
+    setShow("Chat");
+  };
+
 
   return (
     <Grid container item xs={11.3}>
@@ -114,7 +161,20 @@ const Contact = () => {
           height: "100%",
           paddingRight: "20px",
         }}
-      ></Grid>
+      >
+        {show === "ListFriend" && (
+          <ListFriend handleOpenChat={handleOpenFriendChat} />
+        )}
+        {show === "ListGroup" && (
+          <ListGroup handleOpenChat={handleOpenGroupChat} />
+        )}
+        {show === "RequestFriend" && (
+          <RequestFriend handleOpenChat={handleOpenFriendChat} />
+        )}
+        {show === "Chat" && (
+          <Chat conversation={conversation} setConversation={setConversation} />
+        )}
+      </Grid>
     </Grid>
   );
 };

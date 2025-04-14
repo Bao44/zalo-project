@@ -690,7 +690,7 @@ const ChatDetailScreen = () => {
                                                                             <FlatList
                                                                                 data={item?.seen}
                                                                                 keyExtractor={(item) => item.toString()}
-                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
                                                                                 horizontal
                                                                                 showsHorizontalScrollIndicator={false}
                                                                             />
@@ -740,7 +740,7 @@ const ChatDetailScreen = () => {
                                                                             <FlatList
                                                                                 data={item?.seen}
                                                                                 keyExtractor={(item) => item.toString()}
-                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
                                                                                 horizontal
                                                                                 showsHorizontalScrollIndicator={false}
                                                                             />
@@ -790,7 +790,7 @@ const ChatDetailScreen = () => {
                                                                             <FlatList
                                                                                 data={item?.seen}
                                                                                 keyExtractor={(item) => item.toString()}
-                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
                                                                                 horizontal
                                                                                 showsHorizontalScrollIndicator={false}
                                                                             />
@@ -840,7 +840,7 @@ const ChatDetailScreen = () => {
                                                                             <FlatList
                                                                                 data={item?.seen}
                                                                                 keyExtractor={(item) => item.toString()}
-                                                                                renderItem={({ item }) => <Avatar uri={conversation.members.find((i) => i._id === item).avatar} size={wp(4)} />}
+                                                                                renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
                                                                                 horizontal
                                                                                 showsHorizontalScrollIndicator={false}
                                                                             />
@@ -944,7 +944,7 @@ const ChatDetailScreen = () => {
                                                     item?.removed?.includes(user?.id) ? null : (
                                                         item?.revoked ? (
                                                             <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
-                                                                <Image style={styles.avatar} />
+                                                                {messages[index + 1]?.removed?.includes(user?.id) ? <Avatar uri={item?.senderId?.avatar} style={styles.avatar} /> : <Image style={styles.avatar} />}
                                                                 <View style={styles.boxMessageContent}>
                                                                     <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                                     {(index === messages?.length - 1) ?
@@ -974,7 +974,7 @@ const ChatDetailScreen = () => {
                                                             </TouchableOpacity>
                                                         ) : (
                                                             <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
-                                                                <Image style={styles.avatar} />
+                                                                {messages[index + 1]?.removed?.includes(user?.id) ? <Avatar uri={item?.senderId?.avatar} style={styles.avatar} /> : <Image style={styles.avatar} />}
                                                                 <View style={styles.boxMessageContent}>
                                                                     {item?.attachments?.length > 0 && (
                                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />

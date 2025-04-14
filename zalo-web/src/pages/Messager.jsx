@@ -21,6 +21,7 @@ import CreateGroup from "../components/CreateGroup";
 import AddFriend from "../components/AddFriend";
 import socket from "../../socket/socket";
 import { fetchConversations } from "../redux/conversationSlice";
+import Loading from "../components/Loading";
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -56,8 +57,6 @@ const Messager = () => {
   const { user } = useSelector((state) => state.user);
   const [conversation, setConversation] = useState(null);
 
-  console.log("Conversation", conversation);
-
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
@@ -75,9 +74,9 @@ const Messager = () => {
   }, [user?.id, dispatch]);
 
   // Lọc các tin nhắn chưa đọc
-  const unreadConversations = conversations.filter(
-    (conver) => conver.unreadCount > 0
-  );
+  const unreadConversations = conversations.filter((conver) => {
+    return conver?.lastMessage?.seen.some((mem) => mem !== user?.id) && conver?.lastMessage?.senderId !== user?.id;
+  });
 
   return (
     <Grid container item xs={12} sx={{ height: "100vh" }}>
@@ -136,7 +135,19 @@ const Messager = () => {
           </CustomTabPanel>
           <CustomTabPanel value={value} index={1}>
             <List sx={{ maxHeight: "calc(100vh - 150px)", overflow: "auto" }}>
-              <Typography>Không có tin nhắn chưa đọc</Typography>
+              {loading ? (
+                <Loading />
+              ) : unreadConversations.length > 0 ? (
+                unreadConversations.map((conver) =>
+                  conver?.type === "private" ? (
+                    <CardItemUser key={conver?._id} conver={conver} setConversation={setConversation} converSeleted={conversation} />
+                  ) : (
+                    <CardItemGroup key={conver._id} conver={conver} setConversation={setConversation} converSeleted={conversation} />
+                  )
+                )
+              ) : (
+                <Typography>Không có cuộc trò chuyện nào</Typography>
+              )}
             </List>
           </CustomTabPanel>
         </Box>
