@@ -199,7 +199,7 @@ const MessageScreen = () => {
             <TouchableOpacity
               style={styles.buttonMessage}
               onPress={() =>
-                router.push({ pathname: "chatDetailScreen", params: { type: item?.type, converId: item?._id } })
+                router.push({ pathname: "chatDetailScreen", params: { type: item?.type, convertId: item?._id } })
               }
             >
               {item?.avatar === null || item?.avatar === "" ? (

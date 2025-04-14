@@ -81,11 +81,21 @@ const messageController = {
                 const mimeType = file.type || 'application/octet-stream';
                 const dataUri = `data:${mimeType};base64,${file.uri}`;
 
-                const result = await cloudinary.uploader.upload(dataUri, {
-                    folder: "zalo/messages/files",
-                    resource_type: "auto",
-                    // public_id: file.name,
-                });
+                let result;
+
+                if (file.type === "audio/m4a") {
+                    result = await cloudinary.uploader.upload(dataUri, {
+                        folder: "zalo/messages/audio",
+                        resource_type: "auto",
+                        // public_id: file.name,
+                    });
+                } else {
+                    result = await cloudinary.uploader.upload(dataUri, {
+                        folder: "zalo/messages/files",
+                        resource_type: "auto",
+                        // public_id: file.name,
+                    });
+                }
 
                 const fileData = {
                     fileName: file.name,

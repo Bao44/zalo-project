@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert, Keyboard } from "react-native";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
@@ -23,7 +23,9 @@ import EmojiPicker from "../../components/EmojiPicker";
 import MessageOptionsModal from "@/components/MessageOptionsModal";
 import { useIsFocused } from '@react-navigation/native';
 import { debounce } from "lodash";
-import { Video } from "expo-av";
+import { Video, Audio } from "expo-av";
+import AudioCart from "@/components/AudioCart";
+import AudioPlayer from "@/components/AudioPlayer";
 
 
 const ChatDetailScreen = () => {
@@ -44,6 +46,7 @@ const ChatDetailScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState(null);
     const isFocused = useIsFocused();
+    const videoRef = useRef(null);
 
     // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
@@ -90,6 +93,8 @@ const ChatDetailScreen = () => {
         );
         return manipulatedImage.uri;
     };
+
+    console.log("Data:", data);
 
     // PARSE DATA
     const parsedData = typeof data === "string" ? JSON.parse(data) : data;
@@ -739,6 +744,14 @@ const ChatDetailScreen = () => {
         ]);
     };
 
+    // ĐĂT LAI THỜI GIAN PHÁT CHO VIDEO
+    const handlePlaybackStatusUpdate = async (status) => {
+        if (status.didJustFinish) {
+            await videoRef.current?.setPositionAsync(0);   // tua về đầu
+            await videoRef.current?.pauseAsync();          // dừng phát
+        }
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -790,7 +803,7 @@ const ChatDetailScreen = () => {
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index -1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -829,63 +842,68 @@ const ChatDetailScreen = () => {
                                                             }
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
-                                                            {item?.attachments?.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                            )}
-                                                            {item?.files !== null && (
-                                                                <ViewFile file={item?.files} />
-                                                            )}
-                                                            {item?.media && (
-                                                                <Video
-                                                                    style={{ width: wp(73), height: hp(20) }}
-                                                                    source={{uri: item?.media?.fileUrl}}
-                                                                    useNativeControls
-                                                                    resizeMode="contain"
-                                                                    isLooping
-                                                                />
-                                                            )}
-                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
-                                                            {
-                                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                                    :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index -1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                            }
-                                                            {
-                                                                index === 0 && (
-                                                                    (item?.seen?.length > 0) ? (
-                                                                        <View style={styles.boxSeen}>
-                                                                            <FlatList
-                                                                                data={item?.seen}
-                                                                                keyExtractor={(item) => item.toString()}
-                                                                                renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
-                                                                                horizontal
-                                                                                showsHorizontalScrollIndicator={false}
-                                                                            />
-                                                                        </View>
-                                                                    ) : (
-                                                                        <View style={styles.boxSeen}>
-                                                                            <Text style={{ fontSize: 12 }}>Đã nhận</Text>
+                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0, }]}>
+                                                            <View style={{ width: item?.files?.fileType === "audio/m4a" ? "90%" : "" }}>
+                                                                {item?.attachments?.length > 0 && (
+                                                                    <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                                )}
+                                                                {item?.files !== null && (
+                                                                    item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
+                                                                )}
+                                                                {item?.media && (
+                                                                    <Video
+                                                                        ref={videoRef}
+                                                                        style={{ width: wp(73), height: hp(20) }}
+                                                                        source={{ uri: item?.media?.fileUrl }}
+                                                                        useNativeControls
+                                                                        resizeMode="contain"
+                                                                        isLooping={false}
+                                                                        shouldPlay={false}
+                                                                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                    />
+                                                                )}
+                                                                {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                {
+                                                                    index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                        :
+                                                                        (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                }
+                                                                {
+                                                                    index === 0 && (
+                                                                        (item?.seen?.length > 0) ? (
+                                                                            <View style={styles.boxSeen}>
+                                                                                <FlatList
+                                                                                    data={item?.seen}
+                                                                                    keyExtractor={(item) => item.toString()}
+                                                                                    renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
+                                                                                    horizontal
+                                                                                    showsHorizontalScrollIndicator={false}
+                                                                                />
+                                                                            </View>
+                                                                        ) : (
+                                                                            <View style={styles.boxSeen}>
+                                                                                <Text style={{ fontSize: 12 }}>Đã nhận</Text>
+                                                                            </View>
+                                                                        )
+                                                                    )
+                                                                }
+                                                                {
+                                                                    (index === 0 || item?.like?.length > 0) && (
+                                                                        <View style={styles.boxLike}>
+                                                                            {
+                                                                                item?.like?.length > 0 ? (
+                                                                                    <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                        <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                        <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                    </TouchableOpacity>) : null
+                                                                            }
+                                                                            <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                            </TouchableOpacity>
                                                                         </View>
                                                                     )
-                                                                )
-                                                            }
-                                                            {
-                                                                (index === 0 || item?.like?.length > 0) && (
-                                                                    <View style={styles.boxLike}>
-                                                                        {
-                                                                            item?.like?.length > 0 ? (
-                                                                                <TouchableOpacity style={styles.boxTotalLike}>
-                                                                                    <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
-                                                                                    <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
-                                                                                </TouchableOpacity>) : null
-                                                                        }
-                                                                        <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
-                                                                            <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
-                                                                        </TouchableOpacity>
-                                                                    </View>
-                                                                )
-                                                            }
+                                                                }
+                                                            </View>
                                                         </TouchableOpacity>
                                                     )
                                                 )
@@ -896,65 +914,6 @@ const ChatDetailScreen = () => {
                                                     item?.revoked ? (
                                                         <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
-                                                            {
-                                                                index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                                    :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index -1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
-                                                            }
-                                                            {
-                                                                index === 0 && (
-                                                                    (item?.seen?.length > 0) ? (
-                                                                        <View style={styles.boxSeen}>
-                                                                            <FlatList
-                                                                                data={item?.seen}
-                                                                                keyExtractor={(item) => item.toString()}
-                                                                                renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
-                                                                                horizontal
-                                                                                showsHorizontalScrollIndicator={false}
-                                                                            />
-                                                                        </View>
-                                                                    ) : (
-                                                                        <View style={styles.boxSeen}>
-                                                                            <Text style={{ fontSize: 12 }}>Đã nhận</Text>
-                                                                        </View>
-                                                                    )
-                                                                )
-                                                            }
-                                                            {
-                                                                (index === 0 || item?.like?.length > 0) && (
-                                                                    <View style={styles.boxLike}>
-                                                                        {
-                                                                            item?.like?.length > 0 ? (
-                                                                                <TouchableOpacity style={styles.boxTotalLike}>
-                                                                                    <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
-                                                                                    <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
-                                                                                </TouchableOpacity>) : null
-                                                                        }
-                                                                        <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
-                                                                            <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
-                                                                        </TouchableOpacity>
-                                                                    </View>
-                                                                )
-                                                            }
-                                                        </TouchableOpacity>
-                                                    ) : (
-                                                        < TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
-                                                            {item?.attachments?.length > 0 && (
-                                                                <RenderImageMessage images={item?.attachments} wh={wp(70)} />
-                                                            )}
-                                                            {item?.files !== null && (
-                                                                <ViewFile file={item?.files} />
-                                                            )}
-                                                            {item?.media && (
-                                                                <Video
-                                                                    style={{ width: wp(73), height: hp(20) }}
-                                                                    source={{uri: item?.media?.fileUrl}}
-                                                                    useNativeControls
-                                                                    resizeMode="contain"
-                                                                    isLooping
-                                                                />
-                                                            )}
-                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
@@ -996,6 +955,70 @@ const ChatDetailScreen = () => {
                                                                 )
                                                             }
                                                         </TouchableOpacity>
+                                                    ) : (
+                                                        < TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                            <View style={{ width: item?.files?.fileType === "audio/m4a" ? "90%" : "" }}>
+                                                                {item?.attachments?.length > 0 && (
+                                                                    <RenderImageMessage images={item?.attachments} wh={wp(70)} />
+                                                                )}
+                                                                {item?.files !== null && (
+                                                                    item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
+                                                                )}
+                                                                {item?.media && (
+                                                                    <Video
+                                                                        ref={videoRef}
+                                                                        style={{ width: wp(73), height: hp(20) }}
+                                                                        source={{ uri: item?.media?.fileUrl }}
+                                                                        useNativeControls
+                                                                        resizeMode="contain"
+                                                                        isLooping={false}
+                                                                        shouldPlay={false}
+                                                                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                    />
+                                                                )}
+                                                                {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                {
+                                                                    index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                        :
+                                                                        (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                }
+                                                                {
+                                                                    index === 0 && (
+                                                                        (item?.seen?.length > 0) ? (
+                                                                            <View style={styles.boxSeen}>
+                                                                                <FlatList
+                                                                                    data={item?.seen}
+                                                                                    keyExtractor={(item) => item.toString()}
+                                                                                    renderItem={({ item }) => <Avatar uri={conversation?.members.find((i) => i._id === item)?.avatar} size={wp(4)} />}
+                                                                                    horizontal
+                                                                                    showsHorizontalScrollIndicator={false}
+                                                                                />
+                                                                            </View>
+                                                                        ) : (
+                                                                            <View style={styles.boxSeen}>
+                                                                                <Text style={{ fontSize: 12 }}>Đã nhận</Text>
+                                                                            </View>
+                                                                        )
+                                                                    )
+                                                                }
+                                                                {
+                                                                    (index === 0 || item?.like?.length > 0) && (
+                                                                        <View style={styles.boxLike}>
+                                                                            {
+                                                                                item?.like?.length > 0 ? (
+                                                                                    <TouchableOpacity style={styles.boxTotalLike}>
+                                                                                        <Icon name="heart" size={wp(3.5)} fill="red" color="red" />
+                                                                                        <Text style={{ fontSize: 12 }}>{item?.like.reduce((sum, i) => sum + i.totalLike, 0)}</Text>
+                                                                                    </TouchableOpacity>) : null
+                                                                            }
+                                                                            <TouchableOpacity style={styles.boxHeart} onPress={() => handleLike(item?._id, "like", user?.id)}>
+                                                                                <Icon name="heart" size={wp(3.5)} fill={`${item?.like?.length > 0 ? "red" : "white"}`} color={`${item?.like?.length > 0 ? "red" : "gray"}`} />
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    )
+                                                                }
+                                                            </View>
+                                                        </TouchableOpacity>
                                                     )
                                                 )
                                             )
@@ -1032,21 +1055,24 @@ const ChatDetailScreen = () => {
                                                     ) : (
                                                         <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                             <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                            <View style={styles.boxMessageContent}>
+                                                            <View style={[styles.boxMessageContent, { width: item?.files?.fileType === "audio/m4a" ? "80%" : "" }]}>
                                                                 {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
                                                                 {item?.attachments?.length > 0 && (
                                                                     <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                                 )}
                                                                 {item?.files !== null && (
-                                                                    <ViewFile file={item?.files} />
+                                                                    item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
                                                                 )}
                                                                 {item?.media && (
                                                                     <Video
+                                                                        ref={videoRef}
                                                                         style={{ width: wp(73), height: hp(20) }}
-                                                                        source={{uri: item?.media?.fileUrl}}
+                                                                        source={{ uri: item?.media?.fileUrl }}
                                                                         useNativeControls
                                                                         resizeMode="contain"
-                                                                        isLooping
+                                                                        isLooping={false}
+                                                                        shouldPlay={false}
+                                                                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
                                                                     />
                                                                 )}
                                                                 {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
@@ -1111,20 +1137,23 @@ const ChatDetailScreen = () => {
                                                         ) : (
                                                             <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                                 {messages[index + 1]?.removed?.includes(user?.id) ? <Avatar uri={item?.senderId?.avatar} style={styles.avatar} /> : <Image style={styles.avatar} />}
-                                                                <View style={styles.boxMessageContent}>
+                                                                <View style={[styles.boxMessageContent, { width: item?.files?.fileType === "audio/m4a" ? "80%" : "" }]}>
                                                                     {item?.attachments?.length > 0 && (
                                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                                     )}
                                                                     {item?.files !== null && (
-                                                                        <ViewFile file={item?.files} />
+                                                                        item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
                                                                     )}
                                                                     {item?.media && (
                                                                         <Video
+                                                                            ref={videoRef}
                                                                             style={{ width: wp(73), height: hp(20) }}
-                                                                            source={{uri: item?.media?.fileUrl}}
+                                                                            source={{ uri: item?.media?.fileUrl }}
                                                                             useNativeControls
                                                                             resizeMode="contain"
-                                                                            isLooping
+                                                                            isLooping={false}
+                                                                            shouldPlay={false}
+                                                                            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
                                                                         />
                                                                     )}
                                                                     {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
@@ -1193,21 +1222,24 @@ const ChatDetailScreen = () => {
                                                         ) : (
                                                             <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
                                                                 <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                                <View style={styles.boxMessageContent}>
+                                                                <View style={[styles.boxMessageContent, { width: item?.files?.fileType === "audio/m4a" ? "80%" : "" }]}>
                                                                     {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
                                                                     {item?.attachments?.length > 0 && (
                                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                                     )}
                                                                     {item?.files !== null && (
-                                                                        <ViewFile file={item?.files} />
+                                                                        item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
                                                                     )}
                                                                     {item?.media && (
                                                                         <Video
+                                                                            ref={videoRef}
                                                                             style={{ width: wp(73), height: hp(20) }}
-                                                                            source={{uri: item?.media?.fileUrl}}
+                                                                            source={{ uri: item?.media?.fileUrl }}
                                                                             useNativeControls
                                                                             resizeMode="contain"
-                                                                            isLooping
+                                                                            isLooping={false}
+                                                                            shouldPlay={false}
+                                                                            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
                                                                         />
                                                                     )}
                                                                     {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
@@ -1326,7 +1358,14 @@ const ChatDetailScreen = () => {
                                         )
                                         :
                                         (
-                                            <Text>Audio</Text>
+                                            <AudioCart
+                                                conversation={conversation}
+                                                parsedData={parsedData}
+                                                setMessages={setMessages}
+                                                setStempId={setStempId}
+                                                setConversation={setConversation}
+                                                setShowGallery={setShowGallery}
+                                            />
                                         )
                             }
                         </View>
