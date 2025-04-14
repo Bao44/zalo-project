@@ -80,15 +80,37 @@ const Home = () => {
       const userId = localStorage.getItem("userId");
       const sessionToken = localStorage.getItem("sessionToken");
 
-      // Gọi API signout để xóa thiết bị
-      const result = await UserAPI.logout(userId, sessionToken);
-      if (!result.success) {
-        throw new Error(result.message || "Lỗi khi xóa thiết bị");
+      if (!userId || !sessionToken) {
+        console.warn("Không tìm thấy thông tin đăng nhập trong localStorage");
+      } else {
+        // Gọi API signout để xóa thiết bị, bỏ qua lỗi 404
+        try {
+          const result = await UserAPI.logout(userId, sessionToken);
+          if (!result.success) {
+            console.warn(
+              "Lỗi khi gọi API signout:",
+              result.message || "Unknown error"
+            );
+          }
+        } catch (error) {
+          console.warn("Error calling logout API:", error.message);
+        }
       }
 
-      // Đăng xuất khỏi Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) throw new Error(error.message);
+      // Kiểm tra session trước khi đăng xuất
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log("Session before signOut:", session);
+
+      if (session) {
+        const { error } = await supabase.auth.signOut();
+        if (error && error.message !== "Auth session missing") {
+          throw new Error(error.message);
+        }
+      } else {
+        console.warn("No active session found, skipping Supabase signOut");
+      }
 
       // Xóa dữ liệu trong localStorage
       localStorage.removeItem("userId");

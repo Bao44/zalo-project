@@ -103,94 +103,89 @@ const authController = {
     try {
       const { email, password, device_type } = req.body;
 
-      // Validate device_type
-      if (!["web", "mobile"].includes(device_type)) {
+      if (!email || !password || !device_type) {
         return res.status(400).json({
           success: false,
-          message: "device_type must be either 'web' or 'mobile'",
+          message: "Thiếu thông tin email, password hoặc device_type",
         });
       }
 
       // Đăng nhập với Supabase
-      const { data, error } = await authService.signInWithPassword(
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
-      );
+        password,
+      });
 
       if (error) {
-        return res.status(401).json({ success: false, message: error.message });
+        return res.status(401).json({
+          success: false,
+          message: "Email hoặc mật khẩu không đúng",
+        });
       }
 
-      const userId = data.user.id;
+      const { user, session } = data;
 
-      // Kiểm tra thiết bị trong bảng devices
+      // Kiểm tra xem đã có thiết bị nào cùng device_type chưa
       const { data: existingDevice, error: deviceError } = await supabase
         .from("devices")
         .select("*")
-        .eq("user_id", userId)
-        .eq("device_type", device_type);
+        .eq("user_id", user.id)
+        .eq("device_type", device_type)
+        .single();
 
-      if (deviceError) {
+      if (deviceError && deviceError.code !== "PGRST116") {
+        // PGRST116 là mã lỗi khi không tìm thấy bản ghi (không phải lỗi nghiêm trọng)
         return res.status(500).json({
           success: false,
-          message: "Error checking device: " + deviceError.message,
+          message: "Lỗi khi kiểm tra thiết bị: " + deviceError.message,
         });
       }
 
-      if (existingDevice.length > 0) {
+      if (existingDevice) {
+        // Nếu đã có thiết bị, từ chối đăng nhập
         return res.status(403).json({
           success: false,
-          message: `Tài khoản đã đăng nhập trên một thiết bị ${device_type} khác. Vui lòng đăng xuất trước.`,
+          message: "Tài khoản đã được đăng nhập trên một thiết bị web khác",
         });
       }
 
-      // Tạo session_token và lưu thiết bị vào bảng devices
-      const sessionToken = uuidv4();
-      const { error: insertError } = await supabase.from("devices").insert([
-        {
-          user_id: userId,
-          device_type,
-          session_token: sessionToken,
-          last_active: new Date().toISOString(),
-        },
-      ]);
+      // Tạo session_token mới
+      const session_token = uuidv4();
+
+      // Thêm thiết bị mới
+      const { error: insertError } = await supabase.from("devices").insert({
+        user_id: user.id,
+        device_type,
+        session_token,
+        last_active: new Date().toISOString(),
+      });
 
       if (insertError) {
         return res.status(500).json({
           success: false,
-          message: "Error saving device: " + insertError.message,
+          message: "Lỗi khi thêm thiết bị: " + insertError.message,
         });
-      }
-
-      // Đồng bộ với MongoDB
-      if (data?.user) {
-        try {
-          let mongoUser = await User.findOne({ _id: userId });
-
-          if (!mongoUser) {
-            mongoUser = new User({
-              _id: userId,
-              email: data.user.email,
-              name: data.user.user_metadata?.name || "",
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
-            await mongoUser.save();
-          }
-        } catch (dbError) {
-          console.error("Error syncing to MongoDB:", dbError);
-        }
       }
 
       return res.status(200).json({
         success: true,
         data: {
-          user: data.user,
-          session: { ...data.session, session_token: sessionToken },
+          user: {
+            id: user.id,
+            email: user.email,
+          },
+          session: {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            session_token,
+          },
         },
       });
     } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi server: " + error.message,
+      });
     }
   },
 

@@ -90,33 +90,45 @@ const Start = () => {
 
     try {
       const result = await UserAPI.signIn(email, password);
+      console.log("SignIn result:", result);
 
       if (result.success) {
         const { user, session } = result.data;
+        console.log("Đăng nhập thành công:", user);
 
         // Thiết lập phiên làm việc với Supabase
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        });
+        const { error: sessionError, data: sessionData } =
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          });
 
         if (sessionError) {
+          console.error("Session error:", sessionError);
           toast.error("Lỗi xác thực phiên làm việc: " + sessionError.message);
           setLoading(false);
           return;
         }
 
+        console.log("Session set successfully:", sessionData);
+
+        // Xóa localStorage cũ trước khi lưu dữ liệu mới
+        localStorage.removeItem("userId");
+        localStorage.removeItem("sessionToken");
+        localStorage.removeItem("user");
+        localStorage.removeItem("lastLoginAt");
+
         // Lưu user.id và session_token vào local storage
         localStorage.setItem("userId", user.id);
         localStorage.setItem("sessionToken", session.session_token);
         localStorage.setItem("user", JSON.stringify(user));
-
       } else {
+        console.error("SignIn failed:", result.message);
         toast.error(result.message || "Đăng nhập thất bại!");
       }
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
-      toast.error("Đã xảy ra lỗi khi đăng nhập!");
+      toast.error(error.message || "Đã xảy ra lỗi khi đăng nhập!");
     } finally {
       setLoading(false);
     }
