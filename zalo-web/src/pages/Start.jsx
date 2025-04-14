@@ -58,7 +58,6 @@ const Start = () => {
 
   useEffect(() => {
     if (location.pathname !== "/") {
-      console.log("[Start] Not on root path, skipping useEffect logic");
       return;
     }
     if (location.state?.message) {
@@ -94,7 +93,6 @@ const Start = () => {
 
       if (result.success) {
         const { user, session } = result.data;
-        console.log("Đăng nhập thành công:", user);
 
         // Thiết lập phiên làm việc với Supabase
         const { error: sessionError } = await supabase.auth.setSession({

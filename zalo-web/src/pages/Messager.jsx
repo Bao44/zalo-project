@@ -22,6 +22,7 @@ import AddFriend from "../components/AddFriend";
 import socket from "../../socket/socket";
 import { fetchConversations } from "../redux/conversationSlice";
 import Loading from "../components/Loading";
+import { useAuth } from "../../contexts/AuthContext";
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -54,8 +55,9 @@ const Messager = () => {
 
   // Lấy dữ liệu từ Redux store
   const { conversations, loading } = useSelector((state) => state.conversation);
-  const { user } = useSelector((state) => state.user);
   const [conversation, setConversation] = useState(null);
+
+  const { user } = useAuth(); // Sử dụng useAuth để lấy thông tin người dùng
 
   const handleChange = (event, newValue) => {
     setValue(newValue);

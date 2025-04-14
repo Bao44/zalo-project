@@ -32,8 +32,6 @@ const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, setAuth } = useAuth();
-
-  // Sử dụng useRef để theo dõi trạng thái đã fetch dữ liệu hay chưa
   const hasDataBeenFetched = useRef(false);
 
   const [showMess, setShowMess] = useState(true);
@@ -43,7 +41,6 @@ const Home = () => {
   const id = open ? "simple-popover" : undefined;
 
   const [isUserLoaded, setIsUserLoaded] = useState(false);
-
 
   // Fetch user data chỉ một lần khi component mount
   useEffect(() => {
@@ -62,6 +59,7 @@ const Home = () => {
         if (result?.success) {
           dispatch(setUser(result.data));
           hasDataBeenFetched.current = true;
+          setIsUserLoaded(true);
         } else {
           toast.error("Không thể tải dữ liệu người dùng");
         }
@@ -140,7 +138,12 @@ const Home = () => {
                   height: "100px",
                 }}
               >
-                <UserAvatar width={50} height={50} uri={user?.avatar || ""} key={user?.id}/>
+                <UserAvatar
+                  width={50}
+                  height={50}
+                  uri={user?.avatar || ""}
+                  key={user?.id}
+                />
               </ListItem>
               <ListItem
                 sx={{
