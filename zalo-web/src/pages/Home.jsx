@@ -176,7 +176,7 @@ const Home = () => {
               <ListItem
                 sx={{ justifyContent: "center", alignItems: "center", width: "100%", height: "100px" }}
               >
-                <UserAvatar width={50} height={50} uri={user?.avatar} />
+                <UserAvatar width={50} height={50} uri={user?.avatar || ""} key={user?.id}/>
               </ListItem>
               <ListItem
                 sx={{

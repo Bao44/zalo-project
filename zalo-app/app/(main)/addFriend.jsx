@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import React, {useState} from "react";
+import React, { useState } from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import Icon from "../../assets/icons";
 import { theme } from "../../constants/theme";
@@ -7,19 +7,20 @@ import { hp, wp } from "../../helpers/common";
 import { router } from "expo-router";
 import { searchFriends } from "../../api/friendshipAPI";
 import { useAuth } from "../../contexts/AuthContext";
+import QRCode from "react-native-qrcode-svg";
 
 const AddFriend = () => {
     const { user } = useAuth();
     const [phone, setPhone] = useState("");
-    
-    // console.log("User", user);
+
+    const qrValue = user?.phone ? `tel:${user.phone}` : "No phone number available";
 
     //Tìm kiếm bạn bè
     const handleSearch = async (phone) => {
         try {
             const response = await searchFriends(phone);
             if (response.success) {
-                router.push({pathname: "bioUserAddFriend", params: {user: JSON.stringify(response.data[0]), type: "phone"}});
+                router.push({ pathname: "bioUserAddFriend", params: { user: JSON.stringify(response.data[0]), type: "phone" } });
             } else {
                 alert("Số điện thoại này chưa đăng ký tài khoản hoặc không cho phép tìm kiếm!");
             }
@@ -40,7 +41,16 @@ const AddFriend = () => {
                 <View style={styles.myQR}>
                     <View style={styles.boxInfoQR}>
                         <Text style={styles.textName}>{user?.name}</Text>
-                        <Image style={styles.imgQR} source={{ uri: user?.avatar }} />
+                        {user?.phone ? (
+                            <QRCode
+                                value={qrValue} // QR code will encode the phone number
+                                size={wp(35)} // Adjust size as needed
+                                color="black"
+                                backgroundColor="white"
+                            />
+                        ) : (
+                            <Text style={styles.textQR}>Không có số điện thoại để tạo mã QR</Text>
+                        )}
                         <Text style={styles.textQR}>Quét mã để thêm bạn Yalo với tôi</Text>
                     </View>
                 </View>
