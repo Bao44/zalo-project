@@ -8,7 +8,6 @@ import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import * as UserAPI from "../../api/user";
 import ForgotPassword from "../components/ForgotPassword";
-import { getDeviceId } from "../../utils/device";
 
 const style = {
   position: "absolute",
@@ -91,37 +90,35 @@ const Start = () => {
     setLoading(true);
 
     try {
-      const deviceId = getDeviceId(); // ✅ lấy deviceId duy nhất từ localStorage
-      // const response = await UserAPI.signIn(email, password, "web", deviceId);
-      const response = await UserAPI.signIn(email, password);
+      const result = await UserAPI.signIn(email, password);
 
+      if (result.success) {
+        const { user, session } = result.data;
+        console.log("Đăng nhập thành công:", user);
 
-      if (!response || !response.data || response.error) {
-        toast.error(
-          response?.error?.message || "Email hoặc mật khẩu không đúng!"
-        );
-        setLoading(false);
-        return;
-      }
-
-      const { data } = response;
-
-      if (!data.user || !data.session) {
-        toast.error("Không nhận được thông tin người dùng!");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
+        // Thiết lập phiên làm việc với Supabase
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
         });
-      } catch (sessionError) {
-        toast.error("Lỗi xác thực phiên làm việc!");
+
+        if (sessionError) {
+          toast.error("Lỗi xác thực phiên làm việc: " + sessionError.message);
+          setLoading(false);
+          return;
+        }
+
+        // Lưu user.id và session_token vào local storage
+        localStorage.setItem("userId", user.id);
+        localStorage.setItem("sessionToken", session.session_token);
+        localStorage.setItem("user", JSON.stringify(user));
+
+      } else {
+        toast.error(result.message || "Đăng nhập thất bại!");
       }
     } catch (error) {
-      toast.error("Email hoặc mật khẩu không đúng!");
+      console.error("Lỗi đăng nhập:", error);
+      toast.error("Đã xảy ra lỗi khi đăng nhập!");
     } finally {
       setLoading(false);
     }
@@ -235,6 +232,7 @@ const Start = () => {
               {currentScreen === "login" ? (
                 <Login
                   handleLogin={handleLogin}
+                  disabled={loading}
                   setCurrentScreen={setCurrentScreen}
                 />
               ) : (

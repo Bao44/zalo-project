@@ -21,7 +21,7 @@ import Loading from "../components/Loading";
 import Profile from "../components/Profile";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
-import { getUserData } from "../../api/user";
+import * as UserAPI from "../../api/user";
 import { logout, setUser } from "../redux/userSlice";
 import UserAvatar from "../components/Avatar";
 
@@ -55,7 +55,7 @@ const Home = () => {
 
       setIsLoading(true);
       try {
-        const result = await getUserData(user.id);
+        const result = await UserAPI.getUserData(user.id);
         if (result?.success) {
           dispatch(setUser(result.data));
           hasDataBeenFetched.current = true;
@@ -73,16 +73,38 @@ const Home = () => {
   }, [user?.id, dispatch, navigate]);
 
   const handleLogout = async () => {
+    setIsLoading(true);
     try {
+      // Lấy userId và sessionToken từ localStorage
+      const userId = localStorage.getItem("userId");
+      const sessionToken = localStorage.getItem("sessionToken");
+
+      // Gọi API signout để xóa thiết bị
+      const result = await UserAPI.logout(userId, sessionToken);
+      if (!result.success) {
+        throw new Error(result.message || "Lỗi khi xóa thiết bị");
+      }
+
+      // Đăng xuất khỏi Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw new Error(error.message);
 
+      // Xóa dữ liệu trong localStorage
+      localStorage.removeItem("userId");
+      localStorage.removeItem("sessionToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("lastLoginAt");
+
+      // Cập nhật trạng thái Redux và AuthContext
       dispatch(logout());
       setAuth(null);
-      localStorage.removeItem("lastLoginAt");
+
+      // Chuyển hướng về trang đăng nhập
       navigate("/");
     } catch (error) {
       toast.error("Lỗi khi đăng xuất: " + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -162,7 +184,10 @@ const Home = () => {
                       <ChangePassword />
                     </ListItem>
                     <ListItem sx={{ padding: 0 }}>
-                      <ListItemButton onClick={handleLogout}>
+                      <ListItemButton
+                        onClick={handleLogout}
+                        disabled={isLoading}
+                      >
                         <Box sx={{ marginRight: "10px" }}>
                           <LogoutIcon />
                         </Box>
