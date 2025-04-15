@@ -6,7 +6,7 @@ import Icon from "../../assets/icons";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
-import { getConversationBetweenTwoUsers, createConversation1vs1, getConversationsGroup, getConversation } from "../../api/conversationAPI";
+import { getConversationBetweenTwoUsers, createConversation1vs1, getConversation } from "../../api/conversationAPI";
 import { getMessages, sendMessage, addUserSeen, deleteMessage, undoDeleteMessage, likeMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
@@ -23,11 +23,12 @@ import EmojiPicker from "../../components/EmojiPicker";
 import MessageOptionsModal from "@/components/MessageOptionsModal";
 import { useIsFocused } from '@react-navigation/native';
 import { debounce } from "lodash";
-import { Video, Audio } from "expo-av";
+import { Video } from "expo-av";
 import AudioCart from "@/components/AudioCart";
 import AudioPlayer from "@/components/AudioPlayer";
 import ReplytoMessageSelected from "@/components/ReplytoMessageSelected";
 import AttachReplytoMessage from "@/components/AttachReplytoMessage";
+import ParsedText from "react-native-parsed-text";
 
 
 const ChatDetailScreen = () => {
@@ -785,6 +786,28 @@ const ChatDetailScreen = () => {
         }
     };
 
+    // HIỂN THỊ NỘI DUNG TIN NHẮN CÓ URL
+    const renderMessageContent = (content) => {
+        if (!content) return null;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = content.split(urlRegex);
+        return parts.map((part, index) => {
+            if (part.match(urlRegex)) {
+                return (
+                    <TouchableOpacity
+                        key={index}
+                        onPress={() => {
+                            Linking.openURL(part).catch((err) => console.error("Lỗi khi mở URL:", err));
+                        }}
+                    >
+                        <Text style={[styles.textMessage, styles.url]}>{part}</Text>
+                    </TouchableOpacity>
+                );
+            }
+            return <Text key={index} style={styles.textMessage}>{part}</Text>;
+        });
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -914,10 +937,32 @@ const ChatDetailScreen = () => {
                                                             {item?.content && (item?.replyTo ?
                                                                 <>
                                                                     <AttachReplytoMessage message={item?.replyTo} />
-                                                                    <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                    <ParsedText
+                                                                        style={styles.textMessage}
+                                                                        parse={[
+                                                                            {
+                                                                                type: "url",
+                                                                                style: styles.url,
+                                                                                onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {item?.content}
+                                                                    </ParsedText>
                                                                 </>
                                                                 :
-                                                                <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                <ParsedText
+                                                                    style={styles.textMessage}
+                                                                    parse={[
+                                                                        {
+                                                                            type: "url",
+                                                                            style: styles.url,
+                                                                            onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                        },
+                                                                    ]}
+                                                                >
+                                                                    {item?.content}
+                                                                </ParsedText>
                                                             )}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
@@ -1049,10 +1094,32 @@ const ChatDetailScreen = () => {
                                                             {item?.content && (item?.replyTo ?
                                                                 <>
                                                                     <AttachReplytoMessage message={item?.replyTo} />
-                                                                    <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                    <ParsedText
+                                                                        style={styles.textMessage}
+                                                                        parse={[
+                                                                            {
+                                                                                type: "url",
+                                                                                style: styles.url,
+                                                                                onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {item?.content}
+                                                                    </ParsedText>
                                                                 </>
                                                                 :
-                                                                <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                <ParsedText
+                                                                    style={styles.textMessage}
+                                                                    parse={[
+                                                                        {
+                                                                            type: "url",
+                                                                            style: styles.url,
+                                                                            onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                        },
+                                                                    ]}
+                                                                >
+                                                                    {item?.content}
+                                                                </ParsedText>
                                                             )}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
@@ -1168,10 +1235,32 @@ const ChatDetailScreen = () => {
                                                                 {item?.content && (item?.replyTo ?
                                                                     <>
                                                                         <AttachReplytoMessage message={item?.replyTo} />
-                                                                        <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                        <ParsedText
+                                                                            style={styles.textMessage}
+                                                                            parse={[
+                                                                                {
+                                                                                    type: "url",
+                                                                                    style: styles.url,
+                                                                                    onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                },
+                                                                            ]}
+                                                                        >
+                                                                            {item?.content}
+                                                                        </ParsedText>
                                                                     </>
                                                                     :
-                                                                    <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                    <ParsedText
+                                                                        style={styles.textMessage}
+                                                                        parse={[
+                                                                            {
+                                                                                type: "url",
+                                                                                style: styles.url,
+                                                                                onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {item?.content}
+                                                                    </ParsedText>
                                                                 )}
                                                                 <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                 {
@@ -1271,10 +1360,32 @@ const ChatDetailScreen = () => {
                                                                     {item?.content && (item?.replyTo ?
                                                                         <>
                                                                             <AttachReplytoMessage message={item?.replyTo} />
-                                                                            <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                            <ParsedText
+                                                                                style={styles.textMessage}
+                                                                                parse={[
+                                                                                    {
+                                                                                        type: "url",
+                                                                                        style: styles.url,
+                                                                                        onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                    },
+                                                                                ]}
+                                                                            >
+                                                                                {item?.content}
+                                                                            </ParsedText>
                                                                         </>
                                                                         :
-                                                                        <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                        <ParsedText
+                                                                            style={styles.textMessage}
+                                                                            parse={[
+                                                                                {
+                                                                                    type: "url",
+                                                                                    style: styles.url,
+                                                                                    onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                },
+                                                                            ]}
+                                                                        >
+                                                                            {item?.content}
+                                                                        </ParsedText>
                                                                     )}
                                                                     {(index === messages?.length - 1) ?
                                                                         ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
@@ -1384,10 +1495,32 @@ const ChatDetailScreen = () => {
                                                                     {item?.content && (item?.replyTo ?
                                                                         <>
                                                                             <AttachReplytoMessage message={item?.replyTo} />
-                                                                            <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                            <ParsedText
+                                                                                style={styles.textMessage}
+                                                                                parse={[
+                                                                                    {
+                                                                                        type: "url",
+                                                                                        style: styles.url,
+                                                                                        onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                    },
+                                                                                ]}
+                                                                            >
+                                                                                {item?.content}
+                                                                            </ParsedText>
                                                                         </>
                                                                         :
-                                                                        <Text style={styles.textMessage}>{item?.content}</Text>
+                                                                        <ParsedText
+                                                                            style={styles.textMessage}
+                                                                            parse={[
+                                                                                {
+                                                                                    type: "url",
+                                                                                    style: styles.url,
+                                                                                    onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                },
+                                                                            ]}
+                                                                        >
+                                                                            {item?.content}
+                                                                        </ParsedText>
                                                                     )}
                                                                     {(index === messages?.length - 1) ?
                                                                         ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
@@ -1763,5 +1896,9 @@ const styles = StyleSheet.create({
     highlightReplyMessage: {
         borderColor: theme.colors.primary,
         borderWidth: 1,
-    }
+    },
+    url: {
+        color: theme.colors.primary,
+        textDecorationLine: "underline",
+    },
 });
