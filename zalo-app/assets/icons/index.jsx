@@ -71,6 +71,7 @@ import Block from "./Block";
 import HeartRemove from "./HeartRemove";
 import Play from "./Play";
 import Pause from "./Pause";
+import Media from "./Media";
 
 
 const icons = {
@@ -144,7 +145,8 @@ const icons = {
   block : Block,
   heartRemove: HeartRemove,
   play: Play,
-  pause: Pause
+  pause: Pause,
+  media: Media
 };
 
 const Icon = ({ name, ...props }) => {

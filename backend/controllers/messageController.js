@@ -68,7 +68,14 @@ const messageController = {
                 // Populate và gửi tin nhắn real-time
                 const populatedMessage = await Message.findById(savedMessage._id)
                     .populate("senderId", "name avatar")
-                    .populate("replyTo", "content senderId");
+                    .populate({
+                        path: "replyTo",
+                        select: "content senderId attachments files media",
+                        populate: {
+                            path: "senderId",
+                            select: "name"
+                        }
+                    });
                 io.to(conversation._id.toString()).emit("newMessage", populatedMessage, idTemp);
             }
 
@@ -120,7 +127,14 @@ const messageController = {
 
                 const populatedFileMessage = await Message.findById(savedFileMessage._id)
                     .populate("senderId", "name avatar")
-                    .populate("replyTo", "content senderId");
+                    .populate({
+                        path: "replyTo",
+                        select: "content senderId attachments files media",
+                        populate: {
+                            path: "senderId",
+                            select: "name"
+                        }
+                    });
 
                 // Gửi tin nhắn real-time cho file
                 io.to(conversation._id.toString()).emit("newMessage", populatedFileMessage, idTemp);
@@ -164,7 +178,14 @@ const messageController = {
 
                 const populatedVideoMessage = await Message.findById(savedVideoMessage._id)
                     .populate("senderId", "name avatar")
-                    .populate("replyTo", "content senderId");
+                    .populate({
+                        path: "replyTo",
+                        select: "content senderId attachments files media",
+                        populate: {
+                            path: "senderId",
+                            select: "name"
+                        }
+                    });
 
                 // Gửi tin nhắn real-time cho video
                 io.to(conversation._id.toString()).emit("newMessage", populatedVideoMessage, idTemp);
@@ -191,7 +212,14 @@ const messageController = {
             // Trả về tin nhắn cuối cùng hoặc danh sách tin nhắn (tùy yêu cầu)
             const lastPopulatedMessage = await Message.findById(savedMessages[savedMessages.length - 1]._id)
                 .populate("senderId", "name avatar")
-                .populate("replyTo", "content senderId");
+                .populate({
+                    path: "replyTo",
+                    select: "content senderId attachments files media",
+                    populate: {
+                        path: "senderId",
+                        select: "name"
+                    }
+                });
 
             res.status(201).json(lastPopulatedMessage);
         } catch (error) {
@@ -212,8 +240,14 @@ const messageController = {
             const messages = await Message.find({ conversationId })
                 .sort({ createdAt: 1 })
                 .populate("senderId", "name avatar")
-                .populate("replyTo", "content senderId");
-
+                .populate({
+                    path: "replyTo",
+                    select: "content senderId attachments files media",
+                    populate: {
+                        path: "senderId",
+                        select: "name"
+                    }
+                });
             res.json(messages.reverse());
         } catch (error) {
             console.error("Error fetching messages:", error);
@@ -460,8 +494,14 @@ const messageController = {
                 { new: true }
             )
                 .populate("senderId", "name avatar")
-                .populate("replyTo", "content senderId");
-
+                .populate({
+                    path: "replyTo",
+                    select: "content senderId attachments files media",
+                    populate: {
+                        path: "senderId",
+                        select: "name"
+                    }
+                });
             if (!message) {
                 return res.status(404).json({ error: "Tin nhắn không tồn tại" });
             }
