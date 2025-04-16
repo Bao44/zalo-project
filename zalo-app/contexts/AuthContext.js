@@ -78,7 +78,6 @@ export const AuthProvider = ({ children }) => {
         }
       }
     );
-
     // Kiểm tra session định kỳ
     const interval = setInterval(async () => {
       const {

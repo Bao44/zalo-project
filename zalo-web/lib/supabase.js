@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { supabaseAnonKey, supabaseUrl } from "../../zalo-app/constants";
+import { supabaseRoleKey, supabaseUrl } from "../../zalo-app/constants";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseRoleKey, {
   auth: {
     autoRefreshToken: true, // Tự động làm mới token
     persistSession: true, // Lưu phiên đăng nhập vào localStorage
