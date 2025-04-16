@@ -4,7 +4,7 @@ import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
 import { hp, wp } from "../helpers/common";
 
-const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, onRecall, isSender, isLike, onLike, onDisLike }) => {
+const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, onRecall, isSender, isLike, onLike, onDisLike, isRevoked }) => {
     return (
         <Modal
             transparent={true}
@@ -14,31 +14,35 @@ const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, o
         >
             <TouchableOpacity style={styles.overlay} onPress={onClose}>
                 <View style={styles.modalContainer}>
-                    <TouchableOpacity style={styles.option} onPress={onReply}>
-                        <Icon name="reply" size={24} color={theme.colors.dark} />
-                        <Text style={styles.optionText}>Trả lời</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.option} onPress={onForward}>
-                        <Icon name="forward" size={24} color={theme.colors.dark} />
-                        <Text style={styles.optionText}>Chuyển tiếp</Text>
-                    </TouchableOpacity>
+                    {!isRevoked && (
+                        <>
+                            <TouchableOpacity style={styles.option} onPress={onReply}>
+                                <Icon name="reply" size={24} color={theme.colors.dark} />
+                                <Text style={styles.optionText}>Trả lời</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.option} onPress={onForward}>
+                                <Icon name="forward" size={24} color={theme.colors.dark} />
+                                <Text style={styles.optionText}>Chuyển tiếp</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
                     <TouchableOpacity style={styles.option} onPress={onDelete}>
                         <Icon name="delete" size={24} color={theme.colors.dark} />
                         <Text style={styles.optionText}>Xóa</Text>
                     </TouchableOpacity>
-                    {isSender && (
+                    {isSender && !isRevoked && (
                         <TouchableOpacity style={styles.option} onPress={onRecall}>
                             <Icon name="eyeHide" size={24} color={theme.colors.dark} />
                             <Text style={styles.optionText}>Thu hồi</Text>
                         </TouchableOpacity>
                     )}
-                    {isLike && (
+                    {isLike && !isRevoked && (
                         <TouchableOpacity style={styles.option} onPress={onDisLike}>
                             <Icon name="heartRemove" size={24} color={theme.colors.dark} />
                             <Text style={styles.optionText}>Bỏ thích</Text>
                         </TouchableOpacity>
                     )}
-                    {!isLike && (
+                    {!isLike && !isRevoked && (
                         <TouchableOpacity style={styles.option} onPress={onLike}>
                             <Icon name="heart" size={24} color={theme.colors.dark} />
                             <Text style={styles.optionText}>Thích</Text>

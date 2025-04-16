@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert, Keyboard } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert, Keyboard, InteractionManager, Linking } from "react-native";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { theme } from "../../constants/theme";
 import Icon from "../../assets/icons";
 import { router } from "expo-router";
 import { wp, hp } from "../../helpers/common";
 import { useLocalSearchParams } from "expo-router";
-import { getConversationBetweenTwoUsers, createConversation1vs1, getConversationsGroup, getConversation } from "../../api/conversationAPI";
+import { getConversationBetweenTwoUsers, createConversation1vs1, getConversation } from "../../api/conversationAPI";
 import { getMessages, sendMessage, addUserSeen, deleteMessage, undoDeleteMessage, likeMessage } from "../../api/messageAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../utils/socket";
@@ -23,6 +23,12 @@ import EmojiPicker from "../../components/EmojiPicker";
 import MessageOptionsModal from "@/components/MessageOptionsModal";
 import { useIsFocused } from '@react-navigation/native';
 import { debounce } from "lodash";
+import { Video } from "expo-av";
+import AudioCart from "@/components/AudioCart";
+import AudioPlayer from "@/components/AudioPlayer";
+import ReplytoMessageSelected from "@/components/ReplytoMessageSelected";
+import AttachReplytoMessage from "@/components/AttachReplytoMessage";
+import ParsedText from "react-native-parsed-text";
 
 
 const ChatDetailScreen = () => {
@@ -39,10 +45,15 @@ const ChatDetailScreen = () => {
     const [showGallery, setShowGallery] = useState(false);
     const [stempId, setStempId] = useState("");
     const [option, setOption] = useState("emoji");
+    const [messageReplyto, setMessageReplyto] = useState(null);
+    const [highlightMessageReplyto, setHighlightMessageReplyto] = useState(null);
 
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState(null);
     const isFocused = useIsFocused();
+    const videoRef = useRef(null);
+    const inputRef = useRef(null);
+    const flatListRef = useRef(null);
 
     // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
@@ -225,7 +236,7 @@ const ChatDetailScreen = () => {
 
     // GỬI TIN NHẮN
     const handleSendMessage = async () => {
-        if (!message && attachments?.length === 0 && !media) {
+        if (!message && attachments?.length === 0) {
             return;
         }
         try {
@@ -278,9 +289,10 @@ const ChatDetailScreen = () => {
                 senderId: user?.id,
                 content: message || "",
                 attachments: images.length > 0 ? images : null,
-                media: media || null,
+                media: null,
                 file: null,
                 receiverId: parsedData?._id,
+                replyTo: messageReplyto || null,
             };
 
             // Thêm tin nhắn tạm thời vào danh sách
@@ -290,8 +302,9 @@ const ChatDetailScreen = () => {
                     senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
                     content: message || "",
                     attachments: attachments.map((img) => img.uri),
-                    media,
+                    media: null,
                     files: null,
+                    replyTo: messageReplyto || null,
                     createdAt: new Date().toISOString(),
                 },
                 ...prev,
@@ -300,7 +313,7 @@ const ChatDetailScreen = () => {
             // Reset trạng thái
             setMessage("");
             setAttachments([]);
-            setMedia(null);
+            setMessageReplyto(null);
             setShowGallery(false);
 
             // Gửi tin nhắn
@@ -510,6 +523,115 @@ const ChatDetailScreen = () => {
         }
     };
 
+    // GỬI VIDEO
+    const handlePickVideo = async () => {
+        try {
+            // Kiểm tra quyền truy cập thư viện video
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== "granted") {
+                Alert.alert("Quyền truy cập video", "Vui lòng cấp quyền truy cập video để chọn video.");
+                return;
+            }
+
+            // Chọn video từ thư viện
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ["video/*"], // Chỉ chọn các file video
+                copyToCacheDirectory: true,
+            });
+
+            if (!result.canceled && result.assets?.length > 0) {
+                const maxSizeMB = 50; // Giới hạn kích thước tối đa (50MB)
+                const maxSizeBytes = maxSizeMB * 1024 * 1024; // Chuyển đổi sang bytes
+
+                const selectedVideos = await Promise.all(
+                    result.assets.map(async (video) => {
+                        // Kiểm tra kích thước file
+                        const fileInfo = await FileSystem.getInfoAsync(video.uri);
+                        if (fileInfo.size > maxSizeBytes) {
+                            throw new Error(`Video "${video.name}" vượt quá giới hạn ${maxSizeMB}MB.`);
+                        }
+
+                        const fileBase64 = await FileSystem.readAsStringAsync(video.uri, {
+                            encoding: FileSystem.EncodingType.Base64,
+                        });
+                        return { uri: fileBase64, name: video.name, type: video.mimeType };
+                    })
+                );
+
+                // Gửi từng video ngay sau khi chọn
+                for (const video of selectedVideos) {
+                    let conversationId = conversation?._id;
+
+                    // Tạo cuộc trò chuyện nếu chưa có
+                    if (!conversation) {
+                        if (!user?.id || !parsedData?._id) {
+                            Alert.alert("Lỗi", "Thông tin người dùng hoặc người nhận không hợp lệ");
+                            return;
+                        }
+                        const response = await createConversation1vs1(user?.id, parsedData?._id);
+                        if (response.success && response.data) {
+                            setConversation(response.data);
+                            conversationId = response.data._id;
+                        } else {
+                            const errorMsg = response.data?.message || "Không rõ nguyên nhân";
+                            Alert.alert("Lỗi", `Không thể tạo cuộc trò chuyện: ${errorMsg}`);
+                            return;
+                        }
+                    }
+
+                    if (!conversationId) {
+                        Alert.alert("Lỗi", "Không thể xác định ID cuộc trò chuyện");
+                        return;
+                    }
+
+                    const t = Date.now().toString();
+                    setStempId(t);
+
+                    const messageData = {
+                        idTemp: t,
+                        senderId: user?.id,
+                        content: "", // Nội dung để trống khi gửi video
+                        attachments: null, // Không gửi ảnh kèm video
+                        media: video, // Gửi video dưới dạng media
+                        file: null, // Không gửi file kèm video
+                        receiverId: parsedData?._id,
+                    };
+
+                    // Thêm tin nhắn tạm thời vào danh sách
+                    setMessages((prev) => [
+                        {
+                            _id: t,
+                            senderId: { _id: user?.id, name: user?.name, avatar: user?.avatar },
+                            content: "",
+                            attachments: [],
+                            media: video, // Đồng bộ với tên biến trong API
+                            files: null,
+                            createdAt: new Date().toISOString(),
+                        },
+                        ...prev,
+                    ]);
+
+                    // Gửi tin nhắn qua API
+                    const response = await sendMessage(conversationId, messageData);
+                    if (!response.success) {
+                        Alert.alert("Lỗi", `Không thể gửi video: ${response.data?.message || "Lỗi không xác định"}`);
+                        // Xóa tin nhắn tạm nếu gửi thất bại
+                        setMessages((prev) => prev.filter((msg) => msg._id !== t));
+                    }
+                }
+
+                // Reset trạng thái sau khi gửi
+                setMedia(null);
+                setShowGallery(false);
+            } else {
+                console.log("Video selection canceled");
+            }
+        } catch (error) {
+            console.error("Error in handlePickVideo:", error);
+            Alert.alert("Lỗi", error.message || "Không thể gửi video: Lỗi không xác định");
+        }
+    };
+
     // THÍCH TIN NHẮN
     const handleLike = debounce(async (messageId, statusLike, userId) => {
         try {
@@ -541,9 +663,12 @@ const ChatDetailScreen = () => {
 
     // TRẢ LỜI TIN NHẮN
     const handleReply = () => {
-        console.log("Reply to message:", selectedMessage);
         setModalVisible(false);
         // Add your reply logic here
+        setMessageReplyto(selectedMessage);
+        InteractionManager.runAfterInteractions(() => {
+            inputRef.current?.focus();
+        });
     };
 
     // CHUYỂN TIẾP TIN NHẮN
@@ -630,6 +755,59 @@ const ChatDetailScreen = () => {
         ]);
     };
 
+    // ĐĂT LAI THỜI GIAN PHÁT CHO VIDEO
+    const handlePlaybackStatusUpdate = async (status) => {
+        if (status.didJustFinish) {
+            await videoRef.current?.setPositionAsync(0);   // tua về đầu
+            await videoRef.current?.pauseAsync();          // dừng phát
+        }
+    };
+
+    // FOCUS ĐẾN TIN NHẮN REPLY
+    const scrollToReplyMessage = (replyToId) => {
+        const replyIndex = messages.findIndex((msg) => msg._id === replyToId);
+        if (replyIndex !== -1 && flatListRef.current) {
+            try {
+                setHighlightMessageReplyto(replyToId); // Highlight tin nhắn
+                flatListRef.current.scrollToIndex({
+                    index: replyIndex,
+                    animated: true,
+                    viewPosition: 0.5,
+                });
+            } catch (error) {
+                console.warn("Lỗi khi cuộn tới tin nhắn:", error);
+                flatListRef.current.scrollToOffset({
+                    offset: replyIndex * 100,
+                    animated: true,
+                });
+            }
+        } else {
+            console.warn("Không tìm thấy tin nhắn replyTo hoặc FlatList chưa sẵn sàng");
+        }
+    };
+
+    // HIỂN THỊ NỘI DUNG TIN NHẮN CÓ URL
+    const renderMessageContent = (content) => {
+        if (!content) return null;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = content.split(urlRegex);
+        return parts.map((part, index) => {
+            if (part.match(urlRegex)) {
+                return (
+                    <TouchableOpacity
+                        key={index}
+                        onPress={() => {
+                            Linking.openURL(part).catch((err) => console.error("Lỗi khi mở URL:", err));
+                        }}
+                    >
+                        <Text style={[styles.textMessage, styles.url]}>{part}</Text>
+                    </TouchableOpacity>
+                );
+            }
+            return <Text key={index} style={styles.textMessage}>{part}</Text>;
+        });
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -667,6 +845,7 @@ const ChatDetailScreen = () => {
                             </View>
                         ) : (
                             <FlatList
+                                ref={flatListRef}
                                 data={messages}
                                 keyExtractor={(item) => item?._id?.toString()}
                                 renderItem={({ item, index }) => (
@@ -676,12 +855,20 @@ const ChatDetailScreen = () => {
                                             (
                                                 item?.removed?.includes(user?.id) ? null : (
                                                     item?.revoked ? (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                        <TouchableOpacity
+                                                            onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                            onLongPress={() => handleLongPress(item)}
+                                                            style={[
+                                                                styles.messageOfMe,
+                                                                { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 },
+                                                                highlightMessageReplyto === item?._id && styles.highlightReplyMessage
+                                                            ]}
+                                                        >
                                                             <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -720,18 +907,67 @@ const ChatDetailScreen = () => {
                                                             }
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                        <TouchableOpacity
+                                                            onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                            onLongPress={() => handleLongPress(item)}
+                                                            style={[
+                                                                styles.messageOfMe,
+                                                                { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0, },
+                                                                highlightMessageReplyto === item?._id && styles.highlightReplyMessage
+                                                            ]}
+                                                        >
                                                             {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
                                                             {item?.files !== null && (
-                                                                <ViewFile file={item?.files} />
+                                                                item?.files?.fileType === "audio/m4a" ? <View style={{ width: "90%", position: "relative" }}><AudioPlayer uri={item?.files?.fileUrl} /></View> : <ViewFile file={item?.files} />
                                                             )}
-                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                            {item?.media && (
+                                                                <Video
+                                                                    ref={videoRef}
+                                                                    style={{ width: wp(73), height: hp(20) }}
+                                                                    source={{ uri: item?.media?.fileUrl }}
+                                                                    useNativeControls
+                                                                    resizeMode="contain"
+                                                                    isLooping={false}
+                                                                    shouldPlay={false}
+                                                                    onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                />
+                                                            )}
+                                                            {item?.content && (item?.replyTo ?
+                                                                <>
+                                                                    <AttachReplytoMessage message={item?.replyTo} />
+                                                                    <ParsedText
+                                                                        style={styles.textMessage}
+                                                                        parse={[
+                                                                            {
+                                                                                type: "url",
+                                                                                style: styles.url,
+                                                                                onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {item?.content}
+                                                                    </ParsedText>
+                                                                </>
+                                                                :
+                                                                <ParsedText
+                                                                    style={styles.textMessage}
+                                                                    parse={[
+                                                                        {
+                                                                            type: "url",
+                                                                            style: styles.url,
+                                                                            onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                        },
+                                                                    ]}
+                                                                >
+                                                                    {item?.content}
+                                                                </ParsedText>
+                                                            )}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -776,12 +1012,20 @@ const ChatDetailScreen = () => {
                                             (
                                                 item?.removed?.includes(user?.id) ? null : (
                                                     item?.revoked ? (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                        <TouchableOpacity
+                                                            onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                            onLongPress={() => handleLongPress(item)}
+                                                            style={[
+                                                                styles.messageOfMe,
+                                                                { marginBottom: item?.like?.length > 0 ? 10 : 0 },
+                                                                highlightMessageReplyto === item?._id && styles.highlightReplyMessage
+                                                            ]}
+                                                        >
                                                             <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -820,18 +1064,67 @@ const ChatDetailScreen = () => {
                                                             }
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        < TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfMe, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                        < TouchableOpacity
+                                                            onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                            onLongPress={() => handleLongPress(item)}
+                                                            style={[
+                                                                styles.messageOfMe,
+                                                                { marginBottom: item?.like?.length > 0 ? 10 : 0 },
+                                                                highlightMessageReplyto === item?._id && styles.highlightReplyMessage
+                                                            ]}
+                                                        >
                                                             {item?.attachments?.length > 0 && (
                                                                 <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                             )}
                                                             {item?.files !== null && (
-                                                                <ViewFile file={item?.files} />
+                                                                item?.files?.fileType === "audio/m4a" ? <View style={{ width: "90%", position: "relative" }}><AudioPlayer uri={item?.files?.fileUrl} /></View> : <ViewFile file={item?.files} />
                                                             )}
-                                                            {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                            {item?.media && (
+                                                                <Video
+                                                                    ref={videoRef}
+                                                                    style={{ width: wp(73), height: hp(20) }}
+                                                                    source={{ uri: item?.media?.fileUrl }}
+                                                                    useNativeControls
+                                                                    resizeMode="contain"
+                                                                    isLooping={false}
+                                                                    shouldPlay={false}
+                                                                    onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                />
+                                                            )}
+                                                            {item?.content && (item?.replyTo ?
+                                                                <>
+                                                                    <AttachReplytoMessage message={item?.replyTo} />
+                                                                    <ParsedText
+                                                                        style={styles.textMessage}
+                                                                        parse={[
+                                                                            {
+                                                                                type: "url",
+                                                                                style: styles.url,
+                                                                                onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {item?.content}
+                                                                    </ParsedText>
+                                                                </>
+                                                                :
+                                                                <ParsedText
+                                                                    style={styles.textMessage}
+                                                                    parse={[
+                                                                        {
+                                                                            type: "url",
+                                                                            style: styles.url,
+                                                                            onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                        },
+                                                                    ]}
+                                                                >
+                                                                    {item?.content}
+                                                                </ParsedText>
+                                                            )}
                                                             {
                                                                 index === 0 ? <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                     :
-                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
+                                                                    (item?.senderId?._id === messages[index - 1]?.senderId?._id) && !(messages[index - 1]?.removed?.includes(item?.senderId?._id)) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                             }
                                                             {
                                                                 index === 0 && (
@@ -878,9 +1171,16 @@ const ChatDetailScreen = () => {
                                             (
                                                 item?.removed?.includes(user?.id) ? null : (
                                                     item?.revoked ? (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                        <TouchableOpacity
+                                                            onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                            onLongPress={() => handleLongPress(item)}
+                                                            style={[
+                                                                styles.messageOfOther,
+                                                                { marginBottom: item?.like?.length > 0 ? 10 : 0 }
+                                                            ]}
+                                                        >
                                                             <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                            <View style={styles.boxMessageContent}>
+                                                            <View style={[styles.boxMessageContent, highlightMessageReplyto === item?._id && styles.highlightReplyMessage]}>
                                                                 {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
                                                                 <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                                 <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
@@ -903,17 +1203,65 @@ const ChatDetailScreen = () => {
                                                             </View>
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                        <TouchableOpacity
+                                                            onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                            onLongPress={() => handleLongPress(item)}
+                                                            style={[
+                                                                styles.messageOfOther,
+                                                                { marginBottom: item?.like?.length > 0 ? 10 : 0 }
+                                                            ]}
+                                                        >
                                                             <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                            <View style={styles.boxMessageContent}>
+                                                            <View style={[styles.boxMessageContent, { width: item?.files?.fileType === "audio/m4a" ? "80%" : "" }, highlightMessageReplyto === item?._id && styles.highlightReplyMessage]}>
                                                                 {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
                                                                 {item?.attachments?.length > 0 && (
                                                                     <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                                 )}
                                                                 {item?.files !== null && (
-                                                                    <ViewFile file={item?.files} />
+                                                                    item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
                                                                 )}
-                                                                {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                {item?.media && (
+                                                                    <Video
+                                                                        ref={videoRef}
+                                                                        style={{ width: wp(73), height: hp(20) }}
+                                                                        source={{ uri: item?.media?.fileUrl }}
+                                                                        useNativeControls
+                                                                        resizeMode="contain"
+                                                                        isLooping={false}
+                                                                        shouldPlay={false}
+                                                                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                    />
+                                                                )}
+                                                                {item?.content && (item?.replyTo ?
+                                                                    <>
+                                                                        <AttachReplytoMessage message={item?.replyTo} />
+                                                                        <ParsedText
+                                                                            style={styles.textMessage}
+                                                                            parse={[
+                                                                                {
+                                                                                    type: "url",
+                                                                                    style: styles.url,
+                                                                                    onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                },
+                                                                            ]}
+                                                                        >
+                                                                            {item?.content}
+                                                                        </ParsedText>
+                                                                    </>
+                                                                    :
+                                                                    <ParsedText
+                                                                        style={styles.textMessage}
+                                                                        parse={[
+                                                                            {
+                                                                                type: "url",
+                                                                                style: styles.url,
+                                                                                onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {item?.content}
+                                                                    </ParsedText>
+                                                                )}
                                                                 <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>
                                                                 {
                                                                     (index === 0 || item?.like?.length > 0) && (
@@ -943,9 +1291,16 @@ const ChatDetailScreen = () => {
                                                 (
                                                     item?.removed?.includes(user?.id) ? null : (
                                                         item?.revoked ? (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                            <TouchableOpacity
+                                                                onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                                onLongPress={() => handleLongPress(item)}
+                                                                style={[
+                                                                    styles.messageOfOther,
+                                                                    { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }
+                                                                ]}
+                                                            >
                                                                 {messages[index + 1]?.removed?.includes(user?.id) ? <Avatar uri={item?.senderId?.avatar} style={styles.avatar} /> : <Image style={styles.avatar} />}
-                                                                <View style={styles.boxMessageContent}>
+                                                                <View style={[styles.boxMessageContent, highlightMessageReplyto === item?._id && styles.highlightReplyMessage]}>
                                                                     <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                                     {(index === messages?.length - 1) ?
                                                                         ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
@@ -973,16 +1328,65 @@ const ChatDetailScreen = () => {
                                                                 </View>
                                                             </TouchableOpacity>
                                                         ) : (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                            <TouchableOpacity
+                                                                onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                                onLongPress={() => handleLongPress(item)}
+                                                                style={[
+                                                                    styles.messageOfOther,
+                                                                    { marginTop: 5, marginBottom: item?.like?.length > 0 ? 10 : 0 }
+                                                                ]}
+                                                            >
                                                                 {messages[index + 1]?.removed?.includes(user?.id) ? <Avatar uri={item?.senderId?.avatar} style={styles.avatar} /> : <Image style={styles.avatar} />}
-                                                                <View style={styles.boxMessageContent}>
+                                                                <View
+                                                                    style={[styles.boxMessageContent, { width: item?.files?.fileType === "audio/m4a" ? "80%" : "" }, highlightMessageReplyto === item?._id && styles.highlightReplyMessage]}>
                                                                     {item?.attachments?.length > 0 && (
                                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                                     )}
                                                                     {item?.files !== null && (
-                                                                        <ViewFile file={item?.files} />
+                                                                        item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
                                                                     )}
-                                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                    {item?.media && (
+                                                                        <Video
+                                                                            ref={videoRef}
+                                                                            style={{ width: wp(73), height: hp(20) }}
+                                                                            source={{ uri: item?.media?.fileUrl }}
+                                                                            useNativeControls
+                                                                            resizeMode="contain"
+                                                                            isLooping={false}
+                                                                            shouldPlay={false}
+                                                                            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                        />
+                                                                    )}
+                                                                    {item?.content && (item?.replyTo ?
+                                                                        <>
+                                                                            <AttachReplytoMessage message={item?.replyTo} />
+                                                                            <ParsedText
+                                                                                style={styles.textMessage}
+                                                                                parse={[
+                                                                                    {
+                                                                                        type: "url",
+                                                                                        style: styles.url,
+                                                                                        onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                    },
+                                                                                ]}
+                                                                            >
+                                                                                {item?.content}
+                                                                            </ParsedText>
+                                                                        </>
+                                                                        :
+                                                                        <ParsedText
+                                                                            style={styles.textMessage}
+                                                                            parse={[
+                                                                                {
+                                                                                    type: "url",
+                                                                                    style: styles.url,
+                                                                                    onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                },
+                                                                            ]}
+                                                                        >
+                                                                            {item?.content}
+                                                                        </ParsedText>
+                                                                    )}
                                                                     {(index === messages?.length - 1) ?
                                                                         ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                         :
@@ -1016,9 +1420,16 @@ const ChatDetailScreen = () => {
                                                 (
                                                     item?.removed?.includes(user?.id) ? null : (
                                                         item?.revoked ? (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                            <TouchableOpacity
+                                                                onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                                onLongPress={() => handleLongPress(item)}
+                                                                style={[
+                                                                    styles.messageOfOther,
+                                                                    { marginBottom: item?.like?.length > 0 ? 10 : 0 }
+                                                                ]}
+                                                            >
                                                                 <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                                <View style={styles.boxMessageContent}>
+                                                                <View style={[styles.boxMessageContent, highlightMessageReplyto === item?._id && styles.highlightReplyMessage]}>
                                                                     <Text style={{ fontStyle: "italic", color: 'gray' }}>Tin nhắn đã bị thu hồi</Text>
                                                                     {(index === messages?.length - 1) ?
                                                                         ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
@@ -1046,17 +1457,71 @@ const ChatDetailScreen = () => {
                                                                 </View>
                                                             </TouchableOpacity>
                                                         ) : (
-                                                            <TouchableOpacity onLongPress={() => handleLongPress(item)} style={[styles.messageOfOther, { marginBottom: item?.like?.length > 0 ? 10 : 0 }]}>
+                                                            <TouchableOpacity
+                                                                onPress={() => item?.replyTo && scrollToReplyMessage(item?.replyTo?._id)}
+                                                                onLongPress={() => handleLongPress(item)}
+                                                                style={[
+                                                                    styles.messageOfOther,
+                                                                    { marginBottom: item?.like?.length > 0 ? 10 : 0 },
+                                                                ]}
+                                                            >
                                                                 <Avatar uri={item?.senderId?.avatar} style={styles.avatar} />
-                                                                <View style={styles.boxMessageContent}>
+                                                                <View
+                                                                    style={[
+                                                                        styles.boxMessageContent,
+                                                                        { width: item?.files?.fileType === "audio/m4a" ? "80%" : "" },
+                                                                        highlightMessageReplyto === item?._id && styles.highlightReplyMessage
+                                                                    ]}
+                                                                >
                                                                     {conversation?.type === "private" ? null : <Text style={styles.textNameOthers}>{item?.senderId?.name}</Text>}
                                                                     {item?.attachments?.length > 0 && (
                                                                         <RenderImageMessage images={item?.attachments} wh={wp(70)} />
                                                                     )}
                                                                     {item?.files !== null && (
-                                                                        <ViewFile file={item?.files} />
+                                                                        item?.files?.fileType === "audio/m4a" ? <AudioPlayer uri={item?.files?.fileUrl} /> : <ViewFile file={item?.files} />
                                                                     )}
-                                                                    {item?.content && <Text style={styles.textMessage}>{item?.content}</Text>}
+                                                                    {item?.media && (
+                                                                        <Video
+                                                                            ref={videoRef}
+                                                                            style={{ width: wp(73), height: hp(20) }}
+                                                                            source={{ uri: item?.media?.fileUrl }}
+                                                                            useNativeControls
+                                                                            resizeMode="contain"
+                                                                            isLooping={false}
+                                                                            shouldPlay={false}
+                                                                            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                                                        />
+                                                                    )}
+                                                                    {item?.content && (item?.replyTo ?
+                                                                        <>
+                                                                            <AttachReplytoMessage message={item?.replyTo} />
+                                                                            <ParsedText
+                                                                                style={styles.textMessage}
+                                                                                parse={[
+                                                                                    {
+                                                                                        type: "url",
+                                                                                        style: styles.url,
+                                                                                        onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                    },
+                                                                                ]}
+                                                                            >
+                                                                                {item?.content}
+                                                                            </ParsedText>
+                                                                        </>
+                                                                        :
+                                                                        <ParsedText
+                                                                            style={styles.textMessage}
+                                                                            parse={[
+                                                                                {
+                                                                                    type: "url",
+                                                                                    style: styles.url,
+                                                                                    onPress: (url) => Linking.openURL(url).catch((err) => console.error("Error opening URL:", err)),
+                                                                                },
+                                                                            ]}
+                                                                        >
+                                                                            {item?.content}
+                                                                        </ParsedText>
+                                                                    )}
                                                                     {(index === messages?.length - 1) ?
                                                                         ((item?.senderId?._id === messages[index - 1]?.senderId?._id) ? null : <Text style={styles.textTime}>{formatTime(item?.createdAt)}</Text>)
                                                                         :
@@ -1094,14 +1559,20 @@ const ChatDetailScreen = () => {
                         )
                     }
                 </View>
+
+                {/* Giao diện nhập tin nhắn */}
                 <View style={styles.inputContainer}>
+                    {/* Hiển thị tin nhắn đang trả lời */}
+                    {messageReplyto && (
+                        <ReplytoMessageSelected messageReplyto={messageReplyto} setMessageReplyto={setMessageReplyto} />
+                    )}
                     {/* Hộp nhập tin nhắn */}
                     <View style={styles.sendMessage}>
                         <View style={styles.boxSendMessage}>
                             <TouchableOpacity onPress={() => toggleGallery("emoji")}>
                                 <Icon name="emoji" size={28} color="gray" />
                             </TouchableOpacity>
-                            <TextInput style={styles.textInputMessage} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
+                            <TextInput style={styles.textInputMessage} ref={inputRef} placeholder="Tin nhắn" value={message} onChangeText={(text) => setMessage(text)} />
                         </View>
                         {message === "" && attachments?.length === 0 ? (
                             <View style={styles.boxFeatureSendMessage}>
@@ -1161,24 +1632,33 @@ const ChatDetailScreen = () => {
                                                         </View>
                                                         <Text>Audio</Text>
                                                     </TouchableOpacity>
-                                                    <TouchableOpacity style={styles.buttonExtend}>
+                                                    <TouchableOpacity style={styles.buttonExtend} onPress={handlePickVideo}>
                                                         <View style={[styles.boxIcon, { backgroundColor: "#2196F3" }]}>
-                                                            <Icon name="bussinessCard" size={26} color="#fff" />
+                                                            <Icon name="media" size={26} color="#fff" />
                                                         </View>
-                                                        <Text>Danh thiếp</Text>
+                                                        <Text>Video</Text>
                                                     </TouchableOpacity>
                                                 </View>
                                             </View>
                                         )
                                         :
                                         (
-                                            <Text>Audio</Text>
+                                            <AudioCart
+                                                conversation={conversation}
+                                                parsedData={parsedData}
+                                                setMessages={setMessages}
+                                                setStempId={setStempId}
+                                                setConversation={setConversation}
+                                                setShowGallery={setShowGallery}
+                                            />
                                         )
                             }
                         </View>
                     )}
                 </View>
             </View>
+
+            {/* Modal hiển thị các tùy chọn khi nhấn giữ tin nhắn */}
             <MessageOptionsModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
@@ -1190,6 +1670,7 @@ const ChatDetailScreen = () => {
                 isLike={selectedMessage?.like?.some(like => like.userId === user?.id)}
                 onDisLike={() => { setModalVisible(false); handleLike(selectedMessage?._id, "dislike", user?.id) }}
                 onLike={() => { setModalVisible(false); handleLike(selectedMessage?._id, "like", user?.id) }}
+                isRevoked={selectedMessage?.revoked}
             />
         </ScreenWrapper>
     )
@@ -1258,7 +1739,7 @@ const styles = StyleSheet.create({
         borwderWidth: 1,
         borderColor: "gray",
         maxWidth: wp(80),
-        minWidth: wp(25),
+        minWidth: wp(26),
         minHeight: hp(5),
         position: "relative",
     },
@@ -1276,7 +1757,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 4,
-        maxWidth: wp(75),
+        maxWidth: wp(80),
         marginLeft: 10,
         borderColor: theme.colors.darkLight,
         borderWidth: 0.5,
@@ -1409,5 +1890,15 @@ const styles = StyleSheet.create({
         marginRight: 5,
         borderWidth: 0.4,
         borderColor: "gray",
-    }
+    },
+
+    // style highlight tin nhắn
+    highlightReplyMessage: {
+        borderColor: theme.colors.primary,
+        borderWidth: 1,
+    },
+    url: {
+        color: theme.colors.primary,
+        textDecorationLine: "underline",
+    },
 });
