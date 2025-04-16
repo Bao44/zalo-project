@@ -32,8 +32,6 @@ const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, setAuth } = useAuth();
-
-  // Sử dụng useRef để theo dõi trạng thái đã fetch dữ liệu hay chưa
   const hasDataBeenFetched = useRef(false);
 
   const [showMess, setShowMess] = useState(true);
@@ -41,6 +39,8 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
+
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
 
   // Fetch user data chỉ một lần khi component mount
   useEffect(() => {
@@ -59,6 +59,7 @@ const Home = () => {
         if (result?.success) {
           dispatch(setUser(result.data));
           hasDataBeenFetched.current = true;
+          setIsUserLoaded(true);
         } else {
           toast.error("Không thể tải dữ liệu người dùng");
         }
@@ -79,15 +80,37 @@ const Home = () => {
       const userId = localStorage.getItem("userId");
       const sessionToken = localStorage.getItem("sessionToken");
 
-      // Gọi API signout để xóa thiết bị
-      const result = await UserAPI.logout(userId, sessionToken);
-      if (!result.success) {
-        throw new Error(result.message || "Lỗi khi xóa thiết bị");
+      if (!userId || !sessionToken) {
+        console.warn("Không tìm thấy thông tin đăng nhập trong localStorage");
+      } else {
+        // Gọi API signout để xóa thiết bị, bỏ qua lỗi 404
+        try {
+          const result = await UserAPI.logout(userId, sessionToken);
+          if (!result.success) {
+            console.warn(
+              "Lỗi khi gọi API signout:",
+              result.message || "Unknown error"
+            );
+          }
+        } catch (error) {
+          console.warn("Error calling logout API:", error.message);
+        }
       }
 
-      // Đăng xuất khỏi Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) throw new Error(error.message);
+      // Kiểm tra session trước khi đăng xuất
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log("Session before signOut:", session);
+
+      if (session) {
+        const { error } = await supabase.auth.signOut();
+        if (error && error.message !== "Auth session missing") {
+          throw new Error(error.message);
+        }
+      } else {
+        console.warn("No active session found, skipping Supabase signOut");
+      }
 
       // Xóa dữ liệu trong localStorage
       localStorage.removeItem("userId");
@@ -130,43 +153,57 @@ const Home = () => {
               }}
             >
               <ListItem
-                sx={{ justifyContent: "center", padding: "30px 0 0 14px" }}
+                sx={{
+                  justifyContent: "center",
+                  alignItems: "center",
+                  width: "100%",
+                  height: "100px",
+                }}
               >
-                <UserAvatar uri={user?.avatar} />
+                <UserAvatar
+                  width={50}
+                  height={50}
+                  uri={user?.avatar || ""}
+                  key={user?.id}
+                />
               </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  padding: "0 0 0 14px",
                   backgroundColor: showMess ? "rgba(0,0,0,0.2)" : "transparent",
                 }}
               >
                 <ListItemButton onClick={() => setShowMess(true)}>
-                  <ChatIcon sx={{ color: "#fff" }} />
+                  <ChatIcon
+                    sx={{ color: "#fff", width: "40px", height: "40px" }}
+                  />
                 </ListItemButton>
               </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  padding: "0 0 0 14px",
+                  alignItems: "center",
                   backgroundColor: !showMess
                     ? "rgba(0,0,0,0.2)"
                     : "transparent",
                 }}
               >
                 <ListItemButton onClick={() => setShowMess(false)}>
-                  <ContactsIcon sx={{ color: "#fff" }} />
+                  <ContactsIcon
+                    sx={{ color: "#fff", width: "40px", height: "40px" }}
+                  />
                 </ListItemButton>
               </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  padding: "0 0 0 14px",
                   marginTop: "auto",
                 }}
               >
                 <ListItemButton aria-describedby={id} onClick={handleClick}>
-                  <SettingsIcon sx={{ color: "#fff" }} />
+                  <SettingsIcon
+                    sx={{ color: "#fff", width: "40px", height: "40px" }}
+                  />
                 </ListItemButton>
                 <Popover
                   id={id}
@@ -184,10 +221,7 @@ const Home = () => {
                       <ChangePassword />
                     </ListItem>
                     <ListItem sx={{ padding: 0 }}>
-                      <ListItemButton
-                        onClick={handleLogout}
-                        disabled={isLoading}
-                      >
+                      <ListItemButton onClick={handleLogout}>
                         <Box sx={{ marginRight: "10px" }}>
                           <LogoutIcon />
                         </Box>
@@ -200,7 +234,13 @@ const Home = () => {
             </List>
           </Grid>
           <Grid item xs={11.3}>
-            {isLoading ? <Loading /> : showMess ? <Messager /> : <Contact />}
+            {isLoading || !isUserLoaded ? (
+              <Loading />
+            ) : showMess ? (
+              <Messager />
+            ) : (
+              <Contact />
+            )}
           </Grid>
         </Grid>
       </Box>

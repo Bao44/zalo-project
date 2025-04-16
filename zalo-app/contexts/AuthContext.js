@@ -63,19 +63,21 @@ export const AuthProvider = ({ children }) => {
 
     initializeAuth();
 
-    const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state change event:", _event, "session:", session);
-      if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
-        if (session) {
-          setAuth(session.user);
-          await updateUserData(session.user, session.user.email);
-          router.replace("/home");
+    const authListener = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        console.log("Auth state change event:", _event, "session:", session);
+        if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
+          if (session) {
+            setAuth(session.user);
+            await updateUserData(session.user, session.user.email);
+            router.replace("/home");
+          }
+        } else if (_event === "SIGNED_OUT" || _event === "SESSION_EXPIRED") {
+          setAuth(null);
+          router.replace("/welcome");
         }
-      } else if (_event === "SIGNED_OUT" || _event === "SESSION_EXPIRED") {
-        setAuth(null);
-        router.replace("/welcome");
       }
-    });
+    );
 
     // Kiểm tra session định kỳ
     const interval = setInterval(async () => {

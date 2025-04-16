@@ -121,7 +121,7 @@ const BioUser = () => {
                         )}
                     </View>
 
-                    {!friended && (
+                    {(!friended && friend?._id !== user?.id)&& (
                         <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', width: '100%' }}>
                             <TouchableOpacity style={styles.buttonSendMess}>
                                 <Icon name="message" size={24} color={theme.colors.primary} />
@@ -134,6 +134,7 @@ const BioUser = () => {
                             </TouchableOpacity>
                         </View>
                     )}
+                    {friend?._id === user?.id && ""}
                 </View>
 
                 {friended && (
@@ -248,6 +249,9 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-end',
         marginBottom: hp(6),
         marginRight: wp(6),
+        position: "absolute",
+        right: 0,
+        bottom: 0
     },
 });
 

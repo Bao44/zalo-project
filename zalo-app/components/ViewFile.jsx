@@ -70,11 +70,13 @@ const ViewFile = ({ file }) => {
     };
 
     return (
-        <TouchableOpacity style={styles.container} onPress={handleDownload}>
+        <View style={styles.container}>
             {icon(file.fileType)}
             <Text style={styles.text}>{file.fileName}</Text>
-            <Icon name="download" size={20} color="gray" />
-        </TouchableOpacity>
+            <TouchableOpacity onPress={handleDownload}>
+                <Icon name="download" size={20} color="gray" />
+            </TouchableOpacity>
+        </View>
     );
 };
 
@@ -92,8 +94,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "black",
         fontWeight: theme.fonts.medium,
-        marginLeft: 10,
-        marginRight: 10,
+        paddingHorizontal: 10,
         numberOfLines: 2,
         ellipsizeMode: 'tail',
         width: '70%',

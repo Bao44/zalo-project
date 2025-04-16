@@ -30,6 +30,8 @@ const NewGroup = () => {
     const [search, setSearch] = useState("");
 
     console.log(userSelecteds);
+    // console.log("recent", recent);
+    // console.log("contact", contact);
 
     // Lấy danh sách người dùng gần đây và danh bạ
     useEffect(() => {
@@ -54,12 +56,20 @@ const NewGroup = () => {
                     // Lọc các hội thoại private
                     let temp = ds.filter((u) => u.type === "private");
 
-                    const recentData = resContact.data.map((item) => {
-                        const found = temp.find((u) => u.members[0]._id === item._id || u.members[1]._id === item._id);
-                        return found ? { ...found, ...item } : null;
-                    }
-                    ).filter((item) => item !== null);
-                    setRecent(recentData); // Lưu danh sách hội thoại vào state
+                    const recentData = resContact.data.map((user) => {
+                        const conv = temp.find(
+                            (c) => c.members[0]._id === user._id || c.members[1]._id === user._id
+                        );
+                        if (conv) {
+                            return {
+                                ...user,
+                                time: conv.lastMessage.createdAt, // chỉ thêm createdAt
+                            };
+                        }
+                        return null;
+                    }).filter(Boolean);
+
+                    setRecent(recentData);// Lưu danh sách hội thoại vào state
                 } else {
                     console.log("Không có dữ liệu hoặc lỗi từ server!");
                 }
@@ -102,11 +112,16 @@ const NewGroup = () => {
 
     // Chức năng chọn người dùng
     const toggleSelection = (item) => {
-        if (userSelecteds.includes(item)) {
-            setUserSelecteds((prev) => prev.filter((us) => us._id !== item._id));
-        } else {
-            setUserSelecteds((prev) => [...prev, item]);
-        }
+        setUserSelecteds((prev) => {
+            const isSelected = prev.some((u) => u._id === item._id);
+            if (isSelected) {
+                return prev.filter((u) => u._id !== item._id);
+            } else {
+                // Store the item without the time property to keep consistency
+                const { time, ...cleanedItem } = item;
+                return [...prev, cleanedItem];
+            }
+        });
     };
 
     // Nhóm bạn bè theo chữ cái đầu tiên
@@ -177,7 +192,7 @@ const NewGroup = () => {
                 fileBase64 = await FileSystem.readAsStringAsync(avatarGroup, {
                     encoding: FileSystem.EncodingType.Base64,
                 });
-            } 
+            }
 
 
             const av = {
@@ -221,6 +236,8 @@ const NewGroup = () => {
         const date = new Date(messageTime);
         return `${date.getDate()}/${date.getMonth() + 1}`;
     };
+
+    const cleanItem = ({ time, ...rest }) => rest;
 
     // Chọn ảnh đại điện
     const handleAvatar = async () => {
@@ -283,19 +300,19 @@ const NewGroup = () => {
                         renderItem={({ item }) => {
                             // console.log(item);
                             return (
-                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
+                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(cleanItem(item))}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
-                                        <Avatar uri={item.members.filter((u) => u._id !== user?.id)[0]?.avatar} style={styles.avatar} />
+                                        <Avatar uri={item?.avatar} style={styles.avatar} />
                                         <View>
-                                            <Text style={styles.textName}>{item.members.filter((u) => u._id !== user?.id)[0]?.name}</Text>
-                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{formatTime(item.lastMessage.createdAt)}</Text>
+                                            <Text style={styles.textName}>{item?.name}</Text>
+                                            <Text style={{ color: theme.colors.textLight, marginTop: 5 }}>{formatTime(item.time)}</Text>
                                         </View>
                                     </View>
                                     <RadioButton
-                                        isSelect={userSelecteds.includes(item.members.filter((u) => u._id !== user?.id)[0])}
+                                        isSelect={userSelecteds.some(u => u._id === item._id)}
                                         size={20}
                                         color={theme.colors.primaryDark}
-                                        onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}
+                                        onPress={() => toggleSelection(cleanItem(item))}
                                     />
                                 </TouchableOpacity>
                             )
@@ -313,7 +330,7 @@ const NewGroup = () => {
                         renderItem={({ item }) => {
                             // console.log(item);
                             return (
-                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item.members.filter((u) => u._id !== user?.id)[0])}>
+                                <TouchableOpacity style={styles.buttonUser} onPress={() => toggleSelection(item)}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', }}>
                                         <Avatar style={styles.avatar} uri={item?.avatar} />
                                         <View>
@@ -322,9 +339,10 @@ const NewGroup = () => {
                                         </View>
                                     </View>
                                     <RadioButton
+                                        isSelect={userSelecteds.some(u => u._id === item._id)}
                                         size={20}
                                         color={theme.colors.primaryDark}
-                                        onPress={() => toggleSelection(item.id)}
+                                        onPress={() => toggleSelection(item)}
                                     />
                                 </TouchableOpacity>
                             )

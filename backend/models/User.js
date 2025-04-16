@@ -13,7 +13,6 @@ const UserSchema = new mongoose.Schema({
   albums: { type: Array, default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  conversations: { type: Array, default: [] },
   bio: { type: String, default: "" }
 },{ strict: true, _id: false });
 

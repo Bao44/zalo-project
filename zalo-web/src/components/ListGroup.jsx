@@ -20,16 +20,17 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 const ListGroup = ({ handleOpenChat }) => {
-  const { conversations } = useSelector((state) => state.conversation);
-  const [converList, setConverList] = useState([]);
+  const dispatch = useDispatch();
+  const { conversations, loading, error } = useSelector((state) => state.conversation);
+  
 
   useEffect(() => {
     if (conversations) {
       const list = conversations.filter((conver) => {
-        return conver.type === "GROUP";
+        return conver.type === "group";
       });
       setConverList(list);
     }
@@ -44,6 +45,8 @@ const ListGroup = ({ handleOpenChat }) => {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+
 
   return (
     <>

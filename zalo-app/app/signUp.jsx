@@ -27,7 +27,12 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current || !confirmPasswordRef.current || !nameRef.current) {
+    if (
+      !emailRef.current ||
+      !passwordRef.current ||
+      !confirmPasswordRef.current ||
+      !nameRef.current
+    ) {
       alert("Please fill in all fields");
       return;
     }
@@ -36,6 +41,11 @@ const SignUp = () => {
     let email = emailRef.current.trim();
     let password = passwordRef.current.trim();
     let confirmPassword = confirmPasswordRef.current.trim();
+
+    if (passwordRef.current.length < 10) {
+      Alert.alert("Error", "Mật khẩu phải có ít nhất 10 ký tự!");
+      return;
+    }
 
     if (password !== confirmPassword) {
       Alert.alert("Error", "Mật khẩu không khớp!");
