@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable   } from "react-native";
 import { theme } from "../constants/theme";
 import Icon from "../assets/icons";
 import { hp, wp } from "../helpers/common";
@@ -12,7 +12,7 @@ const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, o
             animationType="fade"
             onRequestClose={onClose}
         >
-            <TouchableOpacity style={styles.overlay} onPress={onClose}>
+            <Pressable   style={styles.overlay} onPress={onClose}>
                 <View style={styles.modalContainer}>
                     {!isRevoked && (
                         <>
@@ -49,7 +49,7 @@ const MessageOptionsModal = ({ visible, onClose, onReply, onForward, onDelete, o
                         </TouchableOpacity>
                     )}
                 </View>
-            </TouchableOpacity>
+            </Pressable >
         </Modal>
     );
 };

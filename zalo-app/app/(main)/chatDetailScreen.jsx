@@ -673,9 +673,13 @@ const ChatDetailScreen = () => {
 
     // CHUYỂN TIẾP TIN NHẮN
     const handleForward = () => {
-        console.log("Forward message:", selectedMessage);
         setModalVisible(false);
-        // Add your forward logic here
+        router.push({
+            pathname: "forwardMessage",
+            params: {
+                messageForward: JSON.stringify(selectedMessage), // Chuyển tin nhắn thành chuỗi JSON
+            },
+        });
     };
 
     // XÓA TIN NHẮN
@@ -784,28 +788,6 @@ const ChatDetailScreen = () => {
         } else {
             console.warn("Không tìm thấy tin nhắn replyTo hoặc FlatList chưa sẵn sàng");
         }
-    };
-
-    // HIỂN THỊ NỘI DUNG TIN NHẮN CÓ URL
-    const renderMessageContent = (content) => {
-        if (!content) return null;
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const parts = content.split(urlRegex);
-        return parts.map((part, index) => {
-            if (part.match(urlRegex)) {
-                return (
-                    <TouchableOpacity
-                        key={index}
-                        onPress={() => {
-                            Linking.openURL(part).catch((err) => console.error("Lỗi khi mở URL:", err));
-                        }}
-                    >
-                        <Text style={[styles.textMessage, styles.url]}>{part}</Text>
-                    </TouchableOpacity>
-                );
-            }
-            return <Text key={index} style={styles.textMessage}>{part}</Text>;
-        });
     };
 
     return (
