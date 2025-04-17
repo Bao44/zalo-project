@@ -19,9 +19,11 @@ import {
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import InforProfile from "./InforProfile";
+import { useAuth } from "../../contexts/AuthContext";
 
 const ListFriend = ({ handleOpenChat }) => {
-  const { user } = useSelector((state) => state.user);
+  // const { user } = useSelector((state) => state.user);
+  const { user } = useAuth();
   const [selectSortName, setSelectSortName] = useState("increase");
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -54,7 +56,8 @@ const ListFriend = ({ handleOpenChat }) => {
           <Stack>
             <Box mt={3} ml={2} component="div">
               <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-                Bạn bè ({user?.friendList.length})
+                Bạn bè
+                 {/* ({user?.friendList.length}) */}
               </Typography>
             </Box>
             <Stack
@@ -116,7 +119,7 @@ const ListFriend = ({ handleOpenChat }) => {
                 </Box>
               </Stack>
 
-              <Stack component="div">
+              {/* <Stack component="div">
                 {user &&
                   user.friendList.length > 0 &&
                   user.friendList.map((friend) => {
@@ -154,15 +157,15 @@ const ListFriend = ({ handleOpenChat }) => {
                       </Box>
                     );
                   })}
-              </Stack>
+              </Stack> */}
             </Stack>
           </Stack>
         </Box>
-        <InforProfile
+        {/* <InforProfile
           openModal={openModal}
           setOpenModal={setOpenModal}
           friend={friend}
-        />
+        /> */}
       </Box>
     </>
   );

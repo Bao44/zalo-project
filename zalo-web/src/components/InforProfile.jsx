@@ -20,6 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { setUser } from "../redux/userSlice";
 import ModalImage from "./ModalImage";
+import { getUserData } from "../../api/user";
 
 const style = {
   position: "absolute",
@@ -50,11 +51,12 @@ export default function InforProfile({ openModal, setOpenModal, friend }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await UserAPI.getUserById(friend?.id);
+      const data = await getUserData(friend?.id);
       if (data) {
-        const groups = await ConversationAPI.getConversationByUserAndMe(
-          data.id
-        );
+        // const groups = await ConversationAPI.getConversationByUserAndMe(
+        //   data.id
+        // );
+        console.log("data: ", data);
         setUserInfo(data);
         setSameGroup(groups);
       }
@@ -153,9 +155,9 @@ function InfoBody({ changeBody, handleCloseModal, userInfo }) {
       </Box>
       {/* Avatar */}
       <AvatarHome
-        fullName={userInfo?.fullName ? userInfo.fullName : ""}
-        avatarUrl={userInfo?.avatarUrl ? userInfo.avatarUrl : ""}
-        coverImage={userInfo?.coverImage ? userInfo.coverImage : ""}
+        fullName={userInfo?.name ? userInfo.name : ""}
+        avatarUrl={userInfo?.avatar ? userInfo.avatar : ""}
+        coverImage={userInfo?.background ? userInfo.background : ""}
       />
       {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
@@ -164,10 +166,8 @@ function InfoBody({ changeBody, handleCloseModal, userInfo }) {
       {/* Thông tin cá nhân */}
       <Info
         gender={userInfo?.gender ? "Nam" : "Nữ"}
-        dateOfBirth={
-          userInfo?.dateOfBirth ? userInfo.dateOfBirth : new Date().getTime()
-        }
-        phoneNumber={userInfo?.phoneNumber ? userInfo.phoneNumber : ""}
+        dateOfBirth={userInfo?.dob ? userInfo.dob : new Date().getTime()}
+        phoneNumber={userInfo?.phone ? userInfo.phone : ""}
         email={userInfo?.email ? userInfo.email : ""}
       />
       {/* line break */}
@@ -297,7 +297,7 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
             {gender}
           </Typography>
           <Typography variant="body1" fontSize="14px" marginBottom="10px">
-            {convertToDate(dateOfBirth)}
+            {dateOfBirth}
           </Typography>
           <Typography variant="body1" fontSize="14px" marginBottom="10px">
             {phoneNumber}

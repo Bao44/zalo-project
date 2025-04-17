@@ -272,6 +272,7 @@ import React, { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { AuthProvider } from "../contexts/AuthContext";
 import * as Linking from "expo-linking";
+import { supabase } from "../lib/supabase";
 
 LogBox.ignoreLogs([
   "Warning: TNodeChildrenRenderer",

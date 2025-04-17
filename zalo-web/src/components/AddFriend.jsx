@@ -9,163 +9,140 @@ import {
   IconButton,
   TextField,
   InputAdornment,
-  List,
-  Avatar,
+  CircularProgress,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import CardItemUser from "./CardItemUser";
-// import UserAPI from "../api/UserAPI";
-import { useDispatch, useSelector } from "react-redux";
-import { setUser } from "../redux/userSlice";
+import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import {
+  checkFriendship,
+  sendFriendRequest,
+  searchFriends,
+  getFriendRequests,
+} from "../../api/friendshipAPI";
+import { useAuth } from "../../contexts/AuthContext";
+import UserAvatar from "./Avatar";
 
 export default function AddFriend({ socket }) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [open, setOpen] = useState(false);
-  const { user } = useSelector((state) => state.user);
-  const dispatch = useDispatch();
   const [friend, setFriend] = useState(null);
-  const [status, setStatus] = useState("request");
+  const [status, setStatus] = useState("request"); // request, revoke, friend, accept
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const dispatch = useDispatch();
 
   const handleClickOpen = () => {
     setOpen(true);
   };
+
   const handleClose = () => {
     setFriend(null);
+    setPhoneNumber("");
+    setStatus("request");
     setOpen(false);
   };
 
-  useEffect(() => {
-    if (socket) {
-      socket.on("send_request_friend", (data) => {
-        if (data.status === "success") {
-          dispatch(setUser(data.data));
-          setStatus("revoke");
-        } else if (data.status === "fail") {
-          toast.error(data.message);
-        }
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off("send_request_friend");
-      }
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("send_accept_friend", (data) => {
-        if (data.status === "success") {
-          dispatch(setUser(data.data));
-          setStatus("friend");
-        } else if (data.status === "fail") {
-          toast.error(data.message);
-        }
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off("send_accept_friend");
-      }
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("send_revoke_friend", (data) => {
-        if (data.status === "success") {
-          dispatch(setUser(data.data));
-          setStatus("request");
-        } else if (data.status === "fail") {
-          toast.error(data.message);
-        }
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off("send_revoke_friend");
-      }
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("send_delete_accept_friend", (data) => {
-        if (data.status === "success") {
-          dispatch(setUser(data.data));
-          setStatus("request");
-        } else if (data.status === "fail") {
-          toast.error(data.message);
-        }
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off("send_delete_accept_friend");
-      }
-    };
-  }, [socket]);
-
+  // Tìm kiếm người dùng theo số điện thoại
   const handleSearchUser = async () => {
-    // const data = await UserAPI.getUserByPhoneNumber(phoneNumber);
-    // if (data) {
-    //   setFriend(data);
-    //   if (user.friendList.find((friend) => friend.id === data.id)) {
-    //     setStatus("friend");
-    //   } else if (
-    //     user.sendedRequestList.find((friend) => friend.id === data.id)
-    //   ) {
-    //     setStatus("revoke");
-    //   } else if (
-    //     user.receivedRequestList.find((friend) => friend.id === data.id)
-    //   ) {
-    //     setStatus("accept");
-    //   } else {
-    //     setStatus("request");
-    //   }
-    // }
+    if (!phoneNumber) {
+      toast.error("Vui lòng nhập số điện thoại!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const searchResponse = await searchFriends(phoneNumber);
+      if (searchResponse.success && searchResponse.data.length > 0) {
+        const foundFriend = searchResponse.data[0];
+        setFriend(foundFriend);
+
+        // Kiểm tra trạng thái bạn bè
+        const friendResponse = await checkFriendship(user.id, foundFriend?._id);
+        if (friendResponse.success) {
+          setStatus("friend"); // Đã là bạn bè
+        } else {
+          // Kiểm tra xem có lời mời kết bạn đã gửi hay không
+          const friendRequests = await getFriendRequests(user.id);
+          const isPending = friendRequests.data.some((req) =>
+            req.data.some(
+              (item) =>
+                item.sender._id === user.id &&
+                item.receiver._id === foundFriend._id
+            )
+          );
+          setStatus(isPending ? "revoke" : "request");
+        }
+      } else {
+        toast.error("Không tìm thấy người dùng với số điện thoại này!");
+        setFriend(null);
+      }
+    } catch (error) {
+      toast.error("Lỗi khi tìm kiếm người dùng!");
+      console.error("Search error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Gửi yêu cầu kết bạn
   const handleRequestFriend = async () => {
-    if (socket) {
-      socket.emit("send_request_friend", {
-        senderId: user.id,
-        receiverId: friend.id,
-      });
+    if (!friend) return;
+
+    try {
+      const content = `Chào bạn, mình là ${user.name}. Mình biết bạn qua số điện thoại. Kết bạn với mình nhé!`;
+      const response = await sendFriendRequest(
+        user.id,
+        friend?._id,
+        content,
+        "phone"
+      );
+      if (response.success) {
+        toast.success("Đã gửi yêu cầu kết bạn!");
+        setStatus("revoke");
+        if (socket) {
+          socket.emit("friend-request-notification", {
+            senderId: user.id,
+            receiverId: friend._id,
+          });
+        }
+      } else {
+        toast.error(response.msg || "Lỗi khi gửi yêu cầu kết bạn!");
+      }
+    } catch (error) {
+      toast.error("Lỗi khi gửi yêu cầu kết bạn!");
+      console.error("Send friend request error:", error);
     }
   };
 
+  // Thu hồi yêu cầu kết bạn (chưa triển khai API, tạm thời để trống)
   const handleRevokeFriend = async () => {
-    if (socket) {
-      socket.emit("send_revoke_friend", {
-        senderId: user.id,
-        receiverId: friend.id,
-      });
-    }
+    toast.info("Chức năng thu hồi yêu cầu kết bạn chưa được triển khai!");
   };
 
-  const handleAcceptFriend = async () => {
+  // Lắng nghe socket để cập nhật trạng thái
+  useEffect(() => {
     if (socket) {
-      socket.emit("send_accept_friend", {
-        senderId: user.id,
-        receiverId: friend.id,
+      socket.on("friend-request-notification", (data) => {
+        if (data.senderId === user.id) {
+          setStatus("revoke");
+        }
       });
-    }
-  };
 
-  const handleDeleteAcceptFriend = async () => {
-    if (socket) {
-      socket.emit("send_delete_accept_friend", {
-        senderId: user.id,
-        receiverId: friend.id,
+      socket.on("friend-request-accepted", (data) => {
+        if (data.senderId === user.id || data.receiverId === user.id) {
+          setStatus("friend");
+        }
       });
     }
-  };
+
+    return () => {
+      if (socket) {
+        socket.off("friend-request-notification");
+        socket.off("friend-request-accepted");
+      }
+    };
+  }, [socket, user.id]);
 
   return (
     <Box>
@@ -202,22 +179,9 @@ export default function AddFriend({ socket }) {
               borderBottom: "1px solid #e0e0e0",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "start",
-                alignItems: "center",
-                gap: "3px",
-              }}
-            >
-              <Typography
-                variant="subtitle1"
-                fontWeight={"bold"}
-                marginLeft={2}
-              >
-                Thêm bạn
-              </Typography>
-            </Box>
+            <Typography variant="subtitle1" fontWeight="bold" marginLeft={2}>
+              Thêm bạn
+            </Typography>
             <IconButton onClick={handleClose} sx={{ color: "black" }}>
               <CloseIcon />
             </IconButton>
@@ -225,10 +189,8 @@ export default function AddFriend({ socket }) {
           <Box
             sx={{
               display: "flex",
-              // justifyContent: "center",
-              // alignItems: "center",
-              gap: "10px",
               flexDirection: "column",
+              gap: "10px",
               padding: "16px",
               paddingTop: "0px",
               height: "88%",
@@ -255,31 +217,45 @@ export default function AddFriend({ socket }) {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 variant="standard"
+                fullWidth
               />
-              <Button variant="contained" onClick={handleSearchUser}>
-                Tìm kiếm
+              <Button
+                variant="contained"
+                onClick={handleSearchUser}
+                disabled={loading}
+                size="small"
+                sx={{
+                  padding: "12px 12px",
+                  fontSize: "12px",
+                  minWidth: "auto",
+                  height: "35px",
+                  width: "100px",
+                }}
+              >
+                {loading ? <CircularProgress size={24} /> : "Tìm kiếm"}
               </Button>
             </Box>
-            <Box
-              sx={{
-                overflowY: "auto",
-                height: "75%",
-              }}
-            >
+            <Box sx={{ overflowY: "auto", height: "75%" }}>
               <Typography fontStyle="italic">Kết quả tìm thấy:</Typography>
-              {friend && (
+              {loading && (
+                <Box display="flex" justifyContent="center" marginTop="20px">
+                  <CircularProgress />
+                </Box>
+              )}
+              {!loading && friend && (
                 <Box display="flex" alignItems="center" marginTop="15px">
-                  <Avatar
-                    src={friend.avatarUrl}
-                    alt="avatar"
-                    style={{ width: "50px", height: "50px" }}
+                  <UserAvatar
+                    width={50}
+                    height={50}
+                    uri={friend?.avatar || ""}
+                    key={friend?._id}
                   />
                   <Typography
                     fontWeight="bold"
                     marginLeft="10px"
                     marginRight="auto"
                   >
-                    {friend.fullName}
+                    {friend.name}
                   </Typography>
                   {status === "request" && (
                     <Button
@@ -289,33 +265,6 @@ export default function AddFriend({ socket }) {
                     >
                       Gửi lời mời
                     </Button>
-                  )}
-                  {status === "accept" && (
-                    <Box
-                      display="flex"
-                      flexDirection="column"
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={handleAcceptFriend}
-                        color="success"
-                      >
-                        Chấp nhận
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        style={{ marginTop: "5px" }}
-                        onClick={handleDeleteAcceptFriend}
-                        fullWidth
-                        color="error"
-                      >
-                        Từ chối
-                      </Button>
-                    </Box>
                   )}
                   {status === "revoke" && (
                     <Button
@@ -333,6 +282,11 @@ export default function AddFriend({ socket }) {
                     </Typography>
                   )}
                 </Box>
+              )}
+              {!loading && !friend && (
+                <Typography color="textSecondary" marginTop="20px">
+                  Không tìm thấy người dùng.
+                </Typography>
               )}
             </Box>
           </Box>

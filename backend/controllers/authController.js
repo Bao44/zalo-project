@@ -36,13 +36,24 @@ const authController = {
           if (!mongoUser) {
             mongoUser = new User({
               _id: data.user.id,
-              email: data.user.email,
-              name: data.user.user_metadata?.name || "",
+              email: data.email,
+              name: data.name || "",
+              phone: data.phone || "",
+              avatar: data.avatar || "",
+              background: data.background || "",
+              bio: data.bio || "",
+              dob: data.dob || null,
+              gender: data.gender || null,
               createdAt: new Date(),
               updatedAt: new Date(),
             });
-            await mongoUser.save();
+          } else {
+            mongoUser.email = data.email || mongoUser.email;
+            mongoUser.name = data.name || mongoUser.name;
+            mongoUser.updatedAt = new Date();
           }
+
+          await mongoUser.save();
         } catch (dbError) {
           console.error("Error syncing to MongoDB:", dbError);
         }
@@ -121,6 +132,38 @@ const authController = {
           success: false,
           message: "Email hoặc mật khẩu không đúng",
         });
+      }
+
+      if (data?.user) {
+        try {
+          let mongoUser = await User.findOne({ _id: data.user.id });
+          console.log("Mongo User:", mongoUser);
+          console.log("Supabase User:", data);
+          console.log("Supabase User ID:", data.user.email);
+          if (!mongoUser) {
+            mongoUser = new User({
+              _id: data.user.id,
+              email: data.user.email,
+              name: data.user.name || "",
+              phone: data.user.phone || "",
+              avatar: data.user.avatar || "",
+              background: data.user.background || "",
+              bio: data.user.bio || "",
+              dob: data.user.dob || null,
+              gender: data.user.gender || null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          } else {
+            mongoUser.email = data.user.email || mongoUser.email;
+            mongoUser.name = data.user.name || mongoUser.name;
+            mongoUser.updatedAt = new Date();
+          }
+
+          await mongoUser.save();
+        } catch (dbError) {
+          console.error("Error syncing to MongoDB:", dbError);
+        }
       }
 
       const { user, session } = data;

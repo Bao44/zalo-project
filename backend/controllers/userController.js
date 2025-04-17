@@ -1,5 +1,5 @@
-const authService = require('../services/authService');
-const User = require('../models/User');
+const authService = require("../services/authService");
+const User = require("../models/User");
 
 const userController = {
   async getUserData(req, res) {
@@ -20,9 +20,15 @@ const userController = {
             mongoUser = new User({
               _id: userId,
               email: data.email,
-              name: data.name || '',
+              name: data.name || "",
+              phone: data.phone || "",
+              avatar: data.avatar || "",
+              background: data.background || "",
+              bio: data.bio || "",
+              dob: data.dob || null,
+              gender: data.gender || null,
               createdAt: new Date(),
-              updatedAt: new Date()
+              updatedAt: new Date(),
             });
           } else {
             mongoUser.email = data.email || mongoUser.email;
@@ -59,8 +65,17 @@ const userController = {
 
           if (mongoUser) {
             // Only update fields that exist in the schema
-            const allowedFields = ['name', 'phone', 'avatar', 'background', 'gender', 'dob', 'email', 'bio'];
-            Object.keys(userData).forEach(key => {
+            const allowedFields = [
+              "name",
+              "phone",
+              "avatar",
+              "background",
+              "gender",
+              "dob",
+              "email",
+              "bio",
+            ];
+            Object.keys(userData).forEach((key) => {
               if (allowedFields.includes(key)) {
                 mongoUser[key] = userData[key];
               }
@@ -87,7 +102,7 @@ const userController = {
       if (!supabaseUser || !supabaseUser.id) {
         return res.status(400).json({
           success: false,
-          message: "Invalid user data provided"
+          message: "Invalid user data provided",
         });
       }
 
@@ -97,9 +112,9 @@ const userController = {
         user = new User({
           _id: supabaseUser.id,
           email: supabaseUser.email,
-          name: supabaseUser.user_metadata?.name || '',
+          name: supabaseUser.user_metadata?.name || "",
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
       } else {
         user.email = supabaseUser.email || user.email;
@@ -112,7 +127,7 @@ const userController = {
       return res.status(200).json({
         success: true,
         message: "User synced successfully",
-        user
+        user,
       });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
@@ -128,7 +143,7 @@ const userController = {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "User not found"
+          message: "User not found",
         });
       }
 
@@ -147,7 +162,7 @@ const userController = {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "User not found"
+          message: "User not found",
         });
       }
 
@@ -165,7 +180,7 @@ const userController = {
       if (!userId || !friendId) {
         return res.status(400).json({
           success: false,
-          message: "Missing user ID or friend ID"
+          message: "Missing user ID or friend ID",
         });
       }
 
@@ -174,7 +189,7 @@ const userController = {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "User not found"
+          message: "User not found",
         });
       }
 
@@ -183,14 +198,14 @@ const userController = {
       if (!friend) {
         return res.status(404).json({
           success: false,
-          message: "Friend not found"
+          message: "Friend not found",
         });
       }
 
       if (user.friends.includes(friendId)) {
         return res.status(400).json({
           success: false,
-          message: "Already friends"
+          message: "Already friends",
         });
       }
 
@@ -200,7 +215,7 @@ const userController = {
 
       return res.status(200).json({
         success: true,
-        message: "Friend added successfully"
+        message: "Friend added successfully",
       });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
@@ -215,7 +230,7 @@ const userController = {
       if (!userId || !conversationId) {
         return res.status(400).json({
           success: false,
-          message: "Missing user ID or conversation ID"
+          message: "Missing user ID or conversation ID",
         });
       }
 
@@ -224,14 +239,14 @@ const userController = {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "User not found"
+          message: "User not found",
         });
       }
 
       if (user.conversations.includes(conversationId)) {
         return res.status(400).json({
           success: false,
-          message: "Conversation already exists"
+          message: "Conversation already exists",
         });
       }
 
@@ -241,12 +256,12 @@ const userController = {
 
       return res.status(200).json({
         success: true,
-        message: "Conversation added successfully"
+        message: "Conversation added successfully",
       });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
     }
-  }
+  },
 };
 
 module.exports = userController;
