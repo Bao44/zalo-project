@@ -60,7 +60,6 @@ const Messager = () => {
   // Nhận thông tin cuộc trò chuyện mới từ socket
   useEffect(() => {
     const handleNewConversation = (newConversation) => {
-      console.log("Cuộc trò chuyện mới web:", newConversation);
       dispatch(addNewConversation(newConversation));
       // Lưu cuộc trò chuyện mới vào localStorage
       localStorage.setItem("selectedConversation", JSON.stringify(newConversation));

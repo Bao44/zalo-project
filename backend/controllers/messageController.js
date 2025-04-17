@@ -238,7 +238,7 @@ const messageController = {
             }
 
             const messages = await Message.find({ conversationId })
-                .sort({ createdAt: 1 })
+                .sort({ createdAt: -1 })
                 .populate("senderId", "name avatar")
                 .populate({
                     path: "replyTo",
@@ -247,7 +247,7 @@ const messageController = {
                         path: "senderId",
                         select: "name"
                     }
-                });
+                }).limit(20); // Giới hạn số lượng tin nhắn trả về
             res.json(messages.reverse());
         } catch (error) {
             console.error("Error fetching messages:", error);

@@ -46,7 +46,7 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
       }
     };
     fetchUnreadCount();
-  }, [conver._id, user?.id]);
+  }, [conver._id, user?.id, conver?.lastMessage]);
 
   // Lưu cuộc trò chuyện đã chọn vào localStorage
   const handleSelectConversation = (conver) => {
@@ -116,7 +116,7 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
         </Box>
         {unreadCount > 0 && (
           <Badge
-            badgeContent={unreadCount > 99 ? "99+" : unreadCount}
+            badgeContent={unreadCount > 99 ? "99+" : unreadCount === 1 ? "" : unreadCount}
             sx={{
               "& .MuiBadge-badge": {
                 backgroundColor: "red",
