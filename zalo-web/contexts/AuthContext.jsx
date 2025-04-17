@@ -8,6 +8,7 @@ import {
 import { supabase } from "../lib/supabase";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getUserData } from "../api/user";
+import socket from "../socket/socket";
 
 const AuthContext = createContext();
 
@@ -163,6 +164,13 @@ export const AuthProvider = ({ children }) => {
       }
     };
   }, [navigate, setAuth, updateUserData, handleAuthFromEmail]);
+
+  // Phát sự kiện user online
+  useEffect(() => {
+    if (user) {
+      socket.emit("user-online", user.id);
+    }
+  }, [user]);
 
   return (
     <AuthContext.Provider

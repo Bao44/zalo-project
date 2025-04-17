@@ -20,7 +20,7 @@ import Chat from "../components/Chat";
 import CreateGroup from "../components/CreateGroup";
 import AddFriend from "../components/AddFriend";
 import socket from "../../socket/socket";
-import { fetchConversations } from "../redux/conversationSlice";
+import { fetchConversations, addNewConversation } from "../redux/conversationSlice";
 import Loading from "../components/Loading";
 
 function CustomTabPanel(props) {
@@ -56,6 +56,21 @@ const Messager = () => {
   const { conversations, loading } = useSelector((state) => state.conversation);
   const { user } = useSelector((state) => state.user);
   const [conversation, setConversation] = useState(null);
+
+  // Nhận thông tin cuộc trò chuyện mới từ socket
+  useEffect(() => {
+    const handleNewConversation = (newConversation) => {
+      console.log("Cuộc trò chuyện mới web:", newConversation);
+      dispatch(addNewConversation(newConversation));
+      // Lưu cuộc trò chuyện mới vào localStorage
+      localStorage.setItem("selectedConversation", JSON.stringify(newConversation));
+    };
+
+    socket.on("newConversation", handleNewConversation);
+    return () => {
+      socket.off("newConversation", handleNewConversation);
+    };
+  }, [dispatch]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
