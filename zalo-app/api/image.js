@@ -111,3 +111,12 @@ export const uploadFile = async (folderName, fileUri, isImage = true) => {
     }
   }
 };
+
+export const downloadFileShare = async (url) => {
+  try {
+    const { uri } = await FileSystem.downloadAsync(url, getLocalFilePath(url));
+    return uri;
+  } catch (error) {
+    return null;
+  }
+};

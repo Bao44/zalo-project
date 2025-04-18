@@ -196,7 +196,6 @@ const DiaryScreen = () => {
           scrollEnabled={false}
           data={posts}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listStyle}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <PostCard item={item} currentUser={user} router={router} />
@@ -258,5 +257,10 @@ const styles = StyleSheet.create({
     marginTop: hp(1),
     height: 10,
     backgroundColor: theme.colors.gray,
+  },
+  noPosts: {
+    fontSize: hp(2),
+    textAlign: "center",
+    color: theme.colors.text,
   },
 });

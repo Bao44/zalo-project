@@ -17,7 +17,7 @@ import RenderHTML from "react-native-render-html";
 import { Video } from "expo-av";
 import Loading from "./Loading";
 import { createPostLike, removePostLike } from "../api/post";
-import { downloadFile, getSupabaseFileUrl } from "../api/image";
+import {  downloadFileShare, getSupabaseFileUrl } from "../api/image";
 
 const textStyle = {
   color: theme.colors.dark,
@@ -61,6 +61,7 @@ const PostCard = ({
     setLikes(item?.postLikes);
   }, []);
 
+
   const openPostDetails = () => {
     if (!showMoreIcon) return null;
     router.push({ pathname: "postDetails", params: { postId: item?.id } });
@@ -96,7 +97,7 @@ const PostCard = ({
     if (item?.file) {
       // downdload file
       setLoading(true);
-      let url = await downloadFile(getSupabaseFileUrl(item?.file).uri);
+      let url = await downloadFileShare(getSupabaseFileUrl(item?.file).uri);
       setLoading(false);
       content.url = url;
     }
