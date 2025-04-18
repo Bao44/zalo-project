@@ -446,6 +446,10 @@ const MainLayout = () => {
         headerShown: false,
       }}
     >
+      <Stack.Screen
+        name="(main)/postDetails"
+        options={{ presentation: "modal" }}
+      />
     </Stack>
   );
 };

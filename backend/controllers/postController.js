@@ -3,7 +3,7 @@ const imageService = require("../services/imageService");
 const { createClient } = require("@supabase/supabase-js");
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANOKEY;
+const supabaseKey = process.env.SUPABASE_ROLE_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -176,6 +176,7 @@ const postController = {
 
   // Thêm like vào bài đăng
   async likePost(req, res) {
+    console.log("likePost: ", req.body);
     try {
       const postLike = req.body;
 
@@ -240,6 +241,7 @@ const postController = {
   async addComment(req, res) {
     try {
       const comment = req.body;
+      console.log("comment: ", comment);
 
       const { data, error } = await supabase
         .from("comments")

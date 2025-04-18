@@ -106,6 +106,7 @@ export const fetchPostDetails = async (postId) => {
 };
 
 export const createPostLike = async (postLike) => {
+  console.log("postLike: ", postLike);
   try {
     const response = await api.post("/api/posts/like", postLike);
     return response.data;
