@@ -42,6 +42,9 @@ import GroupMember from "./GroupMember";
 import UserAvatar from "./Avatar";
 import socket from "../../socket/socket";
 import { getMessages, sendMessage, addUserSeen, likeMessage, undoDeleteMessage, deleteMessage } from "../../api/messageAPI";
+import EmojiPopover from './EmojiPopover';
+import { createConversation1vs1 } from "../../api/conversationAPI";
+import ReplytoMessageSelected from "./ReplytoMessageSelected";
 
 const Chat = ({ conversation, setConversation }) => {
   const { name, members, type } = conversation;
@@ -60,7 +63,13 @@ const Chat = ({ conversation, setConversation }) => {
   const [openRevokeDialog, setOpenRevokeDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState(null);
-  const [revokeError, setRevokeError] = useState(null); const [deleteError, setDeleteError] = useState(null);
+  const [revokeError, setRevokeError] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [replyToMessage, setReplyToMessage] = useState(null);
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
@@ -72,7 +81,6 @@ const Chat = ({ conversation, setConversation }) => {
     socket.on("statusOnline", (status) => {
       isOnline(status);
     });
-
     return () => {
       if (socket) {
         socket.off("statusOnline");
@@ -86,10 +94,50 @@ const Chat = ({ conversation, setConversation }) => {
       socket.emit("join", conversation?._id);
     }
 
-    socket.on("newMessage", (message) => {
-      console.log("Tin nhắn mới:", message);
+    // Lắng nghe sự kiện tin nhắn mới
+    socket.on("newMessage", (message, tempId) => {
+      console.log("Received newMessage:", message);
       if (message?.conversationId === conversation?._id) {
         setMessages((prevMessages) => {
+          // Check if message already exists by _id
+          if (prevMessages.some((msg) => msg._id === message._id)) {
+            console.log("Duplicate message detected, skipping:", message._id);
+            return prevMessages;
+          }
+
+          // Kiểm tra xem có tin nhắn tạm thời nào cần thay thế không
+          const tempIndex = prevMessages.findIndex((msg) => tempId && msg.idTemp === tempId);
+          if (tempIndex !== -1) {
+            console.log("Replacing temporary message with idTemp:", message.idTemp);
+            const updatedMessages = [...prevMessages];
+            updatedMessages[tempIndex] = {
+              ...message,
+              idTemp: undefined, // Clear idTemp to prevent further matches
+            };
+            return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          }
+
+          // Fallback: Match by senderId, createdAt, and attachments (for image messages)
+          const tempIndexFallback = prevMessages.findIndex(
+            (msg) =>
+              msg.idTemp &&
+              msg.senderId._id === message.senderId &&
+              Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) < 1000 && // Within 1 second
+              msg.attachments?.length > 0 &&
+              message.attachments?.length > 0
+          );
+          if (tempIndexFallback !== -1) {
+            console.log("Replacing temporary message with fallback match:", message._id);
+            const updatedMessages = [...prevMessages];
+            updatedMessages[tempIndexFallback] = {
+              ...message,
+              idTemp: undefined,
+            };
+            return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          }
+
+          // If no match, append the new message
+          console.log("Appending new message:", message._id);
           const updatedMessages = [...prevMessages, message];
           return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         });
@@ -100,7 +148,8 @@ const Chat = ({ conversation, setConversation }) => {
       }
     });
 
-    socket.on("messageLiked", ({ savedMessage, senderUserLike, updatedAt }) => {
+    // Lắng nghe sự kiện tin nhắn được thích
+    socket.on("messageLiked", ({ savedMessage, updatedAt }) => {
       if (savedMessage.conversationId === conversation?._id) {
         setMessages((prev) =>
           prev.map((msg) => {
@@ -116,9 +165,38 @@ const Chat = ({ conversation, setConversation }) => {
       }
     });
 
+    // Lắng nghe sự kiện tin nhắn đã được xem
+    socket.on("messageSeen", ({ conversationId, userId }) => {
+      if (conversationId === conversation?._id) {
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg._id.toString() === conversationId.toString()) {
+              return { ...msg, seen: [...(msg.seen || []), userId] };
+            }
+            return msg;
+          })
+        );
+      }
+    });
+
+    // Lắng nghe sự kiện người dùng thu hồi tin nhắn
+    socket.on("messageRevoked", ({ conversationId, messageId }) => {
+      if (conversation?._id === conversationId) {
+        setMessages((prev) =>
+          prev.map((msg) => {
+            return msg._id.toString() === messageId ? { ...msg, revoked: true } : msg
+          })
+        );
+      }
+    });
+
     return () => {
       if (socket) {
         socket.off("newMessage");
+        socket.off("messageLiked");
+        socket.off("messageSeen");
+        socket.off("messageRevoked");
+        socket.off("statusOnline");
         if (conversation?._id) {
           socket.emit("leave", conversation?._id);
         }
@@ -126,93 +204,26 @@ const Chat = ({ conversation, setConversation }) => {
     };
   }, [conversation?._id, user?.id, isFocused]);
 
-  const DrawerList = (
-    <Box sx={{ width: 400 }} role="presentation">
-      <Typography textAlign="center" fontWeight="bold" paddingTop="20px" paddingBottom="20px" fontSize="20px">
-        Thông tin hội thoại
-      </Typography>
-      <Divider />
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0" }}>
-        {conversation.type === "private" ? (
-          <>
-            <UserAvatar uri={friend?.avatar} width={60} height={60} />
-            <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
-              {friend?.fullName}
-            </Typography>
-          </>
-        ) : (
-          <>
-            <AvatarGroup max={2}>
-              {members?.length > 0 &&
-                members?.map((mem) => (
-                  <UserAvatar key={mem?._id} uri={mem?.avatar} width={60} height={60} />
-                ))}
-            </AvatarGroup>
-            <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
-              {name}
-            </Typography>
-          </>
-        )}
-      </Box>
-      <Divider />
-      {conversation?.type === "private" && (
-        <List>
-          {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map((text, index) => (
-            <ListItem key={text} disablePadding>
-              <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
-                <ListItemIcon>
-                  {index === 0 && <AccountCircleIcon />}
-                  {index === 1 && <NotificationsOffIcon />}
-                  {index === 2 && <DeleteIcon color="error" />}
-                </ListItemIcon>
-                <ListItemText primary={text} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      )}
-      <InforProfile openModal={openInforProfile} setOpenModal={setOpenInforProfile} friend={friend} />
-      {conversation?.type === "group" && (
-        <List>
-          {["Thêm thành viên", "Tắt thông báo", "Xem danh sách thành viên", "Rời khỏi nhóm"].map((text, index) => (
-            <ListItem key={text} disablePadding>
-              <ListItemButton sx={{ color: index === 3 ? "red" : "inherit" }}>
-                <ListItemIcon>
-                  {index === 0 && <PersonAddIcon />}
-                  {index === 1 && <NotificationsOffIcon />}
-                  {index === 2 && <GroupsIcon />}
-                  {index === 3 && <ExitToAppIcon color="error" />}
-                </ListItemIcon>
-                <ListItemText primary={index === 2 ? `${text}(${members.length})` : text} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-          {conversation?.admin === user?.id && (
-            <ListItem key={"Giải tán nhóm"} disablePadding>
-              <ListItemButton sx={{ color: "red" }}>
-                <ListItemIcon>
-                  <DeleteIcon color="error" />
-                </ListItemIcon>
-                <ListItemText primary={"Giải tán nhóm"} />
-              </ListItemButton>
-            </ListItem>
-          )}
-        </List>
-      )}
-      <AddMember
-        openModal={openAddMember}
-        setOpenModal={setOpenAddMember}
-        conversation={conversation}
-        setConversation={setConversation}
-      />
-      <GroupMember
-        openModal={openGroupMember}
-        setOpenModal={setOpenGroupMember}
-        conversation={conversation}
-        setConversation={setConversation}
-      />
-    </Box>
-  );
+  // Cleanup stale temporary messages
+  // useEffect(() => {
+  //   const cleanupStaleMessages = () => {
+  //     setMessages((prev) =>
+  //       prev.filter((msg) => {
+  //         if (msg.idTemp) {
+  //           const age = Date.now() - new Date(msg.createdAt).getTime();
+  //           if (age > 10000) { // Remove messages older than 10 seconds
+  //             console.log("Removing stale temporary message:", msg.idTemp);
+  //             return false;
+  //           }
+  //         }
+  //         return true;
+  //       })
+  //     );
+  //   };
+
+  //   const interval = setInterval(cleanupStaleMessages, 5000); // Check every 5 seconds
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // LẤY DANH SÁCH TIN NHẮN
   useEffect(() => {
@@ -232,6 +243,133 @@ const Chat = ({ conversation, setConversation }) => {
     }
   }, [conversation, members, user.id, type]);
 
+  // BẮT ĐẦU GHI ÂM
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        handleSendAudio(audioBlob);
+        // Dừng stream để giải phóng micro
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Không thể truy cập micro. Vui lòng kiểm tra quyền hoặc thiết bị.');
+    }
+  };
+
+  // DỪNG GHI ÂM
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // GỬI FILE ÂM THANH
+  const handleSendAudio = async (audioBlob) => {
+    setLoading(true);
+
+    try {
+      let conversationId = conversation?._id;
+
+      // Nếu không có conversation, tạo mới (cho trường hợp private chat)
+      if (!conversationId && type === "private") {
+        if (!user?.id || !friend?._id) {
+          console.error("User or friend information is missing");
+          return;
+        }
+        const response = await createConversation1vs1(user.id, friend._id);
+        if (response.success && response.data) {
+          setConversation(response.data);
+          conversationId = response.data._id;
+        } else {
+          console.error("Failed to create conversation:", response.data?.message);
+          return;
+        }
+      }
+
+      if (!conversationId) {
+        console.error('No conversation ID found');
+        return;
+      }
+
+      // Chuyển Blob thành base64
+      const reader = new FileReader();
+      const fileBase64 = await new Promise((resolve) => {
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(audioBlob);
+      });
+
+      let t = Math.random().toString(36).substring(2, 15);
+      const audioFileName = `recording_${t}.m4a`; // Tên file tạm
+
+      const messageData = {
+        idTemp: t,
+        senderId: user?.id,
+        content: "",
+        attachments: null,
+        media: null,
+        files: {
+          uri: fileBase64,
+          name: audioFileName,
+          type: 'audio/m4a', // MIME type của file âm thanh
+        },
+        receiverId: type === "private" ? friend?._id : null,
+        replyTo: replyTo || null,
+      };
+
+      // Thêm tin nhắn tạm thời
+      setMessages((prev) => [
+        ...prev,
+        {
+          _id: t,
+          senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+          content: "",
+          attachments: null,
+          media: null,
+          files: {
+            uri: fileBase64,
+            name: audioFileName,
+            type: 'audio/webm',
+          },
+          replyTo: replyTo || null,
+          createdAt: new Date().toISOString(),
+          idTemp: t,
+        },
+      ]);
+
+      // Gửi tin nhắn
+      const response = await sendMessage(conversationId, messageData);
+      if (!response) {
+        console.error('Failed to send audio:', response);
+        setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu thất bại
+      }
+
+      setContent("");
+      setReplyTo(null);
+    } catch (error) {
+      console.error('Error in handleSendAudio:', error);
+      alert('Không thể gửi file âm thanh: ' + (error.message || 'Lỗi không xác định'));
+      setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu lỗi
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // GỬI TIN NHẮN
   const handleSendMessage = async () => {
     if (!content.trim()) return;
@@ -245,15 +383,200 @@ const Chat = ({ conversation, setConversation }) => {
         attachments: [],
         media: null,
         files: null,
+        replyTo: replyToMessage || null,
         receiverId: type === "private" ? friend._id : null,
       };
 
       await sendMessage(conversation._id, messageData);
       setContent("");
+      setReplyToMessage(null);
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // GỬI HÌNH ẢNH
+  const handleSendImage = async (event) => {
+    event.preventDefault();
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      console.log('No files selected');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let conversationId = conversation?._id;
+      if (!conversationId) {
+        console.error('No conversation ID found');
+        return;
+      }
+
+      // Tạo một mảng để lưu trữ attachments
+      let attachments = [];
+      for (const file of files) {
+        const imageFile = await compressImage(file);
+
+        const reader = new FileReader();
+        const fileBase64 = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.readAsDataURL(imageFile);
+        });
+
+        attachments.push({
+          folderName: "messages",
+          fileUri: fileBase64,
+          isImage: true,
+        });
+      }
+
+      let t = Math.random().toString(36).substring(2, 15);
+
+      const messageData = {
+        idTemp: t,
+        senderId: user.id,
+        content: content || "",
+        attachments: attachments ? attachments : null,
+        media: null,
+        files: null,
+        receiverId: type === "private" ? friend?._id : null,
+        replyTo: replyTo || null,
+      };
+
+      // Thêm tin nhắn tạm thời vào danh sách
+      setMessages((prev) => [
+        ...prev,
+        {
+          _id: t,
+          senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+          content: "",
+          attachments: attachments || null, // Hiển thị tạm thời
+          media: null,
+          files: null,
+          replyTo: replyTo || null,
+          createdAt: new Date().toISOString(),
+          idTemp: t,
+        },
+      ]);
+
+      // Gửi tin nhắn
+      await sendMessage(conversationId, messageData);
+
+      setContent("");
+      setReplyTo(null);
+    } catch (error) {
+      console.error('Error in handleSendImage:', error);
+      // Remove temporary messages on error
+      setMessages((prev) => prev.filter((msg) => !msg.idTemp));
+    } finally {
+      setLoading(false);
+      event.target.value = ''; // Reset input file để có thể chọn lại file cũ
+    }
+  };
+
+  // GỬI TỆP
+  const handleSendFile = async (event) => {
+    event.preventDefault();
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      console.log('No files selected');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let conversationId = conversation?._id;
+
+      // Nếu không có conversation, tạo mới (cho trường hợp private chat)
+      if (!conversationId && type === "private") {
+        if (!user?.id || !friend?._id) {
+          console.error("User or friend information is missing");
+          return;
+        }
+        const response = await createConversation1vs1(user.id, friend._id);
+        if (response.success && response.data) {
+          setConversation(response.data);
+          conversationId = response.data._id;
+        } else {
+          console.error("Failed to create conversation:", response.data?.message);
+          return;
+        }
+      }
+
+      if (!conversationId) {
+        console.error('No conversation ID found');
+        return;
+      }
+
+      for (const file of files) {
+        const reader = new FileReader();
+        const fileBase64 = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.readAsDataURL(file);
+        });
+
+        // Nếu file type là video thì gửi media
+        let media = null;
+        if (file.type.startsWith("video/")) {
+          media = {
+            uri: fileBase64,
+            name: file.name,
+            type: file.mimeType || file.type,
+          };
+        } else {
+          media = null;
+        }
+
+        let t = Math.random().toString(36).substring(2, 15);
+
+        const messageData = {
+          idTemp: t,
+          senderId: user?.id,
+          content: content || "",
+          attachments: null,
+          media: media || null,
+          files: media ? null : {
+            uri: fileBase64,
+            name: file.name,
+            type: file.mimeType || file.type,
+          },
+          receiverId: type === "private" ? friend?._id : null,
+          replyTo: replyTo || null,
+        };
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            _id: t,
+            senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+            content: "",
+            attachments: null,
+            media: media || null,
+            files: media ? null : {
+              uri: fileBase64,
+              name: file.name,
+              type: file.mimeType || file.type,
+            },
+            replyTo: replyTo || null,
+            createdAt: new Date().toISOString(),
+            idTemp: t,
+          },
+        ]);
+
+        await sendMessage(conversationId, messageData);
+      }
+
+      setContent("");
+      setReplyTo(null);
+    } catch (error) {
+      console.error('Error in handleSendFile:', error);
+    } finally {
+      setLoading(false);
+      event.target.value = '';
     }
   };
 
@@ -292,7 +615,13 @@ const Chat = ({ conversation, setConversation }) => {
       }
     } catch (error) {
       console.error("Lỗi khi xóa tin nhắn:", error);
-      if (error.response?.status === 404) { setDeleteError("Tin nhắn không tồn tại"); } else if (error.response?.status === 400) { setDeleteError(error.response.data.error || "Yêu cầu không hợp lệ"); } else { setDeleteError("Không thể xóa tin nhắn, vui lòng thử lại"); }
+      if (error.response?.status === 404) {
+        setDeleteError("Tin nhắn không tồn tại");
+      } else if (error.response?.status === 400) {
+        setDeleteError(error.response.data.error || "Yêu cầu không hợp lệ");
+      } else {
+        setDeleteError("Không thể xóa tin nhắn, vui lòng thử lại");
+      }
     }
   };
 
@@ -306,11 +635,6 @@ const Chat = ({ conversation, setConversation }) => {
     try {
       const response = await undoDeleteMessage(selectedMessageId, user.id);
       if (response.data) {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg._id === selectedMessageId ? { ...msg, revoked: true } : msg
-          )
-        );
         setOpenRevokeDialog(false);
       }
     } catch (error) {
@@ -341,205 +665,6 @@ const Chat = ({ conversation, setConversation }) => {
     } catch (error) {
       console.error("Error unliking message:", error);
     }
-  };
-
-  // GỬI HÌNH ẢNH
-  const handleSendImage = async (event) => {
-    // event.preventDefault();
-    // const files = event.target.files;
-    // if (!files || files.length === 0) {
-    //   console.log('No files selected');
-    //   return;
-    // }
-
-    // setLoading(true);
-
-    // try {
-    //   let conversationId = conversation?._id;
-    //   if (!conversationId) {
-    //     console.error('No conversation ID found');
-    //     return;
-    //   }
-
-    //   // Xử lý từng file hình ảnh
-    //   for (const file of files) {
-    //     // Kiểm tra xem file có phải là hình ảnh
-    //     if (!file.type.startsWith('image/')) {
-    //       console.warn(`File ${file.name} is not an image`);
-    //       continue;
-    //     }
-
-    //     // Nén hình ảnh
-    //     const compressedFile = await compressImage(file);
-
-    //     // Chuyển file thành base64
-    //     const reader = new FileReader();
-    //     const fileBase64 = await new Promise((resolve) => {
-    //       reader.onload = () => resolve(reader.result.split(',')[1]); // Loại bỏ phần prefix base64
-    //       reader.readAsDataURL(compressedFile);
-    //     });
-
-    //     const t = Math.random().toString(36).substring(2, 15); // ID tạm thời
-
-    //     // Tạo dữ liệu tin nhắn
-    //     const messageData = {
-    //       idTemp: t,
-    //       senderId: user.id,
-    //       content: '', // Không có nội dung văn bản
-    //       attachments: [
-    //         {
-    //           folderName: 'messages',
-    //           fileUri: fileBase64,
-    //           isImage: true,
-    //         },
-    //       ],
-    //       media: null,
-    //       files: null,
-    //       receiverId: type === 'private' ? friend._id : null,
-    //     };
-
-    //     // Thêm tin nhắn tạm thời vào danh sách
-    //     setMessages((prev) => [
-    //       ...prev,
-    //       {
-    //         _id: t,
-    //         senderId: { _id: user.id, name: user.name, avatar: user.avatar },
-    //         content: '',
-    //         attachments: [{ fileUrl: URL.createObjectURL(compressedFile) }], // Hiển thị tạm thời
-    //         media: null,
-    //         files: null,
-    //         createdAt: new Date().toISOString(),
-    //       },
-    //     ]);
-
-    //     // Gửi tin nhắn qua API
-    //     const response = await sendMessage(conversationId, messageData);
-    //     if (response.success && response.data) {
-    //       // Cập nhật tin nhắn tạm với ID chính thức từ server
-    //       setMessages((prev) => {
-    //         const index = prev.findIndex((msg) => msg._id === t);
-    //         if (index !== -1) {
-    //           const updatedMessages = [...prev];
-    //           updatedMessages[index] = {
-    //             ...updatedMessages[index],
-    //             _id: response.data._id, // Thay thế idTemp
-    //             ...response.data, // Cập nhật các trường từ server
-    //           };
-    //           return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    //         }
-    //         return prev;
-    //       });
-    //     } else {
-    //       console.error('Failed to send image:', response.data?.message);
-    //       setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu thất bại
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error('Error in handleSendImage:', error);
-    // } finally {
-    //   setLoading(false);
-    //   event.target.value = ''; // Reset input file để có thể chọn lại file cũ
-    // }
-  };
-
-  // GỬI TỆP
-  const handleSendFile = async (event) => {
-    // event.preventDefault();
-    // const files = event.target.files;
-    // if (!files || files.length === 0) {
-    //   console.log('No files selected');
-    //   return;
-    // }
-
-    // setLoading(true);
-
-    // try {
-    //   let conversationId = conversation?._id;
-    //   if (!conversationId) {
-    //     console.error('No conversation ID found');
-    //     return;
-    //   }
-
-    //   // Xử lý từng file
-    //   for (const file of files) {
-    //     // Kiểm tra kích thước file (giới hạn 50MB)
-    //     const maxSizeMB = 50;
-    //     const maxSizeBytes = maxSizeMB * 1024 * 1024;
-    //     if (file.size > maxSizeBytes) {
-    //       console.warn(`File ${file.name} exceeds ${maxSizeMB}MB limit`);
-    //       continue;
-    //     }
-
-    //     // Chuyển file thành base64
-    //     const reader = new FileReader();
-    //     const fileBase64 = await new Promise((resolve) => {
-    //       reader.onload = () => resolve(reader.result.split(',')[1]); // Loại bỏ phần prefix base64
-    //       reader.readAsDataURL(file);
-    //     });
-
-    //     const t = Math.random().toString(36).substring(2, 15); // ID tạm thời
-
-    //     // Tạo dữ liệu tin nhắn
-    //     const messageData = {
-    //       idTemp: t,
-    //       senderId: user.id,
-    //       content: "", // Không có nội dung văn bản
-    //       attachments: null,
-    //       media: null,
-    //       files: {
-    //         fileUri: fileBase64,
-    //         name: file.name,
-    //         type: file.type,
-    //       },
-    //       receiverId: type === 'private' ? friend._id : null,
-    //     };
-
-    //     // Thêm tin nhắn tạm thời vào danh sách
-    //     setMessages((prev) => [
-    //       ...prev,
-    //       {
-    //         _id: t,
-    //         senderId: { _id: user.id, name: user.name, avatar: user.avatar },
-    //         content: '',
-    //         attachments: null,
-    //         media: null,
-    //         files: {
-    //           fileName: file.name,
-    //           fileType: file.type,
-    //           fileUrl: URL.createObjectURL(file), // Hiển thị tạm thời
-    //         },
-    //         createdAt: new Date().toISOString(),
-    //       },
-    //     ]);
-
-    //     // Gửi tin nhắn qua API
-    //     const response = await sendMessage(conversationId, messageData);
-    //     if (response.success && response.data) {
-    //       // Cập nhật tin nhắn tạm với ID chính thức từ server
-    //       setMessages((prev) => {
-    //         const index = prev.findIndex((msg) => msg._id === t);
-    //         if (index !== -1) {
-    //           const updatedMessages = [...prev];
-    //           updatedMessages[index] = {
-    //             ...updatedMessages[index],
-    //             _id: response.data._id, // Thay thế idTemp
-    //             ...response.data, // Cập nhật các trường từ server
-    //           };
-    //           return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    //         }
-    //         return prev;
-    //       });
-    //     } else {
-    //       console.error('Failed to send file:', response.data?.message);
-    //       setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu thất bại
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error('Error in handleSendFile:', error);
-    // } finally {
-    //   setLoading(false);
-    //   event.target.value = ''; // Reset input file để có thể chọn lại file cũ
-    // }
   };
 
   const handleChange = (event) => {
@@ -677,6 +802,7 @@ const Chat = ({ conversation, setConversation }) => {
                     handleUnlikeMessage={handleUnlikeMessage}
                     handleRevokeMessage={handleRevokeMessage}
                     handleDeleteMessage={handleDeleteMessage}
+                    setReplyToMessage={setReplyToMessage}
                   />
                 );
               } else {
@@ -689,6 +815,7 @@ const Chat = ({ conversation, setConversation }) => {
                       handleUnlikeMessage={handleUnlikeMessage}
                       handleRevokeMessage={handleRevokeMessage}
                       handleDeleteMessage={handleDeleteMessage}
+                      setReplyToMessage={setReplyToMessage}
                     />
                   );
                 }
@@ -696,6 +823,11 @@ const Chat = ({ conversation, setConversation }) => {
             })}
         <div ref={messagesEndRef} />
       </Box>
+      {replyToMessage && (
+        <Box sx={{ display: "flex", alignItems: "center", padding: "10px 20px", backgroundColor: "#fff" }}>
+          <ReplytoMessageSelected setMessageReplyto={setReplyToMessage} messageReplyto={replyToMessage} />
+        </Box>
+      )}
       <Box
         sx={{
           height: "80px",
@@ -724,7 +856,7 @@ const Chat = ({ conversation, setConversation }) => {
           <input
             id="uploadFile"
             type="file"
-            accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .zip, .rar, .csv, .txt, .java, .css, .html, .json, .xml"
+            accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .zip, .rar, .csv, .txt, .java, .css, .html, .json, .xml, .js, .mp4, .mp3, .avi, .mkv, .mov"
             multiple
             style={{ display: "none" }}
             onChange={handleSendFile}
@@ -737,8 +869,21 @@ const Chat = ({ conversation, setConversation }) => {
           onChange={handleChange}
           sx={{ "& .MuiOutlinedInput-root": { borderRadius: "20px", backgroundColor: "#f5f5f5" } }}
         />
-        <Button>
-          <MicIcon color="#555" sx={{ "&:hover": { color: "#1976d2" } }} />
+        <EmojiPopover content={content} setContent={setContent} />
+        <Button
+          onClick={isRecording ? stopRecording : startRecording}
+          sx={{
+            color: isRecording ? "#f44336" : "#555",
+            "&:hover": { color: isRecording ? "#d32f2f" : "#1976d2" },
+          }}
+        >
+          <MicIcon />
+          {isRecording && (
+            <CircularProgress
+              size={20}
+              sx={{ color: "#f44336", marginLeft: "5px" }}
+            />
+          )}
         </Button>
         <Button
           onClick={handleSendMessage}
@@ -754,7 +899,91 @@ const Chat = ({ conversation, setConversation }) => {
         </Button>
       </Box>
       <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
-        {DrawerList}
+        <Box sx={{ width: 400 }} role="presentation">
+          <Typography textAlign="center" fontWeight="bold" paddingTop="20px" paddingBottom="20px" fontSize="20px">
+            Thông tin hội thoại
+          </Typography>
+          <Divider />
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0" }}>
+            {conversation.type === "private" ? (
+              <>
+                <UserAvatar uri={friend?.avatar} width={60} height={60} />
+                <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
+                  {friend?.fullName}
+                </Typography>
+              </>
+            ) : (
+              <>
+                <AvatarGroup max={2}>
+                  {members?.length > 0 &&
+                    members?.map((mem) => (
+                      <UserAvatar key={mem?._id} uri={mem?.avatar} width={60} height={60} />
+                    ))}
+                </AvatarGroup>
+                <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
+                  {name}
+                </Typography>
+              </>
+            )}
+          </Box>
+          <Divider />
+          {conversation?.type === "private" && (
+            <List>
+              {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map((text, index) => (
+                <ListItem key={text} disablePadding>
+                  <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
+                    <ListItemIcon>
+                      {index === 0 && <AccountCircleIcon />}
+                      {index === 1 && <NotificationsOffIcon />}
+                      {index === 2 && <DeleteIcon color="error" />}
+                    </ListItemIcon>
+                    <ListItemText primary={text} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+          <InforProfile openModal={openInforProfile} setOpenModal={setOpenInforProfile} friend={friend} />
+          {conversation?.type === "group" && (
+            <List>
+              {["Thêm thành viên", "Tắt thông báo", "Xem danh sách thành viên", "Rời khỏi nhóm"].map((text, index) => (
+                <ListItem key={text} disablePadding>
+                  <ListItemButton sx={{ color: index === 3 ? "red" : "inherit" }}>
+                    <ListItemIcon>
+                      {index === 0 && <PersonAddIcon />}
+                      {index === 1 && <NotificationsOffIcon />}
+                      {index === 2 && <GroupsIcon />}
+                      {index === 3 && <ExitToAppIcon color="error" />}
+                    </ListItemIcon>
+                    <ListItemText primary={index === 2 ? `${text}(${members.length})` : text} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+              {conversation?.admin === user?.id && (
+                <ListItem key={"Giải tán nhóm"} disablePadding>
+                  <ListItemButton sx={{ color: "red" }}>
+                    <ListItemIcon>
+                      <DeleteIcon color="error" />
+                    </ListItemIcon>
+                    <ListItemText primary={"Giải tán nhóm"} />
+                  </ListItemButton>
+                </ListItem>
+              )}
+            </List>
+          )}
+          <AddMember
+            openModal={openAddMember}
+            setOpenModal={setOpenAddMember}
+            conversation={conversation}
+            setConversation={setConversation}
+          />
+          <GroupMember
+            openModal={openGroupMember}
+            setOpenModal={setOpenGroupMember}
+            conversation={conversation}
+            setConversation={setConversation}
+          />
+        </Box>
       </Drawer>
       <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
         <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
