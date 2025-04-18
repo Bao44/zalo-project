@@ -7,7 +7,7 @@ import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import ShortcutIcon from '@mui/icons-material/Shortcut';
 import CommentsDisabledIcon from '@mui/icons-material/CommentsDisabled';
 import { Box, Button, Popover, Typography } from "@mui/material";
-import { useState, useEffect, useRef } from "react"; // Thêm useRef và useEffect
+import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { convertToTime } from "../../utils/formatTime";
 import RenderImageMessage from "./RenderImageMessage";
@@ -18,25 +18,26 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage, handle
   const [anchorEl, setAnchorEl] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
   const { user } = useSelector((state) => state.user);
-  const buttonRef = useRef(null); // Thêm ref để theo dõi MoreHorizIcon button
+  const buttonRef = useRef(null);
 
   const handleOpenMoreOptions = (event) => {
-    setAnchorEl(event.currentTarget); // Lưu vị trí của nút MoreHorizIcon
+    setAnchorEl(event.currentTarget);
   };
 
   const handleCloseMoreOptions = () => {
     setAnchorEl(null);
   };
 
-  // Đóng Popover khi isHovered trở thành false
   useEffect(() => {
     if (!isHovered) {
-      setAnchorEl(null); // Xóa anchorEl khi nút không còn hiển thị
+      setAnchorEl(null);
     }
   }, [isHovered]);
 
   const open = Boolean(anchorEl);
   const id = open ? "more-options-popover" : undefined;
+
+  const imageContainerWidth = 200;
 
   return (
     <Box
@@ -86,13 +87,31 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage, handle
                   {content}
                 </Typography>
               ) : (
-                <Box>
-                  <RenderImageMessage images={message?.attachments} />
+                <Box sx={{ maxWidth: imageContainerWidth, maxHeight: imageContainerWidth, overflow: "hidden" }}>
+                  {message?.attachments?.length > 0 && (
+                    <RenderImageMessage images={message?.attachments} wh={imageContainerWidth} />
+                  )}
                   <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
                     {content}
                   </Typography>
                 </Box>
               )
+            )}
+            {message?.attachments?.length > 0 ? (
+              !message?.content ? (
+                <RenderImageMessage images={message?.attachments} wh={imageContainerWidth} />
+              ) : (
+                <Box sx={{ maxWidth: imageContainerWidth, maxHeight: imageContainerWidth, overflow: "hidden" }}>
+                  <RenderImageMessage images={message?.attachments} wh={imageContainerWidth} />
+                  <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
+                    {content}
+                  </Typography>
+                </Box>
+              )
+            ) : (
+              <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
+                {content}
+              </Typography>
             )}
             {message?.media && (
               <Box
@@ -136,69 +155,71 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage, handle
           </>
         )}
       </Box>
-      {!message?.revoked && (
-        <>
-          <Button
-            sx={{ position: "absolute", bottom: "0px", right: "0px" }}
-            onClick={(event) => {
-              event.stopPropagation();
-              handleLikeMessage(message._id, user?.id);
-            }}
-          >
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: "-15px",
-                right: "10px",
-                backgroundColor: "#fff",
-                padding: "5px",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                zIndex: 99,
-                boxShadow: "0 0 5px 0px #000",
-                borderRadius: "50%",
-                cursor: "pointer",
-              }}
-            >
-              <FavoriteIcon
-                fontSize="small"
-                color={message?.like?.length > 0 ? "error" : "disabled"}
-              />
-            </Box>
-          </Button>
-          {message?.like?.length > 0 && (
+      {
+        !message?.revoked && (
+          <>
             <Button
               sx={{ position: "absolute", bottom: "0px", right: "0px" }}
               onClick={(event) => {
                 event.stopPropagation();
-                handleUnLikeMessage(message._id, user?.id);
+                handleLikeMessage(message._id, user?.id);
               }}
             >
               <Box
                 sx={{
                   position: "absolute",
                   bottom: "-15px",
-                  right: "50px",
+                  right: "10px",
                   backgroundColor: "#fff",
-                  padding: "4px",
+                  padding: "5px",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                   zIndex: 99,
                   boxShadow: "0 0 5px 0px #000",
-                  borderRadius: "10px",
+                  borderRadius: "50%",
+                  cursor: "pointer",
                 }}
               >
-                <FavoriteIcon fontSize="small" color="error" />
-                <Typography fontSize={14} color="gray" marginRight="5px">
-                  {message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}
-                </Typography>
+                <FavoriteIcon
+                  fontSize="small"
+                  color={message?.like?.length > 0 ? "error" : "disabled"}
+                />
               </Box>
             </Button>
-          )}
-        </>
-      )}
+            {message?.like?.length > 0 && (
+              <Button
+                sx={{ position: "absolute", bottom: "0px", right: "0px" }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleUnLikeMessage(message._id, user?.id);
+                }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: "-15px",
+                    right: "50px",
+                    backgroundColor: "#fff",
+                    padding: "4px",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 99,
+                    boxShadow: "0 0 5px 0px #000",
+                    borderRadius: "10px",
+                  }}
+                >
+                  <FavoriteIcon fontSize="small" color="error" />
+                  <Typography fontSize={14} color="gray" marginRight="5px">
+                    {message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}
+                  </Typography>
+                </Box>
+              </Button>
+            )}
+          </>
+        )
+      }
       <Popover
         id={id}
         open={open}
@@ -237,16 +258,16 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage, handle
             sx={{ justifyContent: "flex-start", padding: "8px 16px" }}
             onClick={(event) => {
               event.stopPropagation();
-              handleDeleteMessage(message?._id)
+              handleDeleteMessage(message?._id);
               handleCloseMoreOptions();
             }}
           >
             <DeleteIcon fontSize="small" sx={{ marginRight: "8px", color: "red" }} />
-            <Typography fontSize={14} color={"red"} >Xóa tin nhắn ở phía tôi</Typography>
+            <Typography fontSize={14} color={"red"}>Xóa tin nhắn ở phía tôi</Typography>
           </Button>
         </Box>
       </Popover>
-    </Box>
+    </Box >
   );
 };
 

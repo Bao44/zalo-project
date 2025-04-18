@@ -29,24 +29,21 @@ const RenderImageMessage = ({ images, wh }) => {
     const imgG = groubImage(images);
 
     return (
-        <Box sx={{ width: wh }}>
+        <Box sx={{ width: wh, maxHeight: wh, overflow: "hidden" }}>
             {imgG.map((group, groupIndex) => (
                 <Grid
                     container
                     key={groupIndex}
-                    spacing={1} // Khoảng cách 8px (default MUI spacing unit)
+                    spacing={1}
                     sx={{ marginBottom: "5px" }}
                 >
                     {group.map((img, imgIndex) => (
                         <Grid
                             item
                             key={imgIndex}
-                            xs={group.length === 1 ? 12 : group.length === 2 ? 6 : 4} // Chia cột: 1 ảnh = 12, 2 ảnh = 6 mỗi, 3 ảnh = 4 mỗi
+                            xs={group.length === 1 ? 12 : group.length === 2 ? 6 : 4}
                         >
                             <Box
-                                component="img"
-                                src={img}
-                                alt={`image-${groupIndex}-${imgIndex}`}
                                 sx={{
                                     width:
                                         group.length === 1
@@ -54,16 +51,24 @@ const RenderImageMessage = ({ images, wh }) => {
                                             : group.length === 2
                                                 ? halfWidth
                                                 : thirdWidth,
-                                    height:
-                                        group.length === 1
-                                            ? fullWidth
-                                            : group.length === 2
-                                                ? halfWidth
-                                                : thirdWidth,
+                                    maxHeight: group.length === 1 ? wh : wh / 2,
+                                    overflow: "hidden",
                                     borderRadius: "8px",
-                                    objectFit: "cover",
                                 }}
-                            />
+                            >
+                                <Box
+                                    component="img"
+                                    src={img}
+                                    alt={`image-${groupIndex}-${imgIndex}`}
+                                    sx={{
+                                        width: "100%",
+                                        height: "auto",
+                                        maxHeight: "100%",
+                                        objectFit: "contain",
+                                        display: "block",
+                                    }}
+                                />
+                            </Box>
                         </Grid>
                     ))}
                 </Grid>
@@ -71,6 +76,7 @@ const RenderImageMessage = ({ images, wh }) => {
         </Box>
     );
 };
+
 RenderImageMessage.propTypes = {
     images: PropTypes.arrayOf(PropTypes.string).isRequired,
     wh: PropTypes.number.isRequired,

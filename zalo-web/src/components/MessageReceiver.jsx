@@ -28,7 +28,6 @@ const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage, hand
     setAnchorEl(null);
   };
 
-  // Đóng Popover khi isHovered trở thành false
   useEffect(() => {
     if (!isHovered) {
       setAnchorEl(null);
@@ -37,6 +36,8 @@ const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage, hand
 
   const open = Boolean(anchorEl);
   const id = open ? "more-options-popover" : undefined;
+
+  const imageContainerWidth = 200;
 
   return (
     <Box
@@ -81,15 +82,15 @@ const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage, hand
               Tin nhắn đã được thu hồi
             </Typography>
           ) : (
-            <>
+            <Box>
               {message?.content && (
                 message?.attachments?.length === 0 ? (
                   <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
                     {content}
                   </Typography>
                 ) : (
-                  <Box>
-                    <RenderImageMessage images={message?.attachments} />
+                  <Box sx={{ display: "inline-block", maxWidth: imageContainerWidth, maxHeight: imageContainerWidth, overflow: "hidden" }}>
+                    <RenderImageMessage images={message?.attachments} wh={imageContainerWidth} />
                     <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
                       {content}
                     </Typography>
@@ -135,7 +136,7 @@ const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage, hand
                 </Box>
               )}
               <Typography fontSize={14}>{convertToTime(createdAt)}</Typography>
-            </>
+            </Box>
           )}
           {!message?.revoked && (
             <>
