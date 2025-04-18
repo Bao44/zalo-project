@@ -20,7 +20,7 @@ import Chat from "../components/Chat";
 import CreateGroup from "../components/CreateGroup";
 import AddFriend from "../components/AddFriend";
 import socket from "../../socket/socket";
-import { fetchConversations } from "../redux/conversationSlice";
+import { fetchConversations, addNewConversation } from "../redux/conversationSlice";
 import Loading from "../components/Loading";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -52,12 +52,25 @@ function a11yProps(index) {
 const Messager = () => {
   const [value, setValue] = useState(0);
   const dispatch = useDispatch();
+  const { user } = useAuth(); // Lấy thông tin người dùng từ AuthContext
 
   // Lấy dữ liệu từ Redux store
   const { conversations, loading } = useSelector((state) => state.conversation);
   const [conversation, setConversation] = useState(null);
 
-  const { user } = useAuth(); // Sử dụng useAuth để lấy thông tin người dùng
+  // Nhận thông tin cuộc trò chuyện mới từ socket
+  useEffect(() => {
+    const handleNewConversation = (newConversation) => {
+      dispatch(addNewConversation(newConversation));
+      // Lưu cuộc trò chuyện mới vào localStorage
+      localStorage.setItem("selectedConversation", JSON.stringify(newConversation));
+    };
+
+    socket.on("newConversation", handleNewConversation);
+    return () => {
+      socket.off("newConversation", handleNewConversation);
+    };
+  }, [dispatch]);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);

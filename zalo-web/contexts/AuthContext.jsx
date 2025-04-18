@@ -109,6 +109,13 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Phát sự kiện user online
+  useEffect(() => {
+    if (user) {
+      socket.emit("user-online", user.id);
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider value={{ user, setAuth, setUserData }}>
       {children}

@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { createConversationGroupChat } from "../../api/conversationAPI";
 import * as FileSystem from "expo-file-system";
 import { getFriends } from "../../api/friendshipAPI";
+import { useLocalSearchParams } from "expo-router";
 
 
 const NewGroup = () => {
@@ -28,10 +29,20 @@ const NewGroup = () => {
     const [nameGroup, setNameGroup] = useState("");
     const [avatarGroup, setAvatarGroup] = useState("");
     const [search, setSearch] = useState("");
+    const params = useLocalSearchParams();
 
-    console.log(userSelecteds);
-    // console.log("recent", recent);
-    // console.log("contact", contact);
+
+    // Khởi tạo userSelecteds với người dùng được chọn trước (nếu có)
+    useEffect(() => {
+        if (params.preSelectedUser) {
+            try {
+                const preSelectedUser = JSON.parse(params.preSelectedUser); // Chuyển chuỗi JSON thành object
+                setUserSelecteds([preSelectedUser]); // Thêm người dùng vào danh sách đã chọn
+            } catch (error) {
+                console.error("Lỗi phân tích preSelectedUser:", error);
+            }
+        }
+    }, [params.preSelectedUser]);
 
     // Lấy danh sách người dùng gần đây và danh bạ
     useEffect(() => {
@@ -107,8 +118,6 @@ const NewGroup = () => {
             };
         }, [userSelecteds, nameGroup])
     );
-
-
 
     // Chức năng chọn người dùng
     const toggleSelection = (item) => {

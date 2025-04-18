@@ -1,218 +1,259 @@
 import DescriptionIcon from "@mui/icons-material/Description";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import { Box, Button, Modal, Typography } from "@mui/material";
-import { useState } from "react";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import FormatQuoteIcon from "@mui/icons-material/FormatQuote";
+import ShortcutIcon from "@mui/icons-material/Shortcut";
+import DeleteIcon from '@mui/icons-material/Delete';
+import { Box, Button, Popover, Typography } from "@mui/material";
+import { useState, useRef, useEffect } from "react";
 import { convertToTime } from "../../utils/formatTime";
 import PropTypes from "prop-types";
 import RenderImageMessage from "./RenderImageMessage";
 import UserAvatar from "./Avatar";
 import { useSelector } from "react-redux";
 
-const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
+const MessageReceiver = ({ message, handleLikeMessage, handleUnLikeMessage, handleDeleteMessage }) => {
   const { content, createdAt, senderId } = message;
-  const [open, setOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [isHovered, setIsHovered] = useState(false);
   const { user } = useSelector((state) => state.user);
+  const buttonRef = useRef(null);
+
+  const handleOpenMoreOptions = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseMoreOptions = () => {
+    setAnchorEl(null);
+  };
+
+  // Đóng Popover khi isHovered trở thành false
+  useEffect(() => {
+    if (!isHovered) {
+      setAnchorEl(null);
+    }
+  }, [isHovered]);
+
+  const open = Boolean(anchorEl);
+  const id = open ? "more-options-popover" : undefined;
 
   return (
     <Box
       sx={{
-        width: "100%", // Box chính rộng full
+        width: "100%",
         display: "flex",
-        justifyContent: "flex-start", // Đẩy nội dung sang trái
+        justifyContent: "flex-start",
         alignItems: "center",
         marginBottom: "30px",
         position: "relative",
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <Box>
         <UserAvatar uri={senderId?.avatar} />
       </Box>
       <Box
         sx={{
-          padding: "15px",
-          backgroundColor: "#fff",
-          borderRadius: 3,
-          marginLeft: "10px",
-          display: "inline-block", // Chiều dài theo nội dung
-          maxWidth: "70%", // Giới hạn tối đa 70% chiều rộng
-          position: "relative",
-          minWidth: "7%"
+          display: "inline-block",
+          alignItems: "center",
+          flexDirection: "column",
         }}
       >
-        <Typography color={"gray"} fontSize={14} marginBottom="15px">
-          {senderId?.name}
-        </Typography>
-        {message?.revoked ? (
-          <Typography color={"gray"} fontStyle={"italic"}>
-            Tin nhắn đã được thu hồi
+        <Box
+          sx={{
+            padding: "15px",
+            backgroundColor: "#fff",
+            borderRadius: 3,
+            marginLeft: "10px",
+            display: "inline-block",
+            maxWidth: "70%",
+            position: "relative",
+            minWidth: "7%",
+          }}
+        >
+          <Typography color={"gray"} fontSize={14} marginBottom="15px">
+            {senderId?.name}
           </Typography>
-        ) : (
-          <>
-            {message?.content && (
-              message?.attachments?.length === 0 ? (
-                <Typography
-                  color={"black"}
-                  fontWeight={"bold"}
-                  marginBottom="10px"
-                >
-                  {content}
-                </Typography>
-              ) : (
-                <Box>
-                  <RenderImageMessage images={message?.attachments} />
-                  <Typography
-                    color={"black"}
-                    fontWeight={"bold"}
-                    marginBottom="10px"
-                  >
+          {message?.revoked ? (
+            <Typography color={"gray"} fontStyle={"italic"}>
+              Tin nhắn đã được thu hồi
+            </Typography>
+          ) : (
+            <>
+              {message?.content && (
+                message?.attachments?.length === 0 ? (
+                  <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
                     {content}
                   </Typography>
-                </Box>
-              )
-            )}
-            {message?.media?.length > 0 && (
-              <Box
-                sx={{
-                  marginBottom: "10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <video width="600" height="400" controls>
-                  <source src={message?.media.fileUrl} type="video/mp4" />
-                </video>
-                <Button href={message?.media?.fileUrl} download style={{ marginTop: "10px" }}>
-                  <FileDownloadIcon fontSize="small" />
-                  <Typography fontSize={14}>TẢI XUỐNG</Typography>
-                </Button>
-              </Box>
-            )}
-            {message?.files && (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: "10px",
-                }}
-              >
-                <DescriptionIcon fontSize="large" />
-                <Box marginLeft="10px">
-                  <Typography fontSize={14} fontWeight="bold">
-                    {message?.files?.fileName}
-                  </Typography>
-                  <Button
-                    href={message?.files?.fileUrl}
-                    download
-                    style={{
-                      marginTop: "5px",
-                    }}
-                  >
-                    <FileDownloadIcon fontSize="small" />
-                    <Typography fontSize={14}>
-                      Tải xuống
+                ) : (
+                  <Box>
+                    <RenderImageMessage images={message?.attachments} />
+                    <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
+                      {content}
                     </Typography>
+                  </Box>
+                )
+              )}
+              {message?.media?.length > 0 && (
+                <Box
+                  sx={{
+                    marginBottom: "10px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <video width="600" height="400" controls>
+                    <source src={message?.media.fileUrl} type="video/mp4" />
+                  </video>
+                  <Button href={message?.media?.fileUrl} download style={{ marginTop: "10px" }}>
+                    <FileDownloadIcon fontSize="small" />
+                    <Typography fontSize={14}>TẢI XUỐNG</Typography>
                   </Button>
                 </Box>
-              </Box>
-            )}
-            <Typography fontSize={14}>{convertToTime(createdAt)}</Typography>
-          </>
-        )}
-        {!message?.revoked && (
-          <>
-            <Button
-              sx={{ position: "absolute", bottom: "0px", right: "0px" }}
-              onClick={(even) => {
-                even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
-                handleLikeMessage(message._id, user?.id)
-              }}
-            >
-              <Box
-                sx={{
-                  position: "absolute",
-                  bottom: "-15px",
-                  right: "10px",
-                  backgroundColor: "#fff",
-                  padding: "5px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  zIndex: 99,
-                  boxShadow: "0 0 5px 0px #000",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                }}
-              >
-                <FavoriteIcon
-                  fontSize="small"
-                  color={message?.like?.length > 0 ? "error" : "disabled"}
-                />
-              </Box>
-            </Button>
-
-            {message?.like?.length > 0 && (
+              )}
+              {message?.files && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <DescriptionIcon fontSize="large" />
+                  <Box marginLeft="10px">
+                    <Typography fontSize={14} fontWeight="bold">
+                      {message?.files?.fileName}
+                    </Typography>
+                    <Button href={message?.files?.fileUrl} download style={{ marginTop: "5px" }}>
+                      <FileDownloadIcon fontSize="small" />
+                      <Typography fontSize={14}>Tải xuống</Typography>
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+              <Typography fontSize={14}>{convertToTime(createdAt)}</Typography>
+            </>
+          )}
+          {!message?.revoked && (
+            <>
               <Button
                 sx={{ position: "absolute", bottom: "0px", right: "0px" }}
-                onClick={(even) => {
-                  even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
-                  handleUnLikeMessage(message._id, user?.id)
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleLikeMessage(message._id, user?.id);
                 }}
               >
                 <Box
                   sx={{
                     position: "absolute",
                     bottom: "-15px",
-                    right: "50px",
+                    right: "10px",
                     backgroundColor: "#fff",
-                    padding: "4px",
+                    padding: "5px",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
-                    zIndex: 99,
+                    zIndex: 999,
                     boxShadow: "0 0 5px 0px #000",
-                    borderRadius: "10px",
+                    borderRadius: "50%",
                     cursor: "pointer",
                   }}
                 >
-                  <FavoriteIcon fontSize="small" color="error" />
-                  <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+                  <FavoriteIcon
+                    fontSize="small"
+                    color={message?.like?.length > 0 ? "error" : "disabled"}
+                  />
                 </Box>
               </Button>
-            )}
-          </>
-        )}
-      </Box>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)} // Sửa lỗi: true -> false để đóng modal
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 600,
-            height: 400,
-            bgcolor: "background.paper",
-            border: "2px solid #000",
-            boxShadow: 24,
-            p: 4,
-          }}
-        >
-          {message?.attachments?.length > 0 && (
-            <img
-              src={message?.attachments[0].fileUrl}
-              alt="image"
-              style={{ width: "590px", height: "390px" }}
-            />
+              {message?.like?.length > 0 && (
+                <Button
+                  sx={{ position: "absolute", bottom: "0px", right: "0px" }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleUnLikeMessage(message._id, user?.id);
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      bottom: "-15px",
+                      right: "50px",
+                      backgroundColor: "#fff",
+                      padding: "4px",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      zIndex: 99,
+                      boxShadow: "0 0 5px 0px #000",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FavoriteIcon fontSize="small" color="error" />
+                    <Typography fontSize={14} color="gray" marginRight="5px">
+                      {message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}
+                    </Typography>
+                  </Box>
+                </Button>
+              )}
+            </>
           )}
         </Box>
-      </Modal>
+      </Box>
+      {!message?.revoked && isHovered && (
+        <Box sx={{ display: "inline-block", alignItems: "center" }}>
+          <Button>
+            <FormatQuoteIcon fontSize="medium" />
+          </Button>
+          <Button ref={buttonRef} onClick={handleOpenMoreOptions}>
+            <MoreHorizIcon fontSize="medium" />
+          </Button>
+          <Button>
+            <ShortcutIcon fontSize="medium" />
+          </Button>
+        </Box>
+      )}
+      <Popover
+        id={id}
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleCloseMoreOptions}
+        anchorOrigin={{
+          vertical: "top",
+          horizontal: "left",
+        }}
+        transformOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+        sx={{
+          "& .MuiPopover-paper": {
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            width: "300px",
+            padding: "5px 0",
+          },
+        }}
+      >
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          <Button
+            sx={{ justifyContent: "flex-start", padding: "8px 16px" }}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleDeleteMessage(message._id)
+              handleCloseMoreOptions();
+            }}
+          >
+            <DeleteIcon fontSize="small" sx={{ marginRight: "8px", color: "red" }} />
+            <Typography fontSize={14} color={"red"}>
+              Xóa tin nhắn ở phía tôi
+            </Typography>
+          </Button>
+        </Box>
+      </Popover>
     </Box>
   );
 };
@@ -259,13 +300,15 @@ MessageReceiver.propTypes = {
         userId: PropTypes.string,
         totalLike: PropTypes.number,
       })
-    ), // Added validation for 'like'
+    ),
     createdAt: PropTypes.string.isRequired,
     updatedAt: PropTypes.string,
     __v: PropTypes.number,
   }).isRequired,
   handleLikeMessage: PropTypes.func.isRequired,
   handleUnLikeMessage: PropTypes.func.isRequired,
+  handleRevokeMessage: PropTypes.func.isRequired,
+  handleDeleteMessage: PropTypes.func.isRequired,
 };
 
 export default MessageReceiver;

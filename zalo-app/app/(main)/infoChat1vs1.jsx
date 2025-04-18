@@ -57,6 +57,16 @@ const InfoChat1vs1 = () => {
         }
     };
 
+    // TẠO NHÓM VỚI BẠN BÈ
+    const handleReateGroupWithFriend = () => {
+        router.push({
+            pathname: "/newGroup", // Điều chỉnh pathname theo cấu hình định tuyến của bạn
+            params: {
+                preSelectedUser: JSON.stringify(friendInfo), // Truyền đối tượng người dùng dưới dạng chuỗi
+            },
+        });
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -179,7 +189,7 @@ const InfoChat1vs1 = () => {
                     </View>
                 </TouchableOpacity>
                 <View style={styles.container2}>
-                    <TouchableOpacity style={styles.box}>
+                    <TouchableOpacity style={styles.box} onPress={handleReateGroupWithFriend}>
                         <Icon
                             name="addGroup"
                             size={24}

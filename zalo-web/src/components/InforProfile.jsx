@@ -9,7 +9,6 @@ import {
   Modal,
   Typography,
 } from "@mui/material";
-
 import ArrowBackIosNewOutlinedIcon from "@mui/icons-material/ArrowBackIosNewOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
@@ -20,7 +19,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { setUser } from "../redux/userSlice";
 import ModalImage from "./ModalImage";
-import { getUserData } from "../../api/user";
+import { getUserData } from "../../api/user"; // API lấy thông tin người dùng
+import socket from "../../socket/socket";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabaseUrl } from "../../constants";
 
 const style = {
   position: "absolute",
@@ -40,7 +42,6 @@ const style = {
 };
 
 export default function InforProfile({ openModal, setOpenModal, friend }) {
-  const handleCloseModal = () => setOpenModal(false);
   const [body, setBody] = useState("default");
   const [userInfo, setUserInfo] = useState({});
   const [sameGroup, setSameGroup] = useState([]);
@@ -49,16 +50,27 @@ export default function InforProfile({ openModal, setOpenModal, friend }) {
     setBody(body);
   };
 
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setBody("default"); // Reset body khi đóng modal
+  };
+
   useEffect(() => {
     const fetchData = async () => {
-      const data = await getUserData(friend?.id);
-      if (data) {
-        // const groups = await ConversationAPI.getConversationByUserAndMe(
-        //   data.id
-        // );
-        console.log("data: ", data);
-        setUserInfo(data);
-        setSameGroup(groups);
+      if (friend?._id) {
+        try {
+          const data = await getUserData(friend._id);
+          if (data.success) {
+            setUserInfo(data.data);
+            // Giả sử API trả về danh sách nhóm chung (nếu có)
+            // Nếu bạn có API để lấy nhóm chung, thay bằng API tương ứng
+            setSameGroup([]); // Tạm thời đặt rỗng nếu không có API nhóm chung
+          } else {
+            console.error("Error fetching user data:", data.msg);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
       }
     };
 
@@ -74,7 +86,6 @@ export default function InforProfile({ openModal, setOpenModal, friend }) {
       aria-describedby="keep-mounted-modal-description"
     >
       <Box sx={style}>
-        {/* Modal navigation */}
         {body === "default" && (
           <InfoBody
             userInfo={userInfo}
@@ -101,28 +112,14 @@ function HeaderModal({ name, changeBody, back, handleCloseModal }) {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingBottom: "6px",
-        paddingTop: "6px",
-        paddingRight: "10px",
-        paddingLeft: "2px",
+        padding: "6px 10px 6px 2px",
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "start",
-          alignItems: "center",
-          gap: "3px",
-        }}
-      >
-        <IconButton
-          onClick={() => {
-            changeBody(back);
-          }}
-        >
+      <Box sx={{ display: "flex", alignItems: "center", gap: "3px" }}>
+        <IconButton onClick={() => changeBody(back)}>
           <ArrowBackIosNewOutlinedIcon />
         </IconButton>
-        <Typography variant="subtitle1" fontWeight={"bold"}>
+        <Typography variant="subtitle1" fontWeight="bold">
           {name}
         </Typography>
       </Box>
@@ -141,40 +138,37 @@ function InfoBody({ changeBody, handleCloseModal, userInfo }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginLeft: "10px",
-          marginBottom: "6px",
-          marginTop: "6px",
+          margin: "6px 10px",
         }}
       >
-        <Typography variant="subtitle1" component="h2" fontWeight={"bold"}>
+        <Typography variant="subtitle1" fontWeight="bold">
           Thông tin người dùng
         </Typography>
         <IconButton onClick={handleCloseModal} sx={{ color: "black" }}>
           <CloseIcon />
         </IconButton>
       </Box>
-      {/* Avatar */}
       <AvatarHome
-        fullName={userInfo?.name ? userInfo.name : ""}
-        avatarUrl={userInfo?.avatar ? userInfo.avatar : ""}
-        coverImage={userInfo?.background ? userInfo.background : ""}
+        fullName={userInfo?.name || "Không xác định"}
+        avatarUrl={userInfo?.avatar || ""}
+        coverImage={userInfo?.background || ""}
       />
-      {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
         <hr style={{ border: "1px solid #A0A0A0" }} />
       </Box>
-      {/* Thông tin cá nhân */}
       <Info
-        gender={userInfo?.gender ? "Nam" : "Nữ"}
-        dateOfBirth={userInfo?.dob ? userInfo.dob : new Date().getTime()}
-        phoneNumber={userInfo?.phone ? userInfo.phone : ""}
-        email={userInfo?.email ? userInfo.email : ""}
+        gender={userInfo?.gender ? "Nữ" : "Nam"}
+        dateOfBirth={
+          userInfo?.dob
+            ? new Date(userInfo.dob).toLocaleDateString()
+            : "Chưa cung cấp"
+        }
+        phoneNumber={userInfo?.phone || "Chưa cung cấp"}
+        email={userInfo?.email || "Chưa cung cấp"}
       />
-      {/* line break */}
       <Box sx={{ marginBottom: "10px" }}>
         <hr style={{ border: "1px solid #A0A0A0" }} />
       </Box>
-      {/* Chức năng xử lí thêm */}
       <AnotherFunctions
         userInfo={userInfo}
         changeBody={changeBody}
@@ -189,24 +183,21 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
     <>
       <Box>
         {coverImage ? (
-          <ModalImage
-            isImage={true}
-            srcs={coverImage}
-            alt="image"
-            styleOrigin={{ width: "100%", height: 160, objectFit: "cover" }}
-          >
-            <img
-              src={coverImage}
-              alt="image"
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
-            />
-          </ModalImage>
+          <img
+            src={`${supabaseUrl}/storage/v1/object/public/uploads/${coverImage}`}
+            alt="load"
+            style={{
+              width: "100%",
+              height: "160px",
+              objectFit: "cover",
+            }}
+          />
         ) : (
           <Box
             sx={{
               width: "100%",
-              height: 160,
-              backgroundColor: "rgba(0,0,0,0.2)",
+              height: "160px",
+              backgroundColor: "#C0C0C0",
             }}
           ></Box>
         )}
@@ -214,9 +205,7 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "left",
           alignItems: "center",
-          marginBottom: "0px",
           gap: "10px",
           position: "relative",
           top: "-20px",
@@ -225,27 +214,26 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
       >
         <ModalImage
           isOpen={false}
-          srcs={avatarUrl}
-          alt="load"
+          src={avatarUrl || "/default-avatar.png"} // Cung cấp avatar mặc định
+          alt={fullName}
           styleOrigin={{
             width: 70,
             height: 70,
-            border: "1px solid #fff",
+            border: "2px solid #fff",
           }}
         >
           <img
-            src={avatarUrl}
-            alt="load"
+            src={avatarUrl || "/default-avatar.png"}
+            alt={fullName}
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "contain",
+              objectFit: "cover",
+              borderRadius: "50%",
             }}
           />
         </ModalImage>
-        <Typography component="h2" fontWeight={"bold"}>
-          {fullName}
-        </Typography>
+        <Typography fontWeight="bold">{fullName}</Typography>
       </Box>
     </>
   );
@@ -254,13 +242,12 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
 function Info({ gender, dateOfBirth, phoneNumber, email }) {
   return (
     <Box marginLeft={2}>
-      <Typography fontWeight={"bold"} fontSize="16px" marginBottom="10px">
+      <Typography fontWeight="bold" fontSize="16px" marginBottom="10px">
         Thông tin cá nhân
       </Typography>
       <Grid container spacing={2}>
         <Grid item xs={3}>
           <Typography
-            variant="body1"
             sx={{ color: "gray" }}
             fontSize="14px"
             marginBottom="10px"
@@ -268,7 +255,6 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
             Giới tính
           </Typography>
           <Typography
-            variant="body1"
             sx={{ color: "gray" }}
             fontSize="14px"
             marginBottom="10px"
@@ -276,7 +262,6 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
             Ngày sinh
           </Typography>
           <Typography
-            variant="body1"
             sx={{ color: "gray" }}
             fontSize="14px"
             marginBottom="10px"
@@ -284,7 +269,6 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
             Điện thoại
           </Typography>
           <Typography
-            variant="body1"
             sx={{ color: "gray" }}
             fontSize="14px"
             marginBottom="10px"
@@ -293,16 +277,16 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
           </Typography>
         </Grid>
         <Grid item>
-          <Typography variant="body1" fontSize="14px" marginBottom="10px">
+          <Typography fontSize="14px" marginBottom="10px">
             {gender}
           </Typography>
-          <Typography variant="body1" fontSize="14px" marginBottom="10px">
+          <Typography fontSize="14px" marginBottom="10px">
             {dateOfBirth}
           </Typography>
-          <Typography variant="body1" fontSize="14px" marginBottom="10px">
+          <Typography fontSize="14px" marginBottom="10px">
             {phoneNumber}
           </Typography>
-          <Typography variant="body1" fontSize="14px" marginBottom="10px">
+          <Typography fontSize="14px" marginBottom="10px">
             {email}
           </Typography>
         </Grid>
@@ -312,9 +296,17 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
 }
 
 function AnotherFunctions({ changeBody, userInfo, handleCloseModal }) {
-  const { user } = useSelector((state) => state.user);
+  const { user } = useAuth();
   const dispatch = useDispatch();
-  const socket = connectSocket();
+
+  const handleDeleteFriend = async () => {
+    if (socket && user.id && userInfo?._id) {
+      socket.emit("send_delete_friend", {
+        senderId: user.id,
+        receiverId: userInfo._id,
+      });
+    }
+  };
 
   useEffect(() => {
     if (socket) {
@@ -322,45 +314,41 @@ function AnotherFunctions({ changeBody, userInfo, handleCloseModal }) {
         if (data.status === "success") {
           dispatch(setUser(data.data));
           handleCloseModal();
-          toast.success("Bạn đã xoá bạn bè thành công!");
-        } else if (data.status === "fail") {
-          toast.error("Bạn đã xoá bạn bè thất bại!");
+          toast.success("Bạn đã xóa bạn bè thành công!");
+        } else {
+          toast.error("Xóa bạn bè thất bại!");
         }
       });
-    }
-  }, [socket]);
 
-  const handleDeleteFriend = async () => {
-    // const data = await UserAPI.deleteFriend(userInfo.id);
-    // if (data) {
-    //   dispatch(setUser(data));
-    //   handleCloseModal();
-    //   toast.success("Bạn đã xoá bạn bè thành công!");
-    // }
-
-    if (socket) {
-      socket.emit("send_delete_friend", {
-        senderId: user.id,
-        receiverId: userInfo.id,
-      });
+      return () => {
+        socket.off("send_delete_friend");
+      };
     }
-  };
+  }, [socket, dispatch, handleCloseModal]);
+
   return (
     <List>
       <ListItemButton onClick={() => changeBody("group_chat")}>
         <GroupOutlinedIcon sx={{ marginRight: 2 }} />
         <Typography>Nhóm chung</Typography>
       </ListItemButton>
-      {user.friendList.find((friend) => friend.id === userInfo.id) && (
+      {userInfo?._id && (
         <ListItemButton onClick={handleDeleteFriend}>
           <DeleteOutlineOutlinedIcon color="error" sx={{ marginRight: 2 }} />
-          <Typography color="red">Xoá bạn bè</Typography>
+          <Typography color="error">Xóa bạn bè</Typography>
         </ListItemButton>
       )}
     </List>
   );
 }
+
 function GroupChat({ changeBody, handleCloseModal, sameGroup }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredGroups = sameGroup.filter((group) =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Box sx={style}>
       <HeaderModal
@@ -380,7 +368,6 @@ function GroupChat({ changeBody, handleCloseModal, sameGroup }) {
         <Box
           sx={{ position: "relative", display: "flex", alignItems: "center" }}
         >
-          {/* Tìm kiếm nhóm theo tên */}
           <SearchOutlinedIcon sx={{ position: "absolute", left: "10px" }} />
           <input
             type="text"
@@ -394,19 +381,21 @@ function GroupChat({ changeBody, handleCloseModal, sameGroup }) {
               paddingLeft: "40px",
             }}
             placeholder="Tìm nhóm theo tên"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </Box>
-        <Box sx={{ overflowY: "scroll", height: "430px" }}>
+        <Box sx={{ overflowY: "auto", height: "430px" }}>
           <List>
-            {sameGroup?.length > 0 &&
-              sameGroup?.map((group) => (
-                <ListItemButton key={group.id}>
+            {filteredGroups.length > 0 ? (
+              filteredGroups.map((group) => (
+                <ListItemButton key={group._id}>
                   <AvatarGroup max={2}>
                     {group.members.map((member) => (
                       <Avatar
-                        key={member.id}
-                        alt="avatar"
-                        src={member.avatarUrl}
+                        key={member._id}
+                        alt={member.name}
+                        src={member.avatar || "/default-avatar.png"}
                       />
                     ))}
                   </AvatarGroup>
@@ -414,7 +403,10 @@ function GroupChat({ changeBody, handleCloseModal, sameGroup }) {
                     {group.name}
                   </Typography>
                 </ListItemButton>
-              ))}
+              ))
+            ) : (
+              <Typography marginLeft={2}>Không tìm thấy nhóm chung</Typography>
+            )}
           </List>
         </Box>
       </Box>

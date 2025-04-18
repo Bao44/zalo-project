@@ -72,13 +72,21 @@ const MessageScreen = () => {
         setConversations((prev) => {
           const existingConversation = prev?.find((c) => c?._id === conversation?._id);
 
+          let updatedConversations;
           if (!existingConversation) {
-            return [conversation, ...prev];
+            updatedConversations = [conversation, ...prev];
           } else {
-            return prev.map((c) =>
+            updatedConversations = prev.map((c) =>
               c?._id === conversation?._id ? { ...c, lastMessage: conversation?.lastMessage } : c
             );
           }
+
+          // Sort conversations by lastMessage.createdAt in descending order
+          return updatedConversations.sort((a, b) => {
+            const timeA = new Date(a?.lastMessage?.createdAt || 0).getTime();
+            const timeB = new Date(b?.lastMessage?.createdAt || 0).getTime();
+            return timeB - timeA;
+          });
         });
       }
     };

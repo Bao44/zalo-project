@@ -247,7 +247,7 @@ const messageController = {
                         path: "senderId",
                         select: "name"
                     }
-                });
+                }); // Giới hạn số lượng tin nhắn trả về
             res.json(messages.reverse());
         } catch (error) {
             console.error("Error fetching messages:", error);

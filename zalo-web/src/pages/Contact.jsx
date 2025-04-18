@@ -22,6 +22,7 @@ import { getConversations } from "../../api/conversationAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import socket from "../../socket/socket";
 import { toast } from "react-toastify";
+import { getFriends } from "../../api/friendshipAPI";
 
 const Contact = () => {
   const [show, setShow] = useState("ListFriend");
@@ -190,7 +191,13 @@ const Contact = () => {
         }}
       >
         {loading && (
-          <Box sx={{ display: "flex", justifyContent: "center", marginTop: "50px" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "50px",
+            }}
+          >
             <CircularProgress />
           </Box>
         )}

@@ -22,6 +22,7 @@ export const fetchConversations = createAsyncThunk(
     }
 );
 
+// Lấy danh sách cuộc trò chuyện nhóm
 export const fetchGroupConversations = createAsyncThunk(
     'conversation/fetchGroupConversations',
     async (userId, { rejectWithValue }) => {
@@ -34,6 +35,7 @@ export const fetchGroupConversations = createAsyncThunk(
     }
 );
 
+// Lấy thông tin cuộc trò chuyện theo ID
 export const fetchConversation = createAsyncThunk(
     'conversation/fetchConversation',
     async (conversationId, { rejectWithValue }) => {
@@ -46,6 +48,7 @@ export const fetchConversation = createAsyncThunk(
     }
 );
 
+// Lấy thông tin cuộc trò chuyện giữa hai người dùng
 export const fetchConversationBetweenUsers = createAsyncThunk(
     'conversation/fetchConversationBetweenUsers',
     async ({ friend_id, user_id }, { rejectWithValue }) => {
@@ -58,6 +61,7 @@ export const fetchConversationBetweenUsers = createAsyncThunk(
     }
 );
 
+// Tạo cuộc trò chuyện 1-1
 export const createOneOnOneConversation = createAsyncThunk(
     'conversation/createOneOnOneConversation',
     async ({ userId, friendId }, { rejectWithValue }) => {
@@ -70,6 +74,7 @@ export const createOneOnOneConversation = createAsyncThunk(
     }
 );
 
+// Tạo cuộc trò chuyện nhóm
 export const createGroupConversation = createAsyncThunk(
     'conversation/createGroupConversation',
     async (groupData, { rejectWithValue }) => {
@@ -82,6 +87,7 @@ export const createGroupConversation = createAsyncThunk(
     }
 );
 
+// Xóa cuộc trò chuyện 1-1
 export const deleteOneOnOneConversation = createAsyncThunk(
     'conversation/deleteOneOnOneConversation',
     async ({ conversationId, userId }, { rejectWithValue }) => {
@@ -110,6 +116,27 @@ const conversationSlice = createSlice({
         },
         clearCurrentConversation: (state) => {
             state.currentConversation = null;
+        },
+        addNewConversation: (state, action) => {
+            const newConversation = action.payload;
+            const existingIndex = state.conversations.findIndex(
+                (conv) => conv._id === newConversation._id
+            );
+
+            if (existingIndex !== -1) {
+                // Cập nhật cuộc trò chuyện hiện có
+                state.conversations[existingIndex] = newConversation;
+            } else {
+                // Thêm cuộc trò chuyện mới
+                state.conversations.push(newConversation);
+            }
+
+            // Sắp xếp danh sách conversations theo lastMessage.createdAt
+            state.conversations.sort((a, b) => {
+                const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt) : new Date(0);
+                const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt) : new Date(0);
+                return bTime - aTime; // Sắp xếp giảm dần
+            });
         },
     },
     extraReducers: (builder) => {
@@ -222,7 +249,7 @@ const conversationSlice = createSlice({
 });
 
 // Export actions
-export const { clearError, clearCurrentConversation } = conversationSlice.actions;
+export const { clearError, clearCurrentConversation, addNewConversation } = conversationSlice.actions;
 
 // Export reducer
 export default conversationSlice.reducer;

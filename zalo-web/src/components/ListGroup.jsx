@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { getConversationsGroup } from "../../api/conversationAPI";
 import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
 import EastIcon from "@mui/icons-material/East";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
@@ -8,8 +11,10 @@ import {
   Avatar,
   AvatarGroup,
   Box,
+  CircularProgress,
   Divider,
   IconButton,
+  InputAdornment,
   List,
   ListItem,
   ListItemAvatar,
@@ -19,34 +24,86 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
 const ListGroup = ({ handleOpenChat }) => {
-  const dispatch = useDispatch();
-  const { conversations, loading, error } = useSelector((state) => state.conversation);
-  
+  const { user } = useAuth();
+  const [converList, setConverList] = useState([]);
+  const [filteredConverList, setFilteredConverList] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortType, setSortType] = useState("increase");
+  const [filterType, setFilterType] = useState("all");
+  const [loading, setLoading] = useState(false);
 
+  // Lấy danh sách nhóm từ API
   useEffect(() => {
-    if (conversations) {
-      const list = conversations.filter((conver) => {
-        return conver.type === "group";
-      });
-      setConverList(list);
+    const fetchGroupConversations = async () => {
+      if (!user.id) {
+        console.error("User ID is missing!");
+        toast.error("Không thể lấy danh sách nhóm: Thiếu ID người dùng!");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const userId = user.id;
+        const response = await getConversationsGroup(userId);
+        if (response.success) {
+          setConverList(response.data || []);
+          setFilteredConverList(response.data || []);
+        } else {
+          toast.error(response.msg || "Lỗi lấy danh sách nhóm!");
+        }
+      } catch (error) {
+        toast.error("Lỗi khi tải danh sách nhóm!");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroupConversations();
+  }, [user]);
+
+  // Xử lý tìm kiếm, sắp xếp và lọc
+  useEffect(() => {
+    let updatedConverList = [...converList];
+
+    // Lọc theo tìm kiếm
+    if (searchQuery) {
+      updatedConverList = updatedConverList.filter((conver) =>
+        conver.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
-  }, [conversations]);
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
+    // Lọc theo loại (tất cả hoặc nhóm của tôi)
+    if (filterType === "my_own_group") {
+      updatedConverList = updatedConverList.filter(
+        (conver) => conver.admin === user.id
+      );
+    }
 
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+    // Sắp xếp
+    updatedConverList.sort((a, b) => {
+      if (sortType === "increase") {
+        return (a.name || "").localeCompare(b.name || "");
+      } else if (sortType === "decrease") {
+        return (b.name || "").localeCompare(a.name || "");
+      } else if (sortType === "new_action") {
+        return (
+          new Date(b.updatedAt || 0).getTime() -
+          new Date(a.updatedAt || 0).getTime()
+        );
+      } else if (sortType === "old_action") {
+        return (
+          new Date(a.updatedAt || 0).getTime() -
+          new Date(b.updatedAt || 0).getTime()
+        );
+      }
+      return 0;
+    });
 
-
+    setFilteredConverList(updatedConverList);
+  }, [searchQuery, sortType, filterType, converList, user]);
 
   return (
     <>
@@ -67,36 +124,49 @@ const ListGroup = ({ handleOpenChat }) => {
           <Stack direction="column">
             <Box ml={2} mt={3}>
               <Typography variant="body2" fontWeight="bold">
-                Nhóm ({converList.length})
+                Nhóm ({filteredConverList.length})
               </Typography>
             </Box>
-
             <Box
               direction="column"
               spacing={2}
               ml={2}
               mt={3}
               mr={2}
-              backgroundColor="white"
-              sx={{ borderTopLeftRadius: 4, borderTopRightRadius: 4 }}
+              sx={{
+                backgroundColor: "white",
+                borderTopLeftRadius: 4,
+                borderTopRightRadius: 4,
+              }}
             >
               <Stack direction="row" ml={2} mt={2} mr={2} spacing={2}>
                 <TextField
                   size="small"
                   placeholder="Tìm kiếm..."
-                  sx={{ width: 500 }}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{ width: 300 }}
                   InputProps={{
-                    startAdornment: <SearchIcon />,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
                   }}
-                ></TextField>
+                />
                 <TextField
                   size="small"
-                  defaultValue={"increase"}
+                  value={sortType}
                   select
-                  sx={{ width: 500 }}
+                  sx={{ width: 300 }}
                   InputProps={{
-                    startAdornment: <SwapVertIcon />,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SwapVertIcon />
+                      </InputAdornment>
+                    ),
                   }}
+                  onChange={(e) => setSortType(e.target.value)}
                 >
                   <MenuItem value="increase">
                     <Typography variant="body2">Tên (A - Z)</Typography>
@@ -105,32 +175,29 @@ const ListGroup = ({ handleOpenChat }) => {
                     <Typography variant="body2">Tên (Z - A)</Typography>
                   </MenuItem>
                   <MenuItem value="new_action">
-                    <Typography variant="body2" mr={0.5}>
-                      Hoạt động (mới
-                    </Typography>
-                    <EastIcon fontSize="1" />
-                    <Typography variant="body2" ml={0.5}>
-                      cũ)
+                    <Typography variant="body2">
+                      Hoạt động (mới <EastIcon fontSize="small" /> cũ)
                     </Typography>
                   </MenuItem>
                   <MenuItem value="old_action">
-                    <Typography variant="body2" mr={0.5}>
-                      Hoạt động (cũ
-                    </Typography>
-                    <EastIcon fontSize="1" />
-                    <Typography variant="body2" ml={0.5}>
-                      mới)
+                    <Typography variant="body2">
+                      Hoạt động (cũ <EastIcon fontSize="small" /> mới)
                     </Typography>
                   </MenuItem>
                 </TextField>
                 <TextField
                   size="small"
-                  defaultValue={"all"}
+                  value={filterType}
                   select
-                  sx={{ width: 500 }}
+                  sx={{ width: 300 }}
                   InputProps={{
-                    startAdornment: <FilterAltIcon />,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <FilterAltIcon />
+                      </InputAdornment>
+                    ),
                   }}
+                  onChange={(e) => setFilterType(e.target.value)}
                 >
                   <MenuItem value="all">
                     <Typography variant="body2">Tất cả</Typography>
@@ -140,12 +207,15 @@ const ListGroup = ({ handleOpenChat }) => {
                   </MenuItem>
                 </TextField>
               </Stack>
-
-              <Stack direction="column" mt={3}>
-                {converList.length > 0 &&
-                  converList.map((conver) => {
-                    return (
-                      <>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Stack direction="column" mt={3}>
+                  {filteredConverList.length > 0 ? (
+                    filteredConverList.map((conver) => (
+                      <Box key={conver._id}>
                         <List disablePadding>
                           <ListItem
                             disablePadding
@@ -160,18 +230,19 @@ const ListGroup = ({ handleOpenChat }) => {
                             }
                           >
                             <ListItemButton>
-                              <Stack direction="row" alignItems={"center"}>
+                              <Stack direction="row" alignItems="center">
                                 <ListItemAvatar>
                                   <AvatarGroup max={2}>
-                                    {conver.members.map((member) => {
-                                      return (
-                                        <Avatar
-                                          key={member.id}
-                                          alt={member.fullName}
-                                          src={member.avatarUrl}
-                                        />
-                                      );
-                                    })}
+                                    {conver.members.map((member) => (
+                                      <Avatar
+                                        key={member._id || member.id}
+                                        alt={member.fullName || "Unknown"}
+                                        src={
+                                          member.avatarUrl ||
+                                          "/default-avatar.png"
+                                        }
+                                      />
+                                    ))}
                                   </AvatarGroup>
                                 </ListItemAvatar>
                                 <Stack
@@ -179,8 +250,8 @@ const ListGroup = ({ handleOpenChat }) => {
                                   spacing={0.5}
                                   marginLeft="10px"
                                 >
-                                  <Typography fontWeight={"bold"}>
-                                    {conver.name}
+                                  <Typography fontWeight="bold">
+                                    {conver.name || "Nhóm không tên"}
                                   </Typography>
                                 </Stack>
                               </Stack>
@@ -188,10 +259,15 @@ const ListGroup = ({ handleOpenChat }) => {
                           </ListItem>
                           <Divider />
                         </List>
-                      </>
-                    );
-                  })}
-              </Stack>
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography ml={2} mt={2}>
+                      Không tìm thấy nhóm
+                    </Typography>
+                  )}
+                </Stack>
+              )}
             </Box>
           </Stack>
         </Box>

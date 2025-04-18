@@ -16,25 +16,76 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import InforProfile from "./InforProfile";
 import { useAuth } from "../../contexts/AuthContext";
+import { getFriends } from "../../api/friendshipAPI";
+import UserAvatar from "./Avatar";
 
 const ListFriend = ({ handleOpenChat }) => {
-  // const { user } = useSelector((state) => state.user);
   const { user } = useAuth();
   const [selectSortName, setSelectSortName] = useState("increase");
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   let currentAlphabet = "";
+  const [searchQuery, setSearchQuery] = useState("");
+  const [friends, setFriends] = useState([]);
+  const [filteredFriends, setFilteredFriends] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [friend, setFriend] = useState(null);
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      if (user.id) {
+        try {
+          const response = await getFriends(user.id);
+          console.log("response", response);
+          if (response.success) {
+            setFriends(response.data);
+            setFilteredFriends(response.data);
+          } else {
+            console.error("Error fetching friends:", response.msg);
+          }
+        } catch (error) {
+          console.error("Error fetching friends:", error);
+        }
+      }
+    };
+    fetchFriends();
+  }, [user]);
+
+  // Xử lý tìm kiếm và sắp xếp
+  useEffect(() => {
+    let updatedFriends = [...friends];
+
+    // Lọc theo tìm kiếm
+    if (searchQuery) {
+      updatedFriends = updatedFriends.filter((friend) =>
+        friend.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Sắp xếp theo tên
+    updatedFriends.sort((a, b) => {
+      if (selectSortName === "increase") {
+        return a.name.localeCompare(b.name);
+      } else {
+        return b.name.localeCompare(a.name);
+      }
+    });
+
+    setFilteredFriends(updatedFriends);
+  }, [searchQuery, selectSortName, friends]);
 
   const handleOpenProfile = (fri) => {
     setFriend(fri);
     setOpenModal(true);
     setAnchorEl(null);
+  };
+
+  const handleOnChangeSelectSortName = (event) => {
+    setSelectSortName(event.target.value);
   };
 
   return (
@@ -56,8 +107,7 @@ const ListFriend = ({ handleOpenChat }) => {
           <Stack>
             <Box mt={3} ml={2} component="div">
               <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-                Bạn bè
-                 {/* ({user?.friendList.length}) */}
+                Bạn bè ({friends.length})
               </Typography>
             </Box>
             <Stack
@@ -83,6 +133,8 @@ const ListFriend = ({ handleOpenChat }) => {
                     variant="outlined"
                     size="small"
                     placeholder="Tìm bạn"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -97,7 +149,7 @@ const ListFriend = ({ handleOpenChat }) => {
                 <Box component={"div"} width={300}>
                   <TextField
                     size="small"
-                    defaultValue={selectSortName}
+                    value={selectSortName}
                     select
                     InputProps={{
                       startAdornment: (
@@ -107,7 +159,7 @@ const ListFriend = ({ handleOpenChat }) => {
                       ),
                     }}
                     fullWidth={true}
-                    onChange={(event) => handleOnChangeSelectSortName(event)}
+                    onChange={handleOnChangeSelectSortName}
                   >
                     <MenuItem value="increase">
                       <Typography>Tên (A - Z)</Typography>
@@ -119,53 +171,57 @@ const ListFriend = ({ handleOpenChat }) => {
                 </Box>
               </Stack>
 
-              {/* <Stack component="div">
-                {user &&
-                  user.friendList.length > 0 &&
-                  user.friendList.map((friend) => {
-                    return (
-                      <Box key={friend.id}>
-                        <List>
-                          <ListItem
-                            disablePadding
-                            secondaryAction={
-                              <IconButton
-                                edge="end"
-                                aria-label="message"
-                                onClick={() => handleOpenChat(friend.id)}
-                              >
-                                <ChatOutlinedIcon />
-                              </IconButton>
-                            }
-                          >
-                            <ListItemButton
-                              divider={true}
-                              onClick={() => handleOpenProfile(friend)}
+              <Stack component="div">
+                {filteredFriends.length > 0 ? (
+                  filteredFriends.map((friend) => (
+                    <Box key={friend._id}>
+                      <List>
+                        <ListItem
+                          disablePadding
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="message"
+                              onClick={() => handleOpenChat(friend._id)}
                             >
-                              <ListItemAvatar>
-                                <Avatar
-                                  alt={friend.fullName}
-                                  src={friend.avatarUrl}
-                                />
-                              </ListItemAvatar>
-                              <Typography fontWeight={600} fontSize={"15px"}>
-                                {friend.fullName}
-                              </Typography>
-                            </ListItemButton>
-                          </ListItem>
-                        </List>
-                      </Box>
-                    );
-                  })}
-              </Stack> */}
+                              <ChatOutlinedIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemButton
+                            divider={true}
+                            onClick={() => handleOpenProfile(friend)}
+                          >
+                            <ListItemAvatar>
+                              <UserAvatar
+                                width={50}
+                                height={50}
+                                uri={friend.avatar || ""}
+                                key={friend?.id}
+                              />
+                            </ListItemAvatar>
+                            <Typography fontWeight={600} fontSize={"15px"}>
+                              {friend.name}
+                            </Typography>
+                          </ListItemButton>
+                        </ListItem>
+                      </List>
+                    </Box>
+                  ))
+                ) : (
+                  <Typography ml={2} mt={2}>
+                    Không tìm thấy bạn bè
+                  </Typography>
+                )}
+              </Stack>
             </Stack>
           </Stack>
         </Box>
-        {/* <InforProfile
+        <InforProfile
           openModal={openModal}
           setOpenModal={setOpenModal}
           friend={friend}
-        /> */}
+        />
       </Box>
     </>
   );

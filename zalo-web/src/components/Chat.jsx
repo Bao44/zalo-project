@@ -2,7 +2,6 @@ import {
   Box,
   TextField,
   Button,
-  Avatar,
   Typography,
   AvatarGroup,
   List,
@@ -14,33 +13,35 @@ import {
   ListItemIcon,
   CircularProgress,
   useIsFocusVisible,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import ImageIcon from "@mui/icons-material/Image";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DehazeIcon from "@mui/icons-material/Dehaze";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import GroupsIcon from "@mui/icons-material/Groups";
+import CircleIcon from "@mui/icons-material/Circle";
+import PersonIcon from "@mui/icons-material/Person";
+import MicIcon from '@mui/icons-material/Mic';
 import { useEffect, useState, useRef } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import MessageSender from "./MessageSender";
 import MessageReceiver from "./MessageReceiver";
-import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
-import DeleteIcon from "@mui/icons-material/Delete";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import DehazeIcon from "@mui/icons-material/Dehaze";
 import InforProfile from "./InforProfile";
-import ExitToAppIcon from "@mui/icons-material/ExitToApp";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import GroupsIcon from "@mui/icons-material/Groups";
 import AddMember from "./AddMember";
 import GroupMember from "./GroupMember";
-import CircleIcon from "@mui/icons-material/Circle";
-import PersonIcon from "@mui/icons-material/Person";
-
-//
-import { getMessages, sendMessage, addUserSeen, likeMessage } from "../../api/messageAPI";
 import UserAvatar from "./Avatar";
 import socket from "../../socket/socket";
-
+import { getMessages, sendMessage, addUserSeen, likeMessage, undoDeleteMessage, deleteMessage } from "../../api/messageAPI";
 
 const Chat = ({ conversation, setConversation }) => {
   const { name, members, type } = conversation;
@@ -50,21 +51,22 @@ const Chat = ({ conversation, setConversation }) => {
   const [content, setContent] = useState("");
   const [online, isOnline] = useState(true);
   const [typing, setTyping] = useState(false);
-  const [userTyping, setUserTyping] = useState("");
   const isFocused = useIsFocusVisible();
-  let typingTimer = null;
-
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [openInforProfile, setOpenInforProfile] = useState(false);
   const [openAddMember, setOpenAddMember] = useState(false);
   const [openGroupMember, setOpenGroupMember] = useState(false);
+  const [openRevokeDialog, setOpenRevokeDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const [revokeError, setRevokeError] = useState(null); const [deleteError, setDeleteError] = useState(null);
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
   };
 
-  //SOCKET CHECK ONLINE
+  // SOCKET CHECK ONLINE
   useEffect(() => {
     socket.emit("checkOnline", user?.id);
     socket.on("statusOnline", (status) => {
@@ -78,31 +80,26 @@ const Chat = ({ conversation, setConversation }) => {
     };
   }, [user?.id]);
 
-  //SOCKET NHẬN TIN NHẮN MỚI
+  // SOCKET NHẬN TIN NHẮN MỚI
   useEffect(() => {
     if (conversation?._id) {
       socket.emit("join", conversation?._id);
     }
 
-    //Lắng ng nghe sự kiện tin nhắn mới
     socket.on("newMessage", (message) => {
       console.log("Tin nhắn mới:", message);
       if (message?.conversationId === conversation?._id) {
-        // Nếu tin nhắn thuộc hội thoại hiện tại
         setMessages((prevMessages) => {
           const updatedMessages = [...prevMessages, message];
-          // Sắp xếp lại danh sách tin nhắn theo thời gian gửi
           return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         });
 
         if (message?.senderId !== user?.id && isFocused) {
-          // Nếu người gửi không phải là người dùng hiện tại và tab đang được chọn
           addUserSeen(message.conversationId, user?.id);
         }
       }
     });
 
-    //Lắng nghe sự kiện like tin nhắn
     socket.on("messageLiked", ({ savedMessage, senderUserLike, updatedAt }) => {
       if (savedMessage.conversationId === conversation?._id) {
         setMessages((prev) =>
@@ -129,58 +126,29 @@ const Chat = ({ conversation, setConversation }) => {
     };
   }, [conversation?._id, user?.id, isFocused]);
 
-
-
   const DrawerList = (
     <Box sx={{ width: 400 }} role="presentation">
-      <Typography
-        textAlign="center"
-        fontWeight="bold"
-        paddingTop="20px"
-        paddingBottom="20px"
-        fontSize="20px"
-      >
+      <Typography textAlign="center" fontWeight="bold" paddingTop="20px" paddingBottom="20px" fontSize="20px">
         Thông tin hội thoại
       </Typography>
       <Divider />
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "20px 0",
-        }}
-      >
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0" }}>
         {conversation.type === "private" ? (
           <>
-            <UserAvatar
-              uri={friend?.avatar}
-              width={60}
-              height={60}
-            />
-            <Typography
-              textAlign="center"
-              paddingTop="10px"
-              fontWeight="bold"
-              fontSize="18px"
-            >
+            <UserAvatar uri={friend?.avatar} width={60} height={60} />
+            <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
               {friend?.fullName}
             </Typography>
           </>
         ) : (
           <>
-            <AvatarGroup max={2} >
+            <AvatarGroup max={2}>
               {members?.length > 0 &&
                 members?.map((mem) => (
                   <UserAvatar key={mem?._id} uri={mem?.avatar} width={60} height={60} />
                 ))}
             </AvatarGroup>
-            <Typography
-              textAlign="center"
-              paddingTop="10px"
-              fontWeight="bold"
-              fontSize="18px"
-            >
+            <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
               {name}
             </Typography>
           </>
@@ -189,65 +157,38 @@ const Chat = ({ conversation, setConversation }) => {
       <Divider />
       {conversation?.type === "private" && (
         <List>
-          {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map(
-            (text, index) => (
-              <ListItem
-                key={text}
-                disablePadding
-              // onClick={() => handleFriendItemClick(index)}
-              >
-                <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
-                  <ListItemIcon>
-                    {index === 0 && <AccountCircleIcon />}
-                    {index === 1 && <NotificationsOffIcon />}
-                    {index === 2 && <DeleteIcon color="error" />}
-                  </ListItemIcon>
-                  <ListItemText primary={text} />
-                </ListItemButton>
-              </ListItem>
-            )
-          )}
+          {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map((text, index) => (
+            <ListItem key={text} disablePadding>
+              <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
+                <ListItemIcon>
+                  {index === 0 && <AccountCircleIcon />}
+                  {index === 1 && <NotificationsOffIcon />}
+                  {index === 2 && <DeleteIcon color="error" />}
+                </ListItemIcon>
+                <ListItemText primary={text} />
+              </ListItemButton>
+            </ListItem>
+          ))}
         </List>
       )}
-      <InforProfile
-        openModal={openInforProfile}
-        setOpenModal={setOpenInforProfile}
-        friend={friend}
-      />
+      <InforProfile openModal={openInforProfile} setOpenModal={setOpenInforProfile} friend={friend} />
       {conversation?.type === "group" && (
         <List>
-          {[
-            "Thêm thành viên",
-            "Tắt thông báo",
-            "Xem danh sách thành viên",
-            "Rời khỏi nhóm",
-          ].map((text, index) => (
-            <ListItem
-              key={text}
-              disablePadding
-            // onClick={() => handleGroupItemClick(index)}
-            >
-              <ListItemButton
-                sx={{ color: index === 3 || index === 4 ? "red" : "inherit" }}
-              >
+          {["Thêm thành viên", "Tắt thông báo", "Xem danh sách thành viên", "Rời khỏi nhóm"].map((text, index) => (
+            <ListItem key={text} disablePadding>
+              <ListItemButton sx={{ color: index === 3 ? "red" : "inherit" }}>
                 <ListItemIcon>
                   {index === 0 && <PersonAddIcon />}
                   {index === 1 && <NotificationsOffIcon />}
                   {index === 2 && <GroupsIcon />}
                   {index === 3 && <ExitToAppIcon color="error" />}
                 </ListItemIcon>
-                <ListItemText
-                  primary={index === 2 ? `${text}(${members.length})` : text}
-                />
+                <ListItemText primary={index === 2 ? `${text}(${members.length})` : text} />
               </ListItemButton>
             </ListItem>
           ))}
           {conversation?.admin === user?.id && (
-            <ListItem
-              key={"Giải tán nhóm"}
-              disablePadding
-            // onClick={handleDeleteConversation}
-            >
+            <ListItem key={"Giải tán nhóm"} disablePadding>
               <ListItemButton sx={{ color: "red" }}>
                 <ListItemIcon>
                   <DeleteIcon color="error" />
@@ -291,12 +232,9 @@ const Chat = ({ conversation, setConversation }) => {
     }
   }, [conversation, members, user.id, type]);
 
-
-
-
-  //GỬI TIN NHẮN
+  // GỬI TIN NHẮN
   const handleSendMessage = async () => {
-    if (!content.trim()) return; // Không gửi nếu nội dung rỗng
+    if (!content.trim()) return;
     setLoading(true);
 
     try {
@@ -314,17 +252,80 @@ const Chat = ({ conversation, setConversation }) => {
       setContent("");
     } catch (error) {
       console.error("Error sending message:", error);
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
-  }
-
-  const handleRevokeMessage = (messageId) => {
-
   };
 
-  //LIKE TIN NHẮN
+  // THU HỒI TIN NHẮN
+  const handleRevokeMessage = async (messageId) => {
+    setSelectedMessageId(messageId);
+    setOpenRevokeDialog(true);
+    setRevokeError(null);
+  };
+
+  // XÓA TIN NHẮN
+  const handleDeleteMessage = async (messageId) => {
+    setSelectedMessageId(messageId);
+    setOpenDeleteDialog(true);
+    setDeleteError(null);
+  };
+
+  // XÁC NHẬN XÓA TIN NHẮN
+  const confirmDeleteMessage = async () => {
+    if (!selectedMessageId || !user?.id) {
+      setDeleteError("Không thể xác định tin nhắn hoặc người dùng");
+      return;
+    }
+
+    try {
+      const response = await deleteMessage(selectedMessageId, user.id);
+      if (response.data) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === selectedMessageId
+              ? { ...msg, removed: [...(msg.removed || []), user.id] }
+              : msg
+          )
+        );
+        setOpenDeleteDialog(false);
+      }
+    } catch (error) {
+      console.error("Lỗi khi xóa tin nhắn:", error);
+      if (error.response?.status === 404) { setDeleteError("Tin nhắn không tồn tại"); } else if (error.response?.status === 400) { setDeleteError(error.response.data.error || "Yêu cầu không hợp lệ"); } else { setDeleteError("Không thể xóa tin nhắn, vui lòng thử lại"); }
+    }
+  };
+
+  // XÁC NHẬN THU HỒI TIN NHẮN
+  const confirmRevokeMessage = async () => {
+    if (!selectedMessageId || !user?.id) {
+      setRevokeError("Không thể xác định tin nhắn hoặc người dùng");
+      return;
+    }
+
+    try {
+      const response = await undoDeleteMessage(selectedMessageId, user.id);
+      if (response.data) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === selectedMessageId ? { ...msg, revoked: true } : msg
+          )
+        );
+        setOpenRevokeDialog(false);
+      }
+    } catch (error) {
+      console.error("Lỗi khi thu hồi tin nhắn:", error);
+      if (error.response?.status === 404) {
+        setRevokeError("Tin nhắn không tồn tại");
+      } else if (error.response?.status === 400) {
+        setRevokeError(error.response.data.error || "Yêu cầu không hợp lệ");
+      } else {
+        setRevokeError("Không thể thu hồi tin nhắn, vui lòng thử lại");
+      }
+    }
+  };
+
+  // LIKE TIN NHẮN
   const handleLikeMessage = async (messageId, userId) => {
     try {
       await likeMessage(messageId, "like", userId);
@@ -333,6 +334,7 @@ const Chat = ({ conversation, setConversation }) => {
     }
   };
 
+  // UNLIKE TIN NHẮN
   const handleUnlikeMessage = async (messageId, userId) => {
     try {
       await likeMessage(messageId, "dislike", userId);
@@ -341,12 +343,203 @@ const Chat = ({ conversation, setConversation }) => {
     }
   };
 
+  // GỬI HÌNH ẢNH
   const handleSendImage = async (event) => {
+    // event.preventDefault();
+    // const files = event.target.files;
+    // if (!files || files.length === 0) {
+    //   console.log('No files selected');
+    //   return;
+    // }
 
+    // setLoading(true);
+
+    // try {
+    //   let conversationId = conversation?._id;
+    //   if (!conversationId) {
+    //     console.error('No conversation ID found');
+    //     return;
+    //   }
+
+    //   // Xử lý từng file hình ảnh
+    //   for (const file of files) {
+    //     // Kiểm tra xem file có phải là hình ảnh
+    //     if (!file.type.startsWith('image/')) {
+    //       console.warn(`File ${file.name} is not an image`);
+    //       continue;
+    //     }
+
+    //     // Nén hình ảnh
+    //     const compressedFile = await compressImage(file);
+
+    //     // Chuyển file thành base64
+    //     const reader = new FileReader();
+    //     const fileBase64 = await new Promise((resolve) => {
+    //       reader.onload = () => resolve(reader.result.split(',')[1]); // Loại bỏ phần prefix base64
+    //       reader.readAsDataURL(compressedFile);
+    //     });
+
+    //     const t = Math.random().toString(36).substring(2, 15); // ID tạm thời
+
+    //     // Tạo dữ liệu tin nhắn
+    //     const messageData = {
+    //       idTemp: t,
+    //       senderId: user.id,
+    //       content: '', // Không có nội dung văn bản
+    //       attachments: [
+    //         {
+    //           folderName: 'messages',
+    //           fileUri: fileBase64,
+    //           isImage: true,
+    //         },
+    //       ],
+    //       media: null,
+    //       files: null,
+    //       receiverId: type === 'private' ? friend._id : null,
+    //     };
+
+    //     // Thêm tin nhắn tạm thời vào danh sách
+    //     setMessages((prev) => [
+    //       ...prev,
+    //       {
+    //         _id: t,
+    //         senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+    //         content: '',
+    //         attachments: [{ fileUrl: URL.createObjectURL(compressedFile) }], // Hiển thị tạm thời
+    //         media: null,
+    //         files: null,
+    //         createdAt: new Date().toISOString(),
+    //       },
+    //     ]);
+
+    //     // Gửi tin nhắn qua API
+    //     const response = await sendMessage(conversationId, messageData);
+    //     if (response.success && response.data) {
+    //       // Cập nhật tin nhắn tạm với ID chính thức từ server
+    //       setMessages((prev) => {
+    //         const index = prev.findIndex((msg) => msg._id === t);
+    //         if (index !== -1) {
+    //           const updatedMessages = [...prev];
+    //           updatedMessages[index] = {
+    //             ...updatedMessages[index],
+    //             _id: response.data._id, // Thay thế idTemp
+    //             ...response.data, // Cập nhật các trường từ server
+    //           };
+    //           return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    //         }
+    //         return prev;
+    //       });
+    //     } else {
+    //       console.error('Failed to send image:', response.data?.message);
+    //       setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu thất bại
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error('Error in handleSendImage:', error);
+    // } finally {
+    //   setLoading(false);
+    //   event.target.value = ''; // Reset input file để có thể chọn lại file cũ
+    // }
   };
 
+  // GỬI TỆP
   const handleSendFile = async (event) => {
+    // event.preventDefault();
+    // const files = event.target.files;
+    // if (!files || files.length === 0) {
+    //   console.log('No files selected');
+    //   return;
+    // }
 
+    // setLoading(true);
+
+    // try {
+    //   let conversationId = conversation?._id;
+    //   if (!conversationId) {
+    //     console.error('No conversation ID found');
+    //     return;
+    //   }
+
+    //   // Xử lý từng file
+    //   for (const file of files) {
+    //     // Kiểm tra kích thước file (giới hạn 50MB)
+    //     const maxSizeMB = 50;
+    //     const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    //     if (file.size > maxSizeBytes) {
+    //       console.warn(`File ${file.name} exceeds ${maxSizeMB}MB limit`);
+    //       continue;
+    //     }
+
+    //     // Chuyển file thành base64
+    //     const reader = new FileReader();
+    //     const fileBase64 = await new Promise((resolve) => {
+    //       reader.onload = () => resolve(reader.result.split(',')[1]); // Loại bỏ phần prefix base64
+    //       reader.readAsDataURL(file);
+    //     });
+
+    //     const t = Math.random().toString(36).substring(2, 15); // ID tạm thời
+
+    //     // Tạo dữ liệu tin nhắn
+    //     const messageData = {
+    //       idTemp: t,
+    //       senderId: user.id,
+    //       content: "", // Không có nội dung văn bản
+    //       attachments: null,
+    //       media: null,
+    //       files: {
+    //         fileUri: fileBase64,
+    //         name: file.name,
+    //         type: file.type,
+    //       },
+    //       receiverId: type === 'private' ? friend._id : null,
+    //     };
+
+    //     // Thêm tin nhắn tạm thời vào danh sách
+    //     setMessages((prev) => [
+    //       ...prev,
+    //       {
+    //         _id: t,
+    //         senderId: { _id: user.id, name: user.name, avatar: user.avatar },
+    //         content: '',
+    //         attachments: null,
+    //         media: null,
+    //         files: {
+    //           fileName: file.name,
+    //           fileType: file.type,
+    //           fileUrl: URL.createObjectURL(file), // Hiển thị tạm thời
+    //         },
+    //         createdAt: new Date().toISOString(),
+    //       },
+    //     ]);
+
+    //     // Gửi tin nhắn qua API
+    //     const response = await sendMessage(conversationId, messageData);
+    //     if (response.success && response.data) {
+    //       // Cập nhật tin nhắn tạm với ID chính thức từ server
+    //       setMessages((prev) => {
+    //         const index = prev.findIndex((msg) => msg._id === t);
+    //         if (index !== -1) {
+    //           const updatedMessages = [...prev];
+    //           updatedMessages[index] = {
+    //             ...updatedMessages[index],
+    //             _id: response.data._id, // Thay thế idTemp
+    //             ...response.data, // Cập nhật các trường từ server
+    //           };
+    //           return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    //         }
+    //         return prev;
+    //       });
+    //     } else {
+    //       console.error('Failed to send file:', response.data?.message);
+    //       setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu thất bại
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error('Error in handleSendFile:', error);
+    // } finally {
+    //   setLoading(false);
+    //   event.target.value = ''; // Reset input file để có thể chọn lại file cũ
+    // }
   };
 
   const handleChange = (event) => {
@@ -354,27 +547,60 @@ const Chat = ({ conversation, setConversation }) => {
     if (!typing) {
       handleTypingStart();
     }
-
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => {
+  const handleTypingStart = () => { };
 
-  };
+  const handleTypingEnd = () => { };
 
-  const handleTypingEnd = () => {
-
-  };
-
-  //
+  // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
   useEffect(() => {
-    // Cuộn xuống phần tử cuối cùng khi danh sách tin nhắn thay đổi
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
+  // Hàm nén hình ảnh
+  const compressImage = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxWidth = 800; // Kích thước tối đa chiều rộng
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = (maxWidth / width) * height;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.7 // Chất lượng nén 70%
+          );
+        };
+      };
+    });
+  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -387,12 +613,12 @@ const Chat = ({ conversation, setConversation }) => {
               <AvatarGroup max={2}>
                 {members?.length > 0 &&
                   members?.map((mem) => (
-                    <UserAvatar key={mem?.id} uri={mem?.avatar} />
+                    <UserAvatar key={mem?._id} uri={mem?.avatar} />
                   ))}
               </AvatarGroup>
             )}
           </Box>
-          <Box >
+          <Box>
             {type === "private" ? (
               <>
                 <Typography fontWeight="bold" fontSize="18px">
@@ -401,26 +627,14 @@ const Chat = ({ conversation, setConversation }) => {
                 {online ? (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircleIcon sx={{ color: "green" }} fontSize="small" />
-                    <Typography
-                      sx={{
-                        color: "gray",
-                        marginLeft: "10px",
-                        fontSize: "14px",
-                      }}
-                    >
+                    <Typography sx={{ color: "gray", marginLeft: "10px", fontSize: "14px" }}>
                       Đang online
                     </Typography>
                   </Box>
                 ) : (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircleIcon sx={{ color: "gray" }} fontSize="small" />
-                    <Typography
-                      sx={{
-                        color: "gray",
-                        marginLeft: "10px",
-                        fontSize: "14px",
-                      }}
-                    >
+                    <Typography sx={{ color: "gray", marginLeft: "10px", fontSize: "14px" }}>
                       Đang offline
                     </Typography>
                   </Box>
@@ -443,10 +657,7 @@ const Chat = ({ conversation, setConversation }) => {
           <Box sx={{ marginLeft: "auto", color: "#000", padding: "5px" }}>
             <VideocamIcon />
           </Box>
-          <Button
-            sx={{ marginLeft: "10px", color: "#000", padding: "5px" }}
-            onClick={toggleDrawer(true)}
-          >
+          <Button sx={{ marginLeft: "10px", color: "#000", padding: "5px" }} onClick={toggleDrawer(true)}>
             <DehazeIcon />
           </Button>
         </Box>
@@ -454,43 +665,47 @@ const Chat = ({ conversation, setConversation }) => {
       <Box sx={{ flexGrow: 1, overflowY: "auto", backgroundColor: "#f5f5f5", padding: "20px 10px" }}>
         {messages &&
           messages.length > 0 &&
-          [...messages] // Copy để không làm thay đổi mảng gốc
-            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)) // Sắp xếp tăng dần theo thời gian
+          [...messages]
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
             .map((msg) => {
-              if (msg.senderId?._id === user?.id) {
+              if (msg.senderId?._id === user?.id && !msg.removed?.includes(user?.id)) {
                 return (
                   <MessageSender
-                    key={msg.id}
+                    key={msg._id}
                     message={msg}
                     handleLikeMessage={handleLikeMessage}
                     handleUnlikeMessage={handleUnlikeMessage}
                     handleRevokeMessage={handleRevokeMessage}
+                    handleDeleteMessage={handleDeleteMessage}
                   />
                 );
               } else {
-                return (
-                  <MessageReceiver
-                    key={msg.id}
-                    message={msg}
-                    handleLikeMessage={handleLikeMessage}
-                    handleRevokeMessage={handleRevokeMessage}
-                    handleUnlikeMessage={handleUnlikeMessage}
-                  />
-                );
+                if (!msg.removed?.includes(user?.id)) {
+                  return (
+                    <MessageReceiver
+                      key={msg._id}
+                      message={msg}
+                      handleLikeMessage={handleLikeMessage}
+                      handleUnlikeMessage={handleUnlikeMessage}
+                      handleRevokeMessage={handleRevokeMessage}
+                      handleDeleteMessage={handleDeleteMessage}
+                    />
+                  );
+                }
               }
             })}
         <div ref={messagesEndRef} />
       </Box>
-      {/* Input Chat */}
-      <Box sx={{
-        height: "80px",
-        borderTop: "1px solid #ddd",
-        display: "flex",
-        alignItems: "center",
-        padding: "10px 20px",
-        backgroundColor: "#fff"
-      }}>
-        {/* Icon gửi file & ảnh */}
+      <Box
+        sx={{
+          height: "80px",
+          borderTop: "1px solid #ddd",
+          display: "flex",
+          alignItems: "center",
+          padding: "10px 20px",
+          backgroundColor: "#fff",
+        }}
+      >
         <Box sx={{ display: "flex", gap: "10px", marginRight: "10px" }}>
           <label htmlFor="uploadImg">
             <ImageIcon sx={{ cursor: "pointer", color: "#555", "&:hover": { color: "#1976d2" } }} />
@@ -498,55 +713,91 @@ const Chat = ({ conversation, setConversation }) => {
           <input
             id="uploadImg"
             type="file"
-            accept=".png, .jpg, .jpeg, .gif, .mp4, .avi"
+            accept=".png, .jpg, .jpeg, .gif"
+            multiple
             style={{ display: "none" }}
             onChange={handleSendImage}
           />
-
           <label htmlFor="uploadFile">
             <AttachFileIcon sx={{ cursor: "pointer", color: "#555", "&:hover": { color: "#1976d2" } }} />
           </label>
           <input
             id="uploadFile"
             type="file"
-            accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .zip, .rar, .csv"
+            accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .zip, .rar, .csv, .txt, .java, .css, .html, .json, .xml"
+            multiple
             style={{ display: "none" }}
             onChange={handleSendFile}
           />
         </Box>
-
-        {/* Ô nhập tin nhắn */}
         <TextField
           fullWidth
           placeholder="Nhập tin nhắn..."
           value={content}
           onChange={handleChange}
-          sx={{
-            "& .MuiOutlinedInput-root": { borderRadius: "20px", backgroundColor: "#f5f5f5" }
-          }}
+          sx={{ "& .MuiOutlinedInput-root": { borderRadius: "20px", backgroundColor: "#f5f5f5" } }}
         />
-
-        {/* Nút gửi tin nhắn */}
+        <Button>
+          <MicIcon color="#555" sx={{ "&:hover": { color: "#1976d2" } }} />
+        </Button>
         <Button
           onClick={handleSendMessage}
           sx={{
             marginLeft: "10px",
             backgroundColor: "#1976d2",
             color: "#fff",
-            "&:hover": { backgroundColor: "#1565c0" }
+            "&:hover": { backgroundColor: "#1565c0" },
           }}
         >
           Gửi
           {loading && <CircularProgress color="inherit" size="20px" sx={{ marginLeft: "5px" }} />}
         </Button>
       </Box>
-
       <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
         {DrawerList}
       </Drawer>
+      <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
+        <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
+        <DialogContent>
+          <Typography>Bạn có chắc chắn muốn thu hồi tin nhắn này không?</Typography>
+          {revokeError && (
+            <Typography color="error" sx={{ mt: 2 }}>
+              {revokeError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenRevokeDialog(false)} color="primary">
+            Hủy
+          </Button>
+          <Button onClick={confirmRevokeMessage} color="error" variant="contained" autoFocus>
+            Thu hồi
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} aria-labelledby="delete-dialog-title">
+        <DialogTitle id="delete-dialog-title">Xóa tin nhắn</DialogTitle>
+        <DialogContent>
+          <Typography>Bạn có chắc chắn muốn xóa tin nhắn này không?</Typography>
+          {deleteError && (
+            <Typography color="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteDialog(false)} color="primary">
+            Hủy
+          </Button>
+          <Button onClick={confirmDeleteMessage} color="error" variant="contained" autoFocus>
+            Xóa
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
+
 Chat.propTypes = {
   conversation: PropTypes.shape({
     _id: PropTypes.string.isRequired,
