@@ -12,7 +12,7 @@ import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import UserAvatar from "../components/Avatar";
 import { convertToTime } from "../../utils/formatTime";
-import { countUnreadMessages } from "../../api/messageAPI";
+import { addUserSeen, countUnreadMessages } from "../../api/messageAPI";
 
 const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
   let { name, members, lastMessage, avatar } = conver;
@@ -49,9 +49,15 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
   }, [conver._id, user?.id, conver?.lastMessage]);
 
   // Lưu cuộc trò chuyện đã chọn vào localStorage
-  const handleSelectConversation = (conver) => {
+  const handleSelectConversation = async (conver) => {
     setConversation(conver);
-    localStorage.setItem("selectedConversation", JSON.stringify(conver));
+    try {
+      await addUserSeen(conver?._id, user?.id);
+      setUnreadCount(0); // Đặt trực tiếp unreadCount về 0
+      localStorage.setItem("selectedConversation", JSON.stringify(conver));
+    } catch (error) {
+      console.error("Error in handleSelectConversation:", error);
+    }
   };
 
   return (

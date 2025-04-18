@@ -1,41 +1,49 @@
 import DescriptionIcon from "@mui/icons-material/Description";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import KeyboardReturnIcon from "@mui/icons-material/KeyboardReturn";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { Box, Button, Modal, Popover, Typography } from "@mui/material";
-import { useState } from "react";
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import ShortcutIcon from '@mui/icons-material/Shortcut';
+import CommentsDisabledIcon from '@mui/icons-material/CommentsDisabled';
+import { Box, Button, Popover, Typography } from "@mui/material";
+import { useState, useEffect, useRef } from "react"; // Thêm useRef và useEffect
 import PropTypes from "prop-types";
 import { convertToTime } from "../../utils/formatTime";
 import RenderImageMessage from "./RenderImageMessage";
 import { useSelector } from "react-redux";
-// import { likeMessage } from "../../api/messageAPI";
 
-const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
+const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage, handleRevokeMessage, handleDeleteMessage }) => {
   const { content, createdAt } = message;
   const [anchorEl, setAnchorEl] = useState(null);
-  const [opening, setOpening] = useState(false);
-  const isRevoked = false;
   const [isHovered, setIsHovered] = useState(false);
   const { user } = useSelector((state) => state.user);
+  const buttonRef = useRef(null); // Thêm ref để theo dõi MoreHorizIcon button
 
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
+  const handleOpenMoreOptions = (event) => {
+    setAnchorEl(event.currentTarget); // Lưu vị trí của nút MoreHorizIcon
   };
 
-  const handleClose = () => {
+  const handleCloseMoreOptions = () => {
     setAnchorEl(null);
   };
 
+  // Đóng Popover khi isHovered trở thành false
+  useEffect(() => {
+    if (!isHovered) {
+      setAnchorEl(null); // Xóa anchorEl khi nút không còn hiển thị
+    }
+  }, [isHovered]);
+
   const open = Boolean(anchorEl);
-  const uid = open ? "simple-popover" : undefined;
+  const id = open ? "more-options-popover" : undefined;
 
   return (
     <Box
       sx={{
-        width: "100%", // Box chính rộng full
+        width: "100%",
         display: "flex",
-        justifyContent: "flex-end", // Đẩy nội dung sang phải
+        justifyContent: "flex-end",
         alignItems: "center",
         marginBottom: "30px",
         position: "relative",
@@ -44,16 +52,26 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {!message?.revoked && isHovered && (
-        <MoreVertIcon fontSize={"medium"} onClick={handleClick} />
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Button>
+            <FormatQuoteIcon fontSize="medium" />
+          </Button>
+          <Button ref={buttonRef} onClick={handleOpenMoreOptions}>
+            <MoreHorizIcon fontSize="medium" />
+          </Button>
+          <Button>
+            <ShortcutIcon fontSize="medium" />
+          </Button>
+        </Box>
       )}
       <Box
         sx={{
           padding: "15px",
           backgroundColor: "#8FE3FF",
           borderRadius: 3,
-          display: "inline-block", // Chiều dài theo nội dung
-          maxWidth: "70%", // Giới hạn tối đa 70% chiều rộng
-          minWidth: "7%"
+          display: "inline-block",
+          maxWidth: "70%",
+          minWidth: "7%",
         }}
       >
         {message?.revoked ? (
@@ -64,21 +82,13 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
           <>
             {message?.content && (
               message?.attachments?.length === 0 ? (
-                <Typography
-                  color={"black"}
-                  fontWeight={"bold"}
-                  marginBottom="10px"
-                >
+                <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
                   {content}
                 </Typography>
               ) : (
                 <Box>
                   <RenderImageMessage images={message?.attachments} />
-                  <Typography
-                    color={"black"}
-                    fontWeight={"bold"}
-                    marginBottom="10px"
-                  >
+                  <Typography color={"black"} fontWeight={"bold"} marginBottom="10px">
                     {content}
                   </Typography>
                 </Box>
@@ -115,17 +125,9 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
                   <Typography fontSize={14} fontWeight="bold">
                     {message?.files?.fileName}
                   </Typography>
-                  <Button
-                    href={message?.files?.fileUrl}
-                    download
-                    style={{
-                      marginTop: "5px",
-                    }}
-                  >
+                  <Button href={message?.files?.fileUrl} download style={{ marginTop: "5px" }}>
                     <FileDownloadIcon fontSize="small" />
-                    <Typography fontSize={14}>
-                      Tải xuống
-                    </Typography>
+                    <Typography fontSize={14}>Tải xuống</Typography>
                   </Button>
                 </Box>
               </Box>
@@ -134,13 +136,13 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
           </>
         )}
       </Box>
-      {!isRevoked && (
+      {!message?.revoked && (
         <>
           <Button
             sx={{ position: "absolute", bottom: "0px", right: "0px" }}
-            onClick={(even) => {
-              even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
-              handleLikeMessage(message._id, user?.id)
+            onClick={(event) => {
+              event.stopPropagation();
+              handleLikeMessage(message._id, user?.id);
             }}
           >
             <Box
@@ -161,17 +163,16 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
             >
               <FavoriteIcon
                 fontSize="small"
-                color={(message?.like?.length > 0) ? "error" : "disabled"}
+                color={message?.like?.length > 0 ? "error" : "disabled"}
               />
             </Box>
           </Button>
-
           {message?.like?.length > 0 && (
             <Button
               sx={{ position: "absolute", bottom: "0px", right: "0px" }}
-              onClick={(even) => {
-                even.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
-                handleUnLikeMessage(message._id, user?.id)
+              onClick={(event) => {
+                event.stopPropagation();
+                handleUnLikeMessage(message._id, user?.id);
               }}
             >
               <Box
@@ -190,65 +191,61 @@ const MessageSender = ({ message, handleLikeMessage, handleUnLikeMessage }) => {
                 }}
               >
                 <FavoriteIcon fontSize="small" color="error" />
-                <Typography fontSize={14} color="gray" marginRight="5px">{message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}</Typography>
+                <Typography fontSize={14} color="gray" marginRight="5px">
+                  {message?.like?.reduce((sum, i) => sum + i.totalLike, 0)}
+                </Typography>
               </Box>
             </Button>
           )}
         </>
       )}
       <Popover
-        id={uid}
+        id={id}
         open={open}
         anchorEl={anchorEl}
-        onClose={handleClose}
+        onClose={handleCloseMoreOptions}
         anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
           vertical: "top",
           horizontal: "right",
         }}
+        transformOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        sx={{
+          "& .MuiPopover-paper": {
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            width: "300px",
+            padding: "5px 0",
+          },
+        }}
       >
-        <Button
-          style={{ display: "flex", alignItems: "center", paddingX: "10px" }}
-          color="inherit"
-        >
-          <KeyboardReturnIcon fontSize={"small"} />
-          <Typography sx={{ p: 1 }} fontSize="12px">
-            Thu hồi
-          </Typography>
-        </Button>
-      </Popover>
-      <Modal
-        open={opening}
-        onClose={() => setOpening(false)}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 600,
-            height: 400,
-            bgcolor: "background.paper",
-            border: "2px solid #000",
-            boxShadow: 24,
-            p: 4,
-          }}
-        >
-          {message?.attachments?.length > 0 && (
-            <img
-              src={message?.attachments[0].fileUrl}
-              alt="image"
-              style={{ width: "590px", height: "390px" }}
-            />
-          )}
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          <Button
+            sx={{ justifyContent: "flex-start", padding: "8px 16px" }}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleRevokeMessage(message._id, user?.id);
+              handleCloseMoreOptions();
+            }}
+          >
+            <CommentsDisabledIcon fontSize="small" sx={{ marginRight: "8px", color: "red" }} />
+            <Typography fontSize={14} color={"red"}>Thu hồi</Typography>
+          </Button>
+          <Button
+            sx={{ justifyContent: "flex-start", padding: "8px 16px" }}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleDeleteMessage(message?._id)
+              handleCloseMoreOptions();
+            }}
+          >
+            <DeleteIcon fontSize="small" sx={{ marginRight: "8px", color: "red" }} />
+            <Typography fontSize={14} color={"red"} >Xóa tin nhắn ở phía tôi</Typography>
+          </Button>
         </Box>
-      </Modal>
+      </Popover>
     </Box>
   );
 };
@@ -302,6 +299,8 @@ MessageSender.propTypes = {
   }).isRequired,
   handleLikeMessage: PropTypes.func.isRequired,
   handleUnLikeMessage: PropTypes.func.isRequired,
+  handleRevokeMessage: PropTypes.func.isRequired,
+  handleDeleteMessage: PropTypes.func.isRequired,
 };
 
 export default MessageSender;
