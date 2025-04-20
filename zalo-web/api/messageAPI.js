@@ -21,7 +21,7 @@ export const sendMessage = async (conversationId, messageData) => {
             content: messageData.content,
             attachments: messageData.attachments,
             media: messageData.media,
-            files: messageData.files,
+            file: messageData.files,
             replyTo: messageData.replyTo,
             receiverId: messageData.receiverId
         });
