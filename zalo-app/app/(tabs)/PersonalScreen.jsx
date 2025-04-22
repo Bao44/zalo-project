@@ -40,7 +40,7 @@ const PersonalScreen = () => {
             source={
               avatarUri
                 ? { uri: avatarUri }
-                : require("../../assets/images/defaultUser.png")
+                : require("../../assets/images/default_user.png")
             }
             style={styles.avatar}
           />

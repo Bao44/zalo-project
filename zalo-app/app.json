@@ -6,10 +6,17 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zalo-project",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "extra": {
       "eas": {
-        "deeplinkPath": "zalo-project://"
+        "deeplinkPath": "zalo-project://",
+        "projectId": "465ff846-e5b4-443e-a36f-47cccd27a49d"
+      },
+      "router": {
+        "origin": false
       }
     },
     "userInterfaceStyle": "automatic",
@@ -22,7 +29,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.kilasami123.zaloapp"
+      "package": "com.kilasami123.zaloapp",
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro",
