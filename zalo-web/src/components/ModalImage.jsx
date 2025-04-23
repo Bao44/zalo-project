@@ -1,8 +1,6 @@
 import { Avatar, Box, Modal } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
-import UserAvatar from "./Avatar";
-import { supabaseUrl } from "../../constants";
 
 const style = {
   position: "absolute",
@@ -27,7 +25,7 @@ const StyledModal = styled(Modal)(({ theme }) => ({
   },
 }));
 
-export default function ModalImage({ isImage, src, styleOrigin, children }) {
+export default function ModalImage({ isOpen, src, styleOrigin, children }) {
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -44,11 +42,11 @@ export default function ModalImage({ isImage, src, styleOrigin, children }) {
   };
   return (
     <>
-      {isImage ? (
+      {isOpen ? (
         <img src={src} alt="modal" onClick={handleOpen} style={styleOrigin} />
       ) : (
         <Avatar
-          src={`${supabaseUrl}/storage/v1/object/public/uploads/${src}`}
+          src={src}
           onClick={handleOpen}
           style={styleOrigin}
         />

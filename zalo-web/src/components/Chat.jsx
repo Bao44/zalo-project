@@ -30,7 +30,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import GroupsIcon from "@mui/icons-material/Groups";
 import CircleIcon from "@mui/icons-material/Circle";
 import PersonIcon from "@mui/icons-material/Person";
-import MicIcon from '@mui/icons-material/Mic';
+import MicIcon from "@mui/icons-material/Mic";
 import { useEffect, useState, useRef } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
@@ -41,8 +41,15 @@ import AddMember from "./AddMember";
 import GroupMember from "./GroupMember";
 import UserAvatar from "./Avatar";
 import socket from "../../socket/socket";
-import { getMessages, sendMessage, addUserSeen, likeMessage, undoDeleteMessage, deleteMessage } from "../../api/messageAPI";
-import EmojiPopover from './EmojiPopover';
+import {
+  getMessages,
+  sendMessage,
+  addUserSeen,
+  likeMessage,
+  undoDeleteMessage,
+  deleteMessage,
+} from "../../api/messageAPI";
+import EmojiPopover from "./EmojiPopover";
 import { createConversation1vs1 } from "../../api/conversationAPI";
 import ReplytoMessageSelected from "./ReplytoMessageSelected";
 
@@ -70,6 +77,8 @@ const Chat = ({ conversation, setConversation }) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const [replyToMessage, setReplyToMessage] = useState(null);
+  const [openModal, setOpenModal] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
@@ -106,15 +115,22 @@ const Chat = ({ conversation, setConversation }) => {
           }
 
           // Kiểm tra xem có tin nhắn tạm thời nào cần thay thế không
-          const tempIndex = prevMessages.findIndex((msg) => tempId && msg.idTemp === tempId);
+          const tempIndex = prevMessages.findIndex(
+            (msg) => tempId && msg.idTemp === tempId
+          );
           if (tempIndex !== -1) {
-            console.log("Replacing temporary message with idTemp:", message.idTemp);
+            console.log(
+              "Replacing temporary message with idTemp:",
+              message.idTemp
+            );
             const updatedMessages = [...prevMessages];
             updatedMessages[tempIndex] = {
               ...message,
               idTemp: undefined, // Clear idTemp to prevent further matches
             };
-            return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            return updatedMessages.sort(
+              (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+            );
           }
 
           // Fallback: Match by senderId, createdAt, and attachments (for image messages)
@@ -122,24 +138,32 @@ const Chat = ({ conversation, setConversation }) => {
             (msg) =>
               msg.idTemp &&
               msg.senderId._id === message.senderId &&
-              Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) < 1000 && // Within 1 second
+              Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) <
+                1000 && // Within 1 second
               msg.attachments?.length > 0 &&
               message.attachments?.length > 0
           );
           if (tempIndexFallback !== -1) {
-            console.log("Replacing temporary message with fallback match:", message._id);
+            console.log(
+              "Replacing temporary message with fallback match:",
+              message._id
+            );
             const updatedMessages = [...prevMessages];
             updatedMessages[tempIndexFallback] = {
               ...message,
               idTemp: undefined,
             };
-            return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            return updatedMessages.sort(
+              (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+            );
           }
 
           // If no match, append the new message
           console.log("Appending new message:", message._id);
           const updatedMessages = [...prevMessages, message];
-          return updatedMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          return updatedMessages.sort(
+            (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+          );
         });
 
         if (message?.senderId !== user?.id && isFocused) {
@@ -155,7 +179,10 @@ const Chat = ({ conversation, setConversation }) => {
           prev.map((msg) => {
             if (msg._id.toString() === savedMessage._id.toString()) {
               const currentUpdatedAt = msg.updatedAt || msg.createdAt;
-              if (!currentUpdatedAt || new Date(updatedAt) >= new Date(currentUpdatedAt)) {
+              if (
+                !currentUpdatedAt ||
+                new Date(updatedAt) >= new Date(currentUpdatedAt)
+              ) {
                 return { ...msg, like: savedMessage.like, updatedAt };
               }
             }
@@ -184,7 +211,9 @@ const Chat = ({ conversation, setConversation }) => {
       if (conversation?._id === conversationId) {
         setMessages((prev) =>
           prev.map((msg) => {
-            return msg._id.toString() === messageId ? { ...msg, revoked: true } : msg
+            return msg._id.toString() === messageId
+              ? { ...msg, revoked: true }
+              : msg;
           })
         );
       }
@@ -257,7 +286,9 @@ const Chat = ({ conversation, setConversation }) => {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
         handleSendAudio(audioBlob);
         // Dừng stream để giải phóng micro
         stream.getTracks().forEach((track) => track.stop());
@@ -266,8 +297,8 @@ const Chat = ({ conversation, setConversation }) => {
       mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Không thể truy cập micro. Vui lòng kiểm tra quyền hoặc thiết bị.');
+      console.error("Error starting recording:", error);
+      alert("Không thể truy cập micro. Vui lòng kiểm tra quyền hoặc thiết bị.");
     }
   };
 
@@ -297,20 +328,23 @@ const Chat = ({ conversation, setConversation }) => {
           setConversation(response.data);
           conversationId = response.data._id;
         } else {
-          console.error("Failed to create conversation:", response.data?.message);
+          console.error(
+            "Failed to create conversation:",
+            response.data?.message
+          );
           return;
         }
       }
 
       if (!conversationId) {
-        console.error('No conversation ID found');
+        console.error("No conversation ID found");
         return;
       }
 
       // Chuyển Blob thành base64
       const reader = new FileReader();
       const fileBase64 = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onload = () => resolve(reader.result.split(",")[1]);
         reader.readAsDataURL(audioBlob);
       });
 
@@ -326,7 +360,7 @@ const Chat = ({ conversation, setConversation }) => {
         files: {
           uri: fileBase64,
           name: audioFileName,
-          type: 'audio/m4a', // MIME type của file âm thanh
+          type: "audio/m4a", // MIME type của file âm thanh
         },
         receiverId: type === "private" ? friend?._id : null,
         replyTo: replyTo || null,
@@ -344,7 +378,7 @@ const Chat = ({ conversation, setConversation }) => {
           files: {
             uri: fileBase64,
             name: audioFileName,
-            type: 'audio/webm',
+            type: "audio/webm",
           },
           replyTo: replyTo || null,
           createdAt: new Date().toISOString(),
@@ -355,15 +389,18 @@ const Chat = ({ conversation, setConversation }) => {
       // Gửi tin nhắn
       const response = await sendMessage(conversationId, messageData);
       if (!response) {
-        console.error('Failed to send audio:', response);
+        console.error("Failed to send audio:", response);
         setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu thất bại
       }
 
       setContent("");
       setReplyTo(null);
     } catch (error) {
-      console.error('Error in handleSendAudio:', error);
-      alert('Không thể gửi file âm thanh: ' + (error.message || 'Lỗi không xác định'));
+      console.error("Error in handleSendAudio:", error);
+      alert(
+        "Không thể gửi file âm thanh: " +
+          (error.message || "Lỗi không xác định")
+      );
       setMessages((prev) => prev.filter((msg) => msg._id !== t)); // Xóa tin nhắn tạm nếu lỗi
     } finally {
       setLoading(false);
@@ -402,7 +439,7 @@ const Chat = ({ conversation, setConversation }) => {
     event.preventDefault();
     const files = event.target.files;
     if (!files || files.length === 0) {
-      console.log('No files selected');
+      console.log("No files selected");
       return;
     }
 
@@ -411,7 +448,7 @@ const Chat = ({ conversation, setConversation }) => {
     try {
       let conversationId = conversation?._id;
       if (!conversationId) {
-        console.error('No conversation ID found');
+        console.error("No conversation ID found");
         return;
       }
 
@@ -422,7 +459,7 @@ const Chat = ({ conversation, setConversation }) => {
 
         const reader = new FileReader();
         const fileBase64 = await new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onload = () => resolve(reader.result.split(",")[1]);
           reader.readAsDataURL(imageFile);
         });
 
@@ -468,12 +505,12 @@ const Chat = ({ conversation, setConversation }) => {
       setContent("");
       setReplyTo(null);
     } catch (error) {
-      console.error('Error in handleSendImage:', error);
+      console.error("Error in handleSendImage:", error);
       // Remove temporary messages on error
       setMessages((prev) => prev.filter((msg) => !msg.idTemp));
     } finally {
       setLoading(false);
-      event.target.value = ''; // Reset input file để có thể chọn lại file cũ
+      event.target.value = ""; // Reset input file để có thể chọn lại file cũ
     }
   };
 
@@ -482,7 +519,7 @@ const Chat = ({ conversation, setConversation }) => {
     event.preventDefault();
     const files = event.target.files;
     if (!files || files.length === 0) {
-      console.log('No files selected');
+      console.log("No files selected");
       return;
     }
 
@@ -502,20 +539,23 @@ const Chat = ({ conversation, setConversation }) => {
           setConversation(response.data);
           conversationId = response.data._id;
         } else {
-          console.error("Failed to create conversation:", response.data?.message);
+          console.error(
+            "Failed to create conversation:",
+            response.data?.message
+          );
           return;
         }
       }
 
       if (!conversationId) {
-        console.error('No conversation ID found');
+        console.error("No conversation ID found");
         return;
       }
 
       for (const file of files) {
         const reader = new FileReader();
         const fileBase64 = await new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onload = () => resolve(reader.result.split(",")[1]);
           reader.readAsDataURL(file);
         });
 
@@ -539,11 +579,13 @@ const Chat = ({ conversation, setConversation }) => {
           content: content || "",
           attachments: null,
           media: media || null,
-          files: media ? null : {
-            uri: fileBase64,
-            name: file.name,
-            type: file.mimeType || file.type,
-          },
+          files: media
+            ? null
+            : {
+                uri: fileBase64,
+                name: file.name,
+                type: file.mimeType || file.type,
+              },
           receiverId: type === "private" ? friend?._id : null,
           replyTo: replyTo || null,
         };
@@ -556,11 +598,13 @@ const Chat = ({ conversation, setConversation }) => {
             content: "",
             attachments: null,
             media: media || null,
-            files: media ? null : {
-              uri: fileBase64,
-              name: file.name,
-              type: file.mimeType || file.type,
-            },
+            files: media
+              ? null
+              : {
+                  uri: fileBase64,
+                  name: file.name,
+                  type: file.mimeType || file.type,
+                },
             replyTo: replyTo || null,
             createdAt: new Date().toISOString(),
             idTemp: t,
@@ -573,10 +617,10 @@ const Chat = ({ conversation, setConversation }) => {
       setContent("");
       setReplyTo(null);
     } catch (error) {
-      console.error('Error in handleSendFile:', error);
+      console.error("Error in handleSendFile:", error);
     } finally {
       setLoading(false);
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
@@ -675,9 +719,9 @@ const Chat = ({ conversation, setConversation }) => {
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => { };
+  const handleTypingStart = () => {};
 
-  const handleTypingEnd = () => { };
+  const handleTypingEnd = () => {};
 
   // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
@@ -696,7 +740,7 @@ const Chat = ({ conversation, setConversation }) => {
         const img = new Image();
         img.src = event.target.result;
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
           const maxWidth = 800; // Kích thước tối đa chiều rộng
           let width = img.width;
           let height = img.height;
@@ -708,18 +752,18 @@ const Chat = ({ conversation, setConversation }) => {
 
           canvas.width = width;
           canvas.height = height;
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
 
           canvas.toBlob(
             (blob) => {
               const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
+                type: "image/jpeg",
                 lastModified: Date.now(),
               });
               resolve(compressedFile);
             },
-            'image/jpeg',
+            "image/jpeg",
             0.7 // Chất lượng nén 70%
           );
         };
@@ -727,13 +771,30 @@ const Chat = ({ conversation, setConversation }) => {
     });
   };
 
+  const handleOpenProfile = (fri) => {
+    setFriend(fri);
+    setOpenModal(true);
+    setAnchorEl(null);
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <Box sx={{ height: "60px", borderBottom: "1px solid #ddd", padding: "10px 20px" }}>
+      <Box
+        sx={{
+          height: "60px",
+          borderBottom: "1px solid #ddd",
+          padding: "10px 20px",
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center" }}>
           <Box sx={{ marginRight: "10px" }}>
             {type === "private" ? (
-              <UserAvatar uri={friend?.avatar} width={60} height={60} />
+              <UserAvatar
+                uri={friend?.avatar}
+                width={60}
+                height={60}
+                onClick={() => handleOpenProfile(friend)}
+              />
             ) : (
               <AvatarGroup max={2}>
                 {members?.length > 0 &&
@@ -743,6 +804,11 @@ const Chat = ({ conversation, setConversation }) => {
               </AvatarGroup>
             )}
           </Box>
+          <InforProfile
+            openModal={openModal}
+            setOpenModal={setOpenModal}
+            friend={friend}
+          />
           <Box>
             {type === "private" ? (
               <>
@@ -752,14 +818,26 @@ const Chat = ({ conversation, setConversation }) => {
                 {online ? (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircleIcon sx={{ color: "green" }} fontSize="small" />
-                    <Typography sx={{ color: "gray", marginLeft: "10px", fontSize: "14px" }}>
+                    <Typography
+                      sx={{
+                        color: "gray",
+                        marginLeft: "10px",
+                        fontSize: "14px",
+                      }}
+                    >
                       Đang online
                     </Typography>
                   </Box>
                 ) : (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircleIcon sx={{ color: "gray" }} fontSize="small" />
-                    <Typography sx={{ color: "gray", marginLeft: "10px", fontSize: "14px" }}>
+                    <Typography
+                      sx={{
+                        color: "gray",
+                        marginLeft: "10px",
+                        fontSize: "14px",
+                      }}
+                    >
                       Đang offline
                     </Typography>
                   </Box>
@@ -782,18 +860,31 @@ const Chat = ({ conversation, setConversation }) => {
           <Box sx={{ marginLeft: "auto", color: "#000", padding: "5px" }}>
             <VideocamIcon />
           </Box>
-          <Button sx={{ marginLeft: "10px", color: "#000", padding: "5px" }} onClick={toggleDrawer(true)}>
+          <Button
+            sx={{ marginLeft: "10px", color: "#000", padding: "5px" }}
+            onClick={toggleDrawer(true)}
+          >
             <DehazeIcon />
           </Button>
         </Box>
       </Box>
-      <Box sx={{ flexGrow: 1, overflowY: "auto", backgroundColor: "#f5f5f5", padding: "20px 10px" }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          overflowY: "auto",
+          backgroundColor: "#f5f5f5",
+          padding: "20px 10px",
+        }}
+      >
         {messages &&
           messages.length > 0 &&
           [...messages]
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
             .map((msg) => {
-              if (msg.senderId?._id === user?.id && !msg.removed?.includes(user?.id)) {
+              if (
+                msg.senderId?._id === user?.id &&
+                !msg.removed?.includes(user?.id)
+              ) {
                 return (
                   <MessageSender
                     key={msg._id}
@@ -824,8 +915,18 @@ const Chat = ({ conversation, setConversation }) => {
         <div ref={messagesEndRef} />
       </Box>
       {replyToMessage && (
-        <Box sx={{ display: "flex", alignItems: "center", padding: "10px 20px", backgroundColor: "#fff" }}>
-          <ReplytoMessageSelected setMessageReplyto={setReplyToMessage} messageReplyto={replyToMessage} />
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            padding: "10px 20px",
+            backgroundColor: "#fff",
+          }}
+        >
+          <ReplytoMessageSelected
+            setMessageReplyto={setReplyToMessage}
+            messageReplyto={replyToMessage}
+          />
         </Box>
       )}
       <Box
@@ -840,7 +941,13 @@ const Chat = ({ conversation, setConversation }) => {
       >
         <Box sx={{ display: "flex", gap: "10px", marginRight: "10px" }}>
           <label htmlFor="uploadImg">
-            <ImageIcon sx={{ cursor: "pointer", color: "#555", "&:hover": { color: "#1976d2" } }} />
+            <ImageIcon
+              sx={{
+                cursor: "pointer",
+                color: "#555",
+                "&:hover": { color: "#1976d2" },
+              }}
+            />
           </label>
           <input
             id="uploadImg"
@@ -851,7 +958,13 @@ const Chat = ({ conversation, setConversation }) => {
             onChange={handleSendImage}
           />
           <label htmlFor="uploadFile">
-            <AttachFileIcon sx={{ cursor: "pointer", color: "#555", "&:hover": { color: "#1976d2" } }} />
+            <AttachFileIcon
+              sx={{
+                cursor: "pointer",
+                color: "#555",
+                "&:hover": { color: "#1976d2" },
+              }}
+            />
           </label>
           <input
             id="uploadFile"
@@ -867,7 +980,12 @@ const Chat = ({ conversation, setConversation }) => {
           placeholder="Nhập tin nhắn..."
           value={content}
           onChange={handleChange}
-          sx={{ "& .MuiOutlinedInput-root": { borderRadius: "20px", backgroundColor: "#f5f5f5" } }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "20px",
+              backgroundColor: "#f5f5f5",
+            },
+          }}
         />
         <EmojiPopover content={content} setContent={setContent} />
         <Button
@@ -895,20 +1013,44 @@ const Chat = ({ conversation, setConversation }) => {
           }}
         >
           Gửi
-          {loading && <CircularProgress color="inherit" size="20px" sx={{ marginLeft: "5px" }} />}
+          {loading && (
+            <CircularProgress
+              color="inherit"
+              size="20px"
+              sx={{ marginLeft: "5px" }}
+            />
+          )}
         </Button>
       </Box>
       <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
         <Box sx={{ width: 400 }} role="presentation">
-          <Typography textAlign="center" fontWeight="bold" paddingTop="20px" paddingBottom="20px" fontSize="20px">
+          <Typography
+            textAlign="center"
+            fontWeight="bold"
+            paddingTop="20px"
+            paddingBottom="20px"
+            fontSize="20px"
+          >
             Thông tin hội thoại
           </Typography>
           <Divider />
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0" }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "20px 0",
+            }}
+          >
             {conversation.type === "private" ? (
               <>
                 <UserAvatar uri={friend?.avatar} width={60} height={60} />
-                <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
+                <Typography
+                  textAlign="center"
+                  paddingTop="10px"
+                  fontWeight="bold"
+                  fontSize="18px"
+                >
                   {friend?.fullName}
                 </Typography>
               </>
@@ -917,10 +1059,20 @@ const Chat = ({ conversation, setConversation }) => {
                 <AvatarGroup max={2}>
                   {members?.length > 0 &&
                     members?.map((mem) => (
-                      <UserAvatar key={mem?._id} uri={mem?.avatar} width={60} height={60} />
+                      <UserAvatar
+                        key={mem?._id}
+                        uri={mem?.avatar}
+                        width={60}
+                        height={60}
+                      />
                     ))}
                 </AvatarGroup>
-                <Typography textAlign="center" paddingTop="10px" fontWeight="bold" fontSize="18px">
+                <Typography
+                  textAlign="center"
+                  paddingTop="10px"
+                  fontWeight="bold"
+                  fontSize="18px"
+                >
                   {name}
                 </Typography>
               </>
@@ -929,33 +1081,52 @@ const Chat = ({ conversation, setConversation }) => {
           <Divider />
           {conversation?.type === "private" && (
             <List>
-              {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map((text, index) => (
-                <ListItem key={text} disablePadding>
-                  <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
-                    <ListItemIcon>
-                      {index === 0 && <AccountCircleIcon />}
-                      {index === 1 && <NotificationsOffIcon />}
-                      {index === 2 && <DeleteIcon color="error" />}
-                    </ListItemIcon>
-                    <ListItemText primary={text} />
-                  </ListItemButton>
-                </ListItem>
-              ))}
+              {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map(
+                (text, index) => (
+                  <ListItem key={text} disablePadding>
+                    <ListItemButton
+                      sx={{ color: index === 2 ? "red" : "inherit" }}
+                    >
+                      <ListItemIcon>
+                        {index === 0 && <AccountCircleIcon />}
+                        {index === 1 && <NotificationsOffIcon />}
+                        {index === 2 && <DeleteIcon color="error" />}
+                      </ListItemIcon>
+                      <ListItemText primary={text} />
+                    </ListItemButton>
+                  </ListItem>
+                )
+              )}
             </List>
           )}
-          <InforProfile openModal={openInforProfile} setOpenModal={setOpenInforProfile} friend={friend} />
+          <InforProfile
+            openModal={openInforProfile}
+            setOpenModal={setOpenInforProfile}
+            friend={friend}
+          />
           {conversation?.type === "group" && (
             <List>
-              {["Thêm thành viên", "Tắt thông báo", "Xem danh sách thành viên", "Rời khỏi nhóm"].map((text, index) => (
+              {[
+                "Thêm thành viên",
+                "Tắt thông báo",
+                "Xem danh sách thành viên",
+                "Rời khỏi nhóm",
+              ].map((text, index) => (
                 <ListItem key={text} disablePadding>
-                  <ListItemButton sx={{ color: index === 3 ? "red" : "inherit" }}>
+                  <ListItemButton
+                    sx={{ color: index === 3 ? "red" : "inherit" }}
+                  >
                     <ListItemIcon>
                       {index === 0 && <PersonAddIcon />}
                       {index === 1 && <NotificationsOffIcon />}
                       {index === 2 && <GroupsIcon />}
                       {index === 3 && <ExitToAppIcon color="error" />}
                     </ListItemIcon>
-                    <ListItemText primary={index === 2 ? `${text}(${members.length})` : text} />
+                    <ListItemText
+                      primary={
+                        index === 2 ? `${text}(${members.length})` : text
+                      }
+                    />
                   </ListItemButton>
                 </ListItem>
               ))}
@@ -985,10 +1156,16 @@ const Chat = ({ conversation, setConversation }) => {
           />
         </Box>
       </Drawer>
-      <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
+      <Dialog
+        open={openRevokeDialog}
+        onClose={() => setOpenRevokeDialog(false)}
+        aria-labelledby="revoke-dialog-title"
+      >
         <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
         <DialogContent>
-          <Typography>Bạn có chắc chắn muốn thu hồi tin nhắn này không?</Typography>
+          <Typography>
+            Bạn có chắc chắn muốn thu hồi tin nhắn này không?
+          </Typography>
           {revokeError && (
             <Typography color="error" sx={{ mt: 2 }}>
               {revokeError}
@@ -999,12 +1176,21 @@ const Chat = ({ conversation, setConversation }) => {
           <Button onClick={() => setOpenRevokeDialog(false)} color="primary">
             Hủy
           </Button>
-          <Button onClick={confirmRevokeMessage} color="error" variant="contained" autoFocus>
+          <Button
+            onClick={confirmRevokeMessage}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
             Thu hồi
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} aria-labelledby="delete-dialog-title">
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        aria-labelledby="delete-dialog-title"
+      >
         <DialogTitle id="delete-dialog-title">Xóa tin nhắn</DialogTitle>
         <DialogContent>
           <Typography>Bạn có chắc chắn muốn xóa tin nhắn này không?</Typography>
@@ -1018,7 +1204,12 @@ const Chat = ({ conversation, setConversation }) => {
           <Button onClick={() => setOpenDeleteDialog(false)} color="primary">
             Hủy
           </Button>
-          <Button onClick={confirmDeleteMessage} color="error" variant="contained" autoFocus>
+          <Button
+            onClick={confirmDeleteMessage}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
             Xóa
           </Button>
         </DialogActions>

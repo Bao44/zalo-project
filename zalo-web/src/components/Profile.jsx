@@ -247,6 +247,7 @@ function AvatarHome({ name, avatar, background, changeBody }) {
                   objectFit: "cover",
                 }}
               />
+              
             ) : (
               <Box
                 sx={{
@@ -292,7 +293,11 @@ function AvatarHome({ name, avatar, background, changeBody }) {
         >
           <ModalImage
             isOpen={false}
-            src={avatar}
+            src={
+              avatar
+                ? `${supabaseUrl}/storage/v1/object/public/uploads/${avatar}`
+                : "/default-avatar.png"
+            } // Cung cấp avatar mặc định
             alt="load"
             styleOrigin={{
               width: 90,
@@ -301,7 +306,11 @@ function AvatarHome({ name, avatar, background, changeBody }) {
             }}
           >
             <img
-              src={avatar}
+              src={
+                avatar
+                  ? `${supabaseUrl}/storage/v1/object/public/uploads/${avatar}`
+                  : "/default-avatar.png"
+              } // Cung cấp avatar mặc định
               alt="load"
               style={{
                 width: "100%",

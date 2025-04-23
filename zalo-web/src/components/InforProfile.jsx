@@ -2,6 +2,7 @@ import {
   Avatar,
   AvatarGroup,
   Box,
+  Button,
   Grid,
   IconButton,
   List,
@@ -153,6 +154,51 @@ function InfoBody({ changeBody, handleCloseModal, userInfo }) {
         avatarUrl={userInfo?.avatar || ""}
         coverImage={userInfo?.background || ""}
       />
+
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 2,
+          marginBottom: "20px",
+          marginTop: "-10px",
+        }}
+      >
+        <Button
+          variant="contained"
+          sx={{
+            backgroundColor: "#f0f2f5",
+            color: "#050505",
+            boxShadow: "none",
+            textTransform: "none",
+            width: "150px",
+            "&:hover": {
+              backgroundColor: "#e4e6eb",
+              boxShadow: "none",
+            },
+          }}
+        >
+          Gọi điện
+        </Button>
+        <Button
+          variant="contained"
+          sx={{
+            backgroundColor: "#e7f3ff",
+            color: "#1877f2",
+            boxShadow: "none",
+            textTransform: "none",
+            width: "150px",
+            "&:hover": {
+              backgroundColor: "#d0e7ff",
+              boxShadow: "none",
+            },
+          }}
+          onClick={() => changeBody("default")}
+        >
+          Nhắn tin
+        </Button>
+      </Box>
+
       <Box sx={{ marginBottom: "10px" }}>
         <hr style={{ border: "1px solid #A0A0A0" }} />
       </Box>
@@ -164,7 +210,6 @@ function InfoBody({ changeBody, handleCloseModal, userInfo }) {
             : "Chưa cung cấp"
         }
         phoneNumber={userInfo?.phone || "Chưa cung cấp"}
-        email={userInfo?.email || "Chưa cung cấp"}
       />
       <Box sx={{ marginBottom: "10px" }}>
         <hr style={{ border: "1px solid #A0A0A0" }} />
@@ -214,7 +259,11 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
       >
         <ModalImage
           isOpen={false}
-          src={avatarUrl || "/default-avatar.png"} // Cung cấp avatar mặc định
+          src={
+            avatarUrl
+              ? `${supabaseUrl}/storage/v1/object/public/uploads/${avatarUrl}`
+              : "/default-avatar.png"
+          } // Cung cấp avatar mặc định
           alt={fullName}
           styleOrigin={{
             width: 70,
@@ -223,7 +272,11 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
           }}
         >
           <img
-            src={avatarUrl || "/default-avatar.png"}
+            src={
+              avatarUrl
+                ? `${supabaseUrl}/storage/v1/object/public/uploads/${avatarUrl}`
+                : "/default-avatar.png"
+            }
             alt={fullName}
             style={{
               width: "100%",
@@ -239,7 +292,7 @@ function AvatarHome({ fullName, avatarUrl, coverImage }) {
   );
 }
 
-function Info({ gender, dateOfBirth, phoneNumber, email }) {
+function Info({ gender, dateOfBirth, phoneNumber }) {
   return (
     <Box marginLeft={2}>
       <Typography fontWeight="bold" fontSize="16px" marginBottom="10px">
@@ -268,13 +321,6 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
           >
             Điện thoại
           </Typography>
-          <Typography
-            sx={{ color: "gray" }}
-            fontSize="14px"
-            marginBottom="10px"
-          >
-            Email
-          </Typography>
         </Grid>
         <Grid item>
           <Typography fontSize="14px" marginBottom="10px">
@@ -285,9 +331,6 @@ function Info({ gender, dateOfBirth, phoneNumber, email }) {
           </Typography>
           <Typography fontSize="14px" marginBottom="10px">
             {phoneNumber}
-          </Typography>
-          <Typography fontSize="14px" marginBottom="10px">
-            {email}
           </Typography>
         </Grid>
       </Grid>
