@@ -2,7 +2,7 @@ import Avatar from "@mui/material/Avatar";
 import { supabaseUrl } from "../../constants";
 import PropTypes from "prop-types";
 
-const UserAvatar = ({ uri, height, width, sx}) => {
+const UserAvatar = ({ uri, height, width, sx, onClick }) => {
   return (
     <Avatar
       src={`${supabaseUrl}/storage/v1/object/public/uploads/${uri}`}
@@ -11,8 +11,10 @@ const UserAvatar = ({ uri, height, width, sx}) => {
         width: width,
         height: height,
         display: "block",
+        cursor: onClick ? "pointer" : "default",
         ...sx,
       }}
+      onClick={onClick}
     />
   );
 };
@@ -21,6 +23,7 @@ UserAvatar.propTypes = {
   height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   sx: PropTypes.object,
+  onClick: PropTypes.func,
 };
 
 export default UserAvatar;
