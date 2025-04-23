@@ -19,6 +19,7 @@ import Icon from "../../assets/icons";
 import CommentItem from "../../components/CommentItem";
 import { supabase } from "../../lib/supabase";
 import { getUserData } from "../../api/user";
+import { createNotification } from "../../api/notification";
 
 const PostDetails = () => {
   const { postId, commentId } = useLocalSearchParams();
@@ -92,10 +93,10 @@ const PostDetails = () => {
         let notify = {
           senderId: user.id,
           receiverId: post.userId,
-          title: "commented on your post",
+          title: commentRef.current,
           data: JSON.stringify({ postId: post.id, commentId: res?.data?.id }),
         };
-        // createNotification(notify);
+        createNotification(notify);
       }
       inputRef?.current?.clear();
       commentRef.current = "";

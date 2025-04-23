@@ -16,14 +16,14 @@ const CommentItem = ({
   const createdAt = moment(item?.created_at).format("MMM D");
 
   const handleDelete = () => {
-    Alert.alert("Confirm", "Are you sure you want to do this?", [
+    Alert.alert("Xác nhận", "Bạn có chắc muốn xóa bình luận này?", [
       {
-        text: "Cancel",
+        text: "Hủy",
         onPress: () => console.log("modal cancelled"),
         style: "cancel",
       },
       {
-        text: "Delete",
+        text: "Xóa",
         onPress: () => onDelete(item),
         style: "destructive",
       },

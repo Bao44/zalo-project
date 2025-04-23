@@ -13,6 +13,7 @@ const userRoutes = require("./routes/userRoutes");
 const postRoutes = require("./routes/postRoutes");
 const friendRoutes = require("./routes/friendshipRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Khởi tạo app và server
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/images', imageRoutes);
 app.use('/api', postRoutes);
 app.use("/api/friendships", friendRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // // Kiểm tra kết nối MariaDB
 // app.get("/check-mariadb", async (req, res) => {

@@ -6,6 +6,7 @@ import {
   Image,
   Alert,
   Share,
+  Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { theme } from "../constants/theme";
@@ -17,7 +18,7 @@ import RenderHTML from "react-native-render-html";
 import { Video } from "expo-av";
 import Loading from "./Loading";
 import { createPostLike, removePostLike } from "../api/post";
-import {  downloadFileShare, getSupabaseFileUrl } from "../api/image";
+import { downloadFileShare, getSupabaseFileUrl } from "../api/image";
 
 const textStyle = {
   color: theme.colors.dark,
@@ -60,7 +61,6 @@ const PostCard = ({
   useEffect(() => {
     setLikes(item?.postLikes);
   }, []);
-
 
   const openPostDetails = () => {
     if (!showMoreIcon) return null;
@@ -244,6 +244,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: theme.colors.gray,
     shadowColor: "#000",
+    marginHorizontal: wp(2),
   },
   header: {
     flexDirection: "row",
