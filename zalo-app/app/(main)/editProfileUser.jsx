@@ -69,7 +69,7 @@ const EditProfileUser = () => {
             {coverUri ? (
               <Image source={{ uri: coverUri }} style={styles.coverImage} />
             ) : (
-              <Image source={require("../../assets/images/defaultUser.png")} style={styles.coverImage} />
+              <Image source={require("../../assets/images/default_user.png")} style={styles.coverImage} />
             )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuButton} onPress={() => router.push("/settingsProfile")}>
@@ -82,7 +82,7 @@ const EditProfileUser = () => {
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatar} />
             ) : (
-              <Image source={require("../../assets/images/defaultUser.png")} style={styles.avatar} />
+              <Image source={require("../../assets/images/default_user.png")} style={styles.avatar} />
             )}
           </TouchableOpacity>
           {/* Display the username */}

@@ -19,7 +19,7 @@ export const getUserImageSrc = (imagePath) => {
     }
     return imagePath;
   } else {
-    return require("../assets/images/defaultUser.png");
+    return require("../assets/images/default_user.png");
   }
 };
 
@@ -32,7 +32,7 @@ export const getUserBackgroundImageSrc = (imagePath) => {
     }
     return imagePath;
   } else {
-    return require("../assets/images/defaultBackground.jpg");
+    return require("../assets/images/default_background.png");
   }
 };
 
