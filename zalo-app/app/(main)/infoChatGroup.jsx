@@ -116,6 +116,16 @@ const InfoChatGroup = () => {
         }
     };
 
+    //Thêm thành viên vào nhóm
+    const handleAddMember = async () => {
+        try {
+            // Gọi sang
+            router.push({ pathname: "selectAddMembersGroup", params: { conver: JSON.stringify(conversationInfo) } });
+        } catch (error) {
+            Alert.alert("Lỗi", error.message || "Không thể thêm thành viên vào nhóm.");
+        }
+    }
+
     return (
         <ScreenWrapper>
             {/* Header */}
@@ -164,7 +174,7 @@ const InfoChatGroup = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Tìm tin nhắn</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }} onPress={handleAddMember}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="addGroup"
