@@ -73,6 +73,8 @@ import Play from "./Play";
 import Pause from "./Pause";
 import Media from "./Media";
 import Send from "./Send";
+import Chart from "./Chart";
+import Key from "./Key";
 
 const icons = {
   add: Add,
@@ -148,6 +150,8 @@ const icons = {
   pause: Pause,
   media: Media,
   send: Send,
+  chart: Chart,
+  key: Key
 };
 
 const Icon = ({ name, ...props }) => {

@@ -105,6 +105,54 @@ export const deleteConversation1vs1 = async (conversationId, userId) => {
   }
 };
 
+// Thay đổi admin group
+export const changeAdminGroup = async (conversationId, newAdminId) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/change-admin`, { newAdminId });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in changeAdminGroup:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+};
+
+// Cập nhật avatar cuộc trò chuyện
+export const updateAvataConversation = async (conversationId, avatar) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/avatar`, { avatar });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in updateAvataConversation:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+};
+
+// Thêm thành viên vào group
+export const addMemberToGroup = async (conversationId, newMembers) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/add-member`, { newMembers });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in addMemberToGroup:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+};
+
+// Xóa thành viên khỏi group
+export const removeMemberFromGroup = async (conversationId, memberId) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/remove-member`, { memberId });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in removeMemberFromGroup:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+};
+
 // Xư lý lỗi trả về từ API
 const handleApiError = (error) => {
   if (error.response) {

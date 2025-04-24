@@ -790,6 +790,15 @@ const ChatDetailScreen = () => {
         }
     };
 
+    //Handle info conversation
+    const handleInfoConversation = (typeInfo) => {
+        if (typeInfo === "private") {
+            router.push({ pathname: "/infoChat1vs1", params: { conversationId: conversation?._id, friend: JSON.stringify(parsedData) } });
+        } else {
+            router.push({ pathname: "/infoChatGroup", params: { conversationId: conversation?._id } });
+        }
+    }
+
     return (
         <ScreenWrapper>
             <View style={styles.container}>
@@ -814,7 +823,7 @@ const ChatDetailScreen = () => {
                         {type === "private" && <TouchableOpacity><Icon name="phone" size={26} color="#FFF" /></TouchableOpacity>}
                         <TouchableOpacity><Icon name="callVideoOn" size={26} color="#FFF" /></TouchableOpacity>
                         {type === "group" && <TouchableOpacity><Icon name="search" size={26} color="#FFF" /></TouchableOpacity>}
-                        <TouchableOpacity onPress={() => router.push({ pathname: "/infoChat1vs1", params: { conversationId: conversation?._id, friend: JSON.stringify(parsedData) } })}><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleInfoConversation(type)}><Icon name="menu" size={26} color="#FFF" /></TouchableOpacity>
                     </View>
                 </View>
 

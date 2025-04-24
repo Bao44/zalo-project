@@ -28,7 +28,7 @@ const BioUser = () => {
                     checkFriendship(user.id, friend?._id)
                 ]);
 
-                if (userResponse) setInfoUser(userResponse);
+                if (userResponse.success) setInfoUser(userResponse?.user);
                 setFriended(friendResponse.success);
             } catch (error) {
                 console.log("Lỗi khi tải dữ liệu:", error);

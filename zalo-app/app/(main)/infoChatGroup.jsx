@@ -1,27 +1,41 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Alert } from "react-native";
-import React, { useState } from "react";
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, FlatList, Alert, Image } from "react-native";
+import React, { useEffect, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Icon from "@/assets/icons";
-import Avatar from "@/components/Avatar";
 import { theme } from "@/constants/theme";
 import { router } from "expo-router";
 import { hp, wp } from "@/helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import { deleteConversation1vs1 } from "@/api/conversationAPI";
-import { getUserFromMongoDB } from "@/api/user";
+import { deleteConversation1vs1, getConversation, updateAvataConversation } from "@/api/conversationAPI";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 
-const InfoChat1vs1 = () => {
+const InfoChatGroup = () => {
     const { user } = useAuth();
-    const { conversationId, friend } = useLocalSearchParams();
-    const friendInfo = JSON.parse(friend);
+    const { conversationId } = useLocalSearchParams();
+    const [conversationInfo, setConversationInfo] = useState({});
     const [data, setData] = useState([]);
-    //LAY DATA FROM API
+
+    // LẤY THÔNG TIN CUỘC TRÒ CHUYỆN
+    useEffect(() => {
+        const fetchConversationInfo = async () => {
+            try {
+                const response = await getConversation(conversationId);
+                if (response.success) {
+                    setConversationInfo(response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching conversation info:", error);
+            }
+        };
+        fetchConversationInfo();
+    }, [conversationId]);
 
     // XÓA CUỘC TRÒ CHUYỆN
     const handleDelete = () => {
         // Hỏi người dùng có chắc chắn muốn xóa không
-        Alert.alert(`Xóa cuộc trò chuyện với ${friendInfo?.name}?`, "Bạn có chắc chắn muốn xóa cuộc trò chuyện này không?", [
+        Alert.alert(`Xóa lịch sử cuộc trò chuyện nhóm?`, "Bạn có chắc chắn muốn xóa lịch sử cuộc trò chuyện này không?", [
             {
                 text: "Hủy",
                 style: "cancel",
@@ -47,28 +61,64 @@ const InfoChat1vs1 = () => {
         ]);
     };
 
-    //CHUYỂN ĐẾN TRANG CÁ NHÂN CỦA BẠN BÈ
-    const handleInfo = async () => {
-        const info = await getUserFromMongoDB(friendInfo?._id);
-        if (info.success) {
-            router.push({ pathname: "bioUserAddFriend", params: { user: JSON.stringify(info?.user) } });
-        } else {
-            Alert.alert("Lỗi", info?.data.message || "Không thể tìm thấy thông tin người dùng.");
-        }
-    };
-
-    // TẠO NHÓM VỚI BẠN BÈ
-    const handleReateGroupWithFriend = () => {
-        router.push({
-            pathname: "/newGroup", // Điều chỉnh pathname theo cấu hình định tuyến của bạn
-            params: {
-                preSelectedUser: JSON.stringify(friendInfo), // Truyền đối tượng người dùng dưới dạng chuỗi
-            },
+    // CÂP NHẬT AVATAR CUỘC TRÒ CHUYỆN
+    const handleUpdateAvatar = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
         });
+
+        if (!result.canceled) {
+            const uri = result.assets[0].uri;
+            const fileBase64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+
+            const avatarData = {
+                folderName: "group",
+                fileUri: fileBase64,
+                isImage: true,
+            };
+            const response = await updateAvataConversation(conversationId, avatarData);
+            if (response.success) {
+                setConversationInfo((prev) => ({ ...prev, avatar: response.data.avatar }));
+            } else {
+                Alert.alert("Lỗi", response.data.message || "Không thể cập nhật avatar.");
+            }
+        };
+    }
+
+    //Thay đổi admin nhóm
+    const handleChangeAdmin = async () => {
+        try {
+            // Kiểm tra xem người dùng có phải là admin không
+            const isAdmin = conversationInfo?.admin === user?.id;
+            if (!isAdmin) {
+                Alert.alert("Cảnh báo", "Bạn không có quyền thay đổi admin nhóm này.");
+                return;
+            }
+            // Alert cho người dùng xác nhận
+            Alert.alert("Chuyển quyền trưởng nhóm", "Người được chọn sẽ trở thành trưởng nhóm và có mọi quyền quản lý nhóm. Bạn sẽ mất quyền quản lý nhưng vẫn là một thành viên của nhóm. Hành động này không thể phục hồi", [
+                {
+                    text: "Hủy",
+                    style: "cancel",
+                },
+                {
+                    text: "Tiếp tục",
+                    onPress: async () => {
+                        // Gọi sang màn hình khác để chọn admin mới
+                        router.push({ pathname: "seleteAdminGroup", params: { conver: JSON.stringify(conversationInfo) } });
+                    },
+                },
+            ]);
+        } catch (error) {
+            Alert.alert("Lỗi", error.message || "Không thể thay đổi quyền admin.");
+        }
     };
 
     return (
         <ScreenWrapper>
+            {/* Header */}
             <View style={styles.container}>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <TouchableOpacity onPress={() => router.back()}>
@@ -82,12 +132,28 @@ const InfoChat1vs1 = () => {
                     <Text style={styles.textTitleHeader}>Tùy chọn</Text>
                 </View>
             </View>
+
+            {/* Body */}
             <ScrollView>
                 <View style={styles.container1}>
-                    <Avatar uri={friendInfo?.avatar} size={90} rounded={45} />
-                    <Text style={styles.textName}>{friendInfo?.name}</Text>
+                    <TouchableOpacity onPress={handleUpdateAvatar} style={{ alignItems: "center", justifyContent: "center" }}>
+                        <Image
+                            source={{ uri: conversationInfo?.avatar }}
+                            style={{ width: wp(20), height: wp(20), borderRadius: wp(10) }}
+                        />
+                        <View style={{ position: "absolute", bottom: 0, right: 0, backgroundColor: theme.colors.grayLight, width: wp(8), height: wp(8), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
+                            <Icon
+                                name="camera"
+                                size={16}
+                                strokeWidth={1.6}
+                                color="black"
+
+                            />
+                        </View>
+                    </TouchableOpacity>
+                    <Text style={styles.textName} numberOfLines={1} ellipsizeMode="tail">{conversationInfo?.name}</Text>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: 'space-evenly', height: "30%", width: "100%" }}>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: wp(15) }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="search"
@@ -98,18 +164,18 @@ const InfoChat1vs1 = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Tìm tin nhắn</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: wp(15) }} onPress={handleInfo}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
-                                    name="profile"
+                                    name="addGroup"
                                     size={24}
                                     strokeWidth={1.6}
                                     color="black"
                                 />
                             </View>
-                            <Text style={{ textAlign: "center" }}>Trang cá nhân</Text>
+                            <Text style={{ textAlign: "center" }}>Thêm thành viên</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: wp(15) }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="zTyle"
@@ -120,7 +186,7 @@ const InfoChat1vs1 = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Đổi hình nền</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: wp(15) }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="notification"
@@ -133,33 +199,16 @@ const InfoChat1vs1 = () => {
                         </TouchableOpacity>
                     </View>
                 </View>
-                <View style={styles.container2}>
+
+                <View style={[styles.container2, { height: hp(7) }]}>
                     <TouchableOpacity style={styles.box}>
                         <Icon
                             name="edit"
-                            size={24}
+                            size={20}
                             strokeWidth={1.6}
                             color="gray"
                         />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Đổi tên gọi nhớ</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
-                        <Icon
-                            name="star"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Đánh dấu bạn thân</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
-                        <Icon
-                            name="information"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Nhật ký chung</Text>
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Thêm thông tin mô tả</Text>
                     </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={styles.container3}>
@@ -189,35 +238,15 @@ const InfoChat1vs1 = () => {
                     </View>
                 </TouchableOpacity>
                 <View style={styles.container2}>
-                    <TouchableOpacity style={styles.box} onPress={handleReateGroupWithFriend}>
-                        <Icon
-                            name="addGroup"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Tạo nhóm với {friendInfo?.name}</Text>
-                    </TouchableOpacity>
                     <TouchableOpacity style={styles.box}>
                         <Icon
-                            name="userAdd"
+                            name="calendar"
                             size={24}
                             strokeWidth={1.6}
                             color="gray"
                         />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Thêm {friendInfo?.name} vào nhóm</Text>
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Lịch nhóm</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
-                        <Icon
-                            name="userMultiple"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Xem nhóm chung { }</Text>
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.container4}>
                     <TouchableOpacity style={styles.box}>
                         <Icon
                             name="pin"
@@ -225,7 +254,67 @@ const InfoChat1vs1 = () => {
                             strokeWidth={1.6}
                             color="gray"
                         />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Ghim trò chuyện</Text>
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Tin nhắn đã ghim</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="chart"
+                            size={24}
+                            strokeWidth={1.6}
+                            color="gray"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Bình chọn</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={[styles.container2, { height: hp(7) }]}>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="setting"
+                            size={20}
+                            strokeWidth={1.6}
+                            color="gray"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Cài đặt nhóm</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.container2}>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="userGroup"
+                            size={24}
+                            strokeWidth={1.6}
+                            color="gray"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Xem thành viên ({conversationInfo?.members?.length})</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="tick"
+                            size={24}
+                            strokeWidth={1.6}
+                            color="gray"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Duyệt thành viên</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="link"
+                            size={24}
+                            strokeWidth={1.6}
+                            color="gray"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Link nhóm</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.container5}>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="pin"
+                            size={24}
+                            strokeWidth={1.6}
+                            color="gray"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Ghim cuộc trò chuyện</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.box}>
                         <Icon
@@ -234,16 +323,7 @@ const InfoChat1vs1 = () => {
                             strokeWidth={1.6}
                             color="gray"
                         />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Ẩn trò chuyện</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
-                        <Icon
-                            name="callInComing"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Báo cuộc gọi đến</Text>
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Ẩn cuộc trò chuyện</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.box}>
                         <Icon
@@ -267,7 +347,7 @@ const InfoChat1vs1 = () => {
                         <Text style={{ marginLeft: 20, fontSize: 17 }}>Cài đặt cá nhân</Text>
                     </TouchableOpacity>
                 </View>
-                <View style={styles.container5}>
+                <View style={[styles.container4, { height: conversationInfo?.admin === user?.id ? hp(40) : hp(25) }]}>
                     <TouchableOpacity style={styles.box}>
                         <Icon
                             name="report"
@@ -277,15 +357,17 @@ const InfoChat1vs1 = () => {
                         />
                         <Text style={{ marginLeft: 20, fontSize: 17 }}>Báo xấu</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
-                        <Icon
-                            name="block"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Quản lý chặn</Text>
-                    </TouchableOpacity>
+                    {conversationInfo?.admin === user?.id && (
+                        <TouchableOpacity style={styles.box} onPress={handleChangeAdmin}>
+                            <Icon
+                                name="key"
+                                size={24}
+                                strokeWidth={1.6}
+                                color="gray"
+                            />
+                            <Text style={{ marginLeft: 20, fontSize: 17 }}>Chuyển quyền trưởng nhóm</Text>
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity style={styles.box}>
                         <Icon
                             name="cloud"
@@ -293,7 +375,7 @@ const InfoChat1vs1 = () => {
                             strokeWidth={1.6}
                             color="gray"
                         />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Dung lượng trò chuyện</Text>
+                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Dung lượng trò truyện</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.box} onPress={handleDelete}>
                         <Icon
@@ -302,7 +384,16 @@ const InfoChat1vs1 = () => {
                             strokeWidth={1.6}
                             color="red"
                         />
-                        <Text style={{ marginLeft: 20, fontSize: 17, color: "red" }}>Xóa lịch sử trò chuyện</Text>
+                        <Text style={{ marginLeft: 20, fontSize: 17, color: "red" }}>Xóa lịch sử trò truyện</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.box}>
+                        <Icon
+                            name="leaveGroup"
+                            size={24}
+                            strokeWidth={1.6}
+                            color="red"
+                        />
+                        <Text style={{ marginLeft: 20, fontSize: 17, color: "red" }}>Rời nhóm</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -310,7 +401,7 @@ const InfoChat1vs1 = () => {
     );
 };
 
-export default InfoChat1vs1;
+export default InfoChatGroup;
 
 const styles = StyleSheet.create({
     container: {
@@ -338,6 +429,7 @@ const styles = StyleSheet.create({
     textName: {
         fontSize: 20,
         fontWeight: theme.fonts.medium,
+        width: "60%"
     },
 
     // Container 2
