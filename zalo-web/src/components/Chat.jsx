@@ -45,6 +45,7 @@ import { getMessages, sendMessage, addUserSeen, likeMessage, undoDeleteMessage, 
 import EmojiPopover from './EmojiPopover';
 import { createConversation1vs1 } from "../../api/conversationAPI";
 import ReplytoMessageSelected from "./ReplytoMessageSelected";
+import ConversationInfo from './ConversationInfo';
 
 const Chat = ({ conversation, setConversation }) => {
   const { name, members, type } = conversation;
@@ -782,9 +783,10 @@ const Chat = ({ conversation, setConversation }) => {
           <Box sx={{ marginLeft: "auto", color: "#000", padding: "5px" }}>
             <VideocamIcon />
           </Box>
-          <Button sx={{ marginLeft: "10px", color: "#000", padding: "5px" }} onClick={toggleDrawer(true)}>
+          {/* <Button sx={{ marginLeft: "10px", color: "#000", padding: "5px" }} onClick={toggleDrawer(true)}>
             <DehazeIcon />
-          </Button>
+          </Button> */}
+          <ConversationInfo />
         </Box>
       </Box>
       <Box sx={{ flexGrow: 1, overflowY: "auto", backgroundColor: "#f5f5f5", padding: "20px 10px" }}>
@@ -898,7 +900,7 @@ const Chat = ({ conversation, setConversation }) => {
           {loading && <CircularProgress color="inherit" size="20px" sx={{ marginLeft: "5px" }} />}
         </Button>
       </Box>
-      <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
+      {/* <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
         <Box sx={{ width: 400 }} role="presentation">
           <Typography textAlign="center" fontWeight="bold" paddingTop="20px" paddingBottom="20px" fontSize="20px">
             Thông tin hội thoại
@@ -984,7 +986,7 @@ const Chat = ({ conversation, setConversation }) => {
             setConversation={setConversation}
           />
         </Box>
-      </Drawer>
+      </Drawer> */}
       <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
         <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
         <DialogContent>
