@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const messageController = require("../controllers/messageController");
+const uploadMiddleware = require("../middleware/upload");
 
 // API: Gửi tin nhắn
-router.post("/send-message", messageController.sendMessage);
+router.post("/send-message", uploadMiddleware, messageController.sendMessage);
 
 // API: Lấy tin nhắn trong cuộc trò chuyện
 router.get("/get-messages/:conversationId", messageController.getMessages);

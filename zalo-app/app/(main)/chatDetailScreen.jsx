@@ -38,8 +38,6 @@ const ChatDetailScreen = () => {
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
     const [attachments, setAttachments] = useState([]);
-    const [media, setMedia] = useState(null);
-    const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [photos, setPhotos] = useState([]);
     const [showGallery, setShowGallery] = useState(false);
@@ -54,6 +52,25 @@ const ChatDetailScreen = () => {
     const videoRef = useRef(null);
     const inputRef = useRef(null);
     const flatListRef = useRef(null);
+
+    const getMimeTypeFromFilename = (filename) => {
+        const extension = filename?.split(".").pop()?.toLowerCase();
+        switch (extension) {
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            case "png":
+                return "image/png";
+            case "gif":
+                return "image/gif";
+            case "heic":
+                return "image/heic";
+            case "webp":
+                return "image/webp";
+            default:
+                return "application/octet-stream"; // fallback
+        }
+    };
 
     // LẤY ẢNH TỪ THƯ VIỆN
     useEffect(() => {
@@ -77,11 +94,13 @@ const ChatDetailScreen = () => {
                     first: 50,
                     after: after,
                 });
-                if (photos?.assets?.length === 0) {
-                    console.warn("⚠️ Không tìm thấy ảnh nào trong thư viện.");
-                }
 
-                allPhotos = [...allPhotos, ...photos.assets];
+                const detailedPhotos = photos.assets.map((asset) => ({
+                    ...asset,
+                    mimeType: getMimeTypeFromFilename(asset.filename),
+                }));
+
+                allPhotos = [...allPhotos, ...detailedPhotos];
                 hasNextPage = photos.hasNextPage;
                 after = photos.endCursor;
             }
@@ -269,13 +288,10 @@ const ChatDetailScreen = () => {
                 images = await Promise.all(
                     attachments.map(async (attachment) => {
                         const compressedUri = await compressImage(attachment.uri);
-                        const fileBase64 = await FileSystem.readAsStringAsync(compressedUri, {
-                            encoding: FileSystem.EncodingType.Base64,
-                        });
                         return {
-                            folderName: "messages",
-                            fileUri: fileBase64,
-                            isImage: true,
+                            uri: compressedUri,
+                            name: attachment.filename,
+                            type: attachment.mimeType,
                         };
                     })
                 );
@@ -284,16 +300,12 @@ const ChatDetailScreen = () => {
             const t = Date.now().toString();
             setStempId(t);
 
-            const messageData = {
-                idTemp: t,
-                senderId: user?.id,
-                content: message || "",
-                attachments: images.length > 0 ? images : null,
-                media: null,
-                file: null,
-                receiverId: parsedData?._id,
-                replyTo: messageReplyto || null,
-            };
+            const messageData = new FormData();
+            messageData.append("idTemp", t);
+            messageData.append("senderId", user?.id);
+            messageData.append("content", message || "");
+            messageData.append("receiverId", parsedData?._id);
+            messageData.append("conversationId", conversationId);
 
             // Thêm tin nhắn tạm thời vào danh sách
             setMessages((prev) => [
@@ -317,7 +329,7 @@ const ChatDetailScreen = () => {
             setShowGallery(false);
 
             // Gửi tin nhắn
-            const response = await sendMessage(conversationId, messageData);
+            const response = await sendMessage(messageData);
             if (response.success && response.data) {
                 // Cập nhật tin nhắn tạm với ID chính thức từ server
                 setMessages((prev) => {
@@ -414,7 +426,6 @@ const ChatDetailScreen = () => {
                         'application/vnd.ms-excel', // Excel (.xls)
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel (.xlsx)
                         'application/vnd.ms-project', // Microsoft Project (.mpp)
-                        'text/plain', // File văn bản (.txt)
                         'application/vnd.ms-powerpoint', // PowerPoint (.ppt)
                         'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PowerPoint (.pptx)
                         'application/vnd.ms-outlook', // Outlook (.msg)
@@ -441,10 +452,11 @@ const ChatDetailScreen = () => {
             if (!result.canceled) {
                 const selectedFiles = await Promise.all(
                     result.assets.map(async (file) => {
-                        const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
-                            encoding: FileSystem.EncodingType.Base64,
-                        });
-                        return { uri: fileBase64, name: file.name, type: file.mimeType };
+                        return {
+                            uri: file.uri,
+                            name: file.name,
+                            type: file.mimeType,
+                        };
                     })
                 );
 
@@ -477,15 +489,18 @@ const ChatDetailScreen = () => {
                     const t = Date.now().toString();
                     setStempId(t);
 
-                    const messageData = {
-                        idTemp: t,
-                        senderId: user?.id,
-                        content: "", // Nội dung để trống khi gửi file
-                        attachments: null, // Không gửi ảnh kèm file
-                        media: null, // Không gửi media kèm file
-                        file: file, // Gửi file hiện tại
-                        receiverId: parsedData?._id,
-                    };
+                    const messageData = new FormData();
+                    messageData.append("idTemp", t);
+                    messageData.append("senderId", user?.id);
+                    messageData.append("file", {
+                        uri: file.uri,
+                        name: file.name,
+                        type: file.type,
+                    });
+                    messageData.append("receiverId", parsedData?._id);
+                    messageData.append("conversationId", conversationId);
+
+                    console.log("DDDĐ", messageData._parts);
 
                     // Thêm tin nhắn tạm thời vào danh sách
                     setMessages((prev) => [
@@ -502,14 +517,13 @@ const ChatDetailScreen = () => {
                     ]);
 
                     // Gửi tin nhắn qua API
-                    const response = await sendMessage(conversationId, messageData);
+                    const response = await sendMessage(messageData);
                     if (!response.success) {
                         Alert.alert("Lỗi", `Không thể gửi tin nhắn: ${response.data?.message || "Lỗi không xác định"}`);
                     }
                 }
 
                 // Reset trạng thái files sau khi gửi
-                setFiles([]);
                 setShowGallery(false);
             } else {
                 console.log("Cancel");
@@ -550,11 +564,11 @@ const ChatDetailScreen = () => {
                         if (fileInfo.size > maxSizeBytes) {
                             throw new Error(`Video "${video.name}" vượt quá giới hạn ${maxSizeMB}MB.`);
                         }
-
-                        const fileBase64 = await FileSystem.readAsStringAsync(video.uri, {
-                            encoding: FileSystem.EncodingType.Base64,
-                        });
-                        return { uri: fileBase64, name: video.name, type: video.mimeType };
+                        return {
+                            uri: video.uri,
+                            name: video.name,
+                            type: video.mimeType,
+                        };
                     })
                 );
 
@@ -587,15 +601,15 @@ const ChatDetailScreen = () => {
                     const t = Date.now().toString();
                     setStempId(t);
 
-                    const messageData = {
-                        idTemp: t,
-                        senderId: user?.id,
-                        content: "", // Nội dung để trống khi gửi video
-                        attachments: null, // Không gửi ảnh kèm video
-                        media: video, // Gửi video dưới dạng media
-                        file: null, // Không gửi file kèm video
-                        receiverId: parsedData?._id,
-                    };
+                    const messageData = new FormData();
+                    messageData.append("idTemp", t);
+                    messageData.append("senderId", user?.id);
+                    messageData.append("content", "");
+                    messageData.append("attachments", null);
+                    messageData.append("media", video); // Gửi video
+                    messageData.append("file", null);
+                    messageData.append("receiverId", parsedData?._id);
+                    messageData.append("conversationId", conversationId);
 
                     // Thêm tin nhắn tạm thời vào danh sách
                     setMessages((prev) => [
@@ -612,7 +626,7 @@ const ChatDetailScreen = () => {
                     ]);
 
                     // Gửi tin nhắn qua API
-                    const response = await sendMessage(conversationId, messageData);
+                    const response = await sendMessage(messageData);
                     if (!response.success) {
                         Alert.alert("Lỗi", `Không thể gửi video: ${response.data?.message || "Lỗi không xác định"}`);
                         // Xóa tin nhắn tạm nếu gửi thất bại
@@ -621,7 +635,6 @@ const ChatDetailScreen = () => {
                 }
 
                 // Reset trạng thái sau khi gửi
-                setMedia(null);
                 setShowGallery(false);
             } else {
                 console.log("Video selection canceled");

@@ -12,19 +12,14 @@ export const getMessages = async (conversationId) => {
     }
 };
 
-export const sendMessage = async (conversationId, messageData) => {
+export const sendMessage = async (formData) => {
     try {
-        const response = await axios.post(BACKEND_URL + "/api/messages/send-message", {
-            idTemp: messageData.idTemp,
-            conversationId,
-            senderId: messageData.senderId,
-            content: messageData.content,
-            attachments: messageData.attachments,
-            media: messageData.media,
-            file: messageData.file,
-            replyTo: messageData.replyTo,
-            receiverId: messageData.receiverId
+        const response = await axios.post(BACKEND_URL + "/api/messages/send-message", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
         });
+        console.log("Send Message Response:", 1111); // Log response data
         return { success: true, data: response.data };
     } catch (error) {
         console.error("Send Message Error:", error.response?.data || error);
@@ -78,7 +73,7 @@ export const undoDeleteMessage = async (messageId, userId) => {
 
 export const findPreviousMessage = async (conversationId, messageId, user) => {
     try {
-        const response = await axios.get(BACKEND_URL + `/api/messages/search-messagePrevious/${conversationId}/${messageId}`, {user});
+        const response = await axios.get(BACKEND_URL + `/api/messages/search-messagePrevious/${conversationId}/${messageId}`, { user });
         return response.data;
     } catch (error) {
         console.error("Find Previous Message Error:", error.response?.data || error);
@@ -88,7 +83,7 @@ export const findPreviousMessage = async (conversationId, messageId, user) => {
 
 export const likeMessage = async (messageId, likeStatus, userId) => {
     try {
-        const response = await axios.post(BACKEND_URL + `/api/messages/like-or-dislike-message`, {messageId, likeStatus, userId });
+        const response = await axios.post(BACKEND_URL + `/api/messages/like-or-dislike-message`, { messageId, likeStatus, userId });
         return response.data;
     } catch (error) {
         console.error("Like Message Error:", error.response?.data || error);

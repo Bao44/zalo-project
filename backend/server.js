@@ -4,6 +4,14 @@ const cors = require("cors");
 const http = require("http");
 const { initSocket } = require("./socket");
 const { mongoose } = require("./config/database");
+const fs = require('fs');
+const path = require('path');
+const uploadDir = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log('Created uploads directory:', uploadDir);
+}
 
 // Routes import
 const authRoutes = require("./routes/authRoutes");

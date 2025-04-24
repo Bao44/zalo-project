@@ -2,12 +2,22 @@ const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
 const { getSocketInstance } = require("../socket");
 const cloudinary = require("../config/cloudinary");
+const fs = require("fs/promises");
 
 const messageController = {
     // Gửi tin nhắn
     async sendMessage(req, res) {
         try {
-            const { idTemp, conversationId, senderId, content, attachments, media, file, replyTo, receiverId } = req.body;
+            const normalize = (value) => {
+                if (value === "null" || value === "undefined") return null;
+                return value;
+            };
+            const { idTemp, conversationId, senderId, content, replyTo, receiverId } = Object.fromEntries(
+                Object.entries(req.body).map(([key, value]) => [key, normalize(value)])
+            );
+            const { attachments, file, media } = req.files || {};
+
+            console.log("Req body:", req.body);
 
             if (!conversationId || !senderId) {
                 return res.status(400).json({ error: "conversationId và senderId là bắt buộc" });
@@ -32,17 +42,13 @@ const messageController = {
             let images = [];
             if (attachments && attachments.length > 0) {
                 const uploadPromises = attachments.map(async (attachment) => {
-                    if (!attachment.fileUri) throw new Error("Thiếu dữ liệu fileBase64");
-
-                    const resourceType = attachment.isImage ? "image" : "raw";
-                    const result = await cloudinary.uploader.upload(`data:image/png;base64,${attachment.fileUri}`, {
+                    const result = await cloudinary.uploader.upload(attachment.path, {
                         folder: "zalo/messages/hinh-anh",
-                        resource_type: resourceType,
+                        resource_type: "image",
                     });
-
+                    await fs.unlink(attachment.path); // Xóa tệp tạm thời sau khi upload
                     return result.secure_url;
                 });
-
                 images = await Promise.all(uploadPromises);
             }
 
@@ -80,33 +86,28 @@ const messageController = {
             }
 
             // Upload và tạo tin nhắn riêng cho file (chỉ 1 file duy nhất)
-            if (file) {
-                if (!file.uri) {
-                    throw new Error(`Thiếu dữ liệu base64 cho file: ${file.name}`);
-                }
-
-                const mimeType = file.type || 'application/octet-stream';
-                const dataUri = `data:${mimeType};base64,${file.uri}`;
-
+            if (file && file.length > 0) {
+                const fileInfo = file[0];
                 let result;
 
-                if (file.type === "audio/m4a") {
-                    result = await cloudinary.uploader.upload(dataUri, {
+                if (fileInfo.mimetype === "audio/m4a") {
+                    result = await cloudinary.uploader.upload(fileInfo.path, {
                         folder: "zalo/messages/audio",
                         resource_type: "auto",
                         // public_id: file.name,
                     });
                 } else {
-                    result = await cloudinary.uploader.upload(dataUri, {
+                    result = await cloudinary.uploader.upload(fileInfo.path, {
                         folder: "zalo/messages/files",
                         resource_type: "auto",
                         // public_id: file.name,
                     });
                 }
+                await fs.unlink(fileInfo.path); // Xóa tệp tạm thời sau khi upload
 
                 const fileData = {
-                    fileName: file.name,
-                    fileType: file.type,
+                    fileName: decodeURIComponent(fileInfo.originalname),
+                    fileType: fileInfo.mimetype,
                     fileUrl: result.secure_url,
                 };
 
@@ -141,23 +142,19 @@ const messageController = {
             }
 
             // Upload và tạo tin nhắn riêng cho video (nếu có)
-            if (media) {
-                if (!media.uri) {
-                    throw new Error(`Thiếu dữ liệu base64 cho video: ${media.name}`);
-                }
+            if (media && media.length > 0) {
+                const mediaInfo = media[0];
 
-                const mimeType = media.type || 'video/mp4';
-                const dataUri = `data:${mimeType};base64,${media.uri}`;
-
-                const result = await cloudinary.uploader.upload(dataUri, {
+                const result = await cloudinary.uploader.upload(mediaInfo.path, {
                     folder: "zalo/messages/videos",
                     resource_type: "video",
                     // public_id: media.name,
                 });
+                await fs.unlink(mediaInfo.path); // Xóa tệp tạm thời sau khi upload
 
                 const videoData = {
-                    fileName: media.name,
-                    fileType: media.type,
+                    fileName: decodeURIComponent(mediaInfo.originalname),
+                    fileType: mediaInfo.mimetype,
                     fileUrl: result.secure_url,
                 };
 

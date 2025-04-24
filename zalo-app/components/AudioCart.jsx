@@ -200,28 +200,24 @@ const AudioCart = ({ conversation, parsedData, setMessages, setStempId, setConve
                 return;
             }
 
-            const fileBase64 = await FileSystem.readAsStringAsync(audioUri, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-
             const t = Date.now().toString();
             setStempId(t);
 
             const audioData = {
-                uri: fileBase64,
-                name: `audio_${t}.m4a`,
+                uri: audioUri,
+                name: `audio-${t}.m4a`,
                 type: "audio/m4a",
             };
 
-            const messageData = {
-                idTemp: t,
-                senderId: user?.id,
-                content: "",
-                attachments: null,
-                media: null,
-                file: audioData,
-                receiverId: parsedData?._id,
-            };
+            const messageData = new FormData();
+            messageData.append("idTemp", t);
+            messageData.append("senderId", user?.id);
+            messageData.append("content", "");
+            messageData.append("attachments", null);
+            messageData.append("media", null);
+            messageData.append("file", audioData);
+            messageData.append("receiverId", parsedData?._id);
+            messageData.append("conversationId", conversationId);
 
             setMessages((prev) => [
                 {
@@ -237,7 +233,7 @@ const AudioCart = ({ conversation, parsedData, setMessages, setStempId, setConve
                 ...prev,
             ]);
 
-            const response = await sendMessage(conversationId, messageData);
+            const response = await sendMessage(messageData);
             if (response.success && response.data) {
                 setMessages((prev) => {
                     const index = prev.findIndex((msg) => msg._id === t);
