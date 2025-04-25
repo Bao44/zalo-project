@@ -115,7 +115,7 @@ const Chat = ({ conversation, setConversation }) => {
               msg.idTemp &&
               msg.senderId._id === message.senderId &&
               Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) <
-                1000 && // Within 1 second
+              1000 && // Within 1 second
               msg.attachments?.length > 0 &&
               message.attachments?.length > 0
           );
@@ -375,7 +375,7 @@ const Chat = ({ conversation, setConversation }) => {
       console.error("Error in handleSendAudio:", error);
       alert(
         "Không thể gửi file âm thanh: " +
-          (error.message || "Lỗi không xác định")
+        (error.message || "Lỗi không xác định")
       );
       setMessages((prev) => prev.filter((msg) => !msg.idTemp)); // Xóa tin nhắn tạm nếu lỗi
     } finally {
@@ -558,10 +558,10 @@ const Chat = ({ conversation, setConversation }) => {
           files: media
             ? null
             : {
-                uri: fileBase64,
-                name: file.name,
-                type: file.mimeType || file.type,
-              },
+              uri: fileBase64,
+              name: file.name,
+              type: file.mimeType || file.type,
+            },
           receiverId: type === "private" ? friend?._id : null,
           replyTo: replyTo || null,
         };
@@ -577,10 +577,10 @@ const Chat = ({ conversation, setConversation }) => {
             files: media
               ? null
               : {
-                  uri: fileBase64,
-                  name: file.name,
-                  type: file.mimeType || file.type,
-                },
+                uri: fileBase64,
+                name: file.name,
+                type: file.mimeType || file.type,
+              },
             replyTo: replyTo || null,
             createdAt: new Date().toISOString(),
             idTemp: t,
@@ -695,9 +695,9 @@ const Chat = ({ conversation, setConversation }) => {
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => {};
+  const handleTypingStart = () => { };
 
-  const handleTypingEnd = () => {};
+  const handleTypingEnd = () => { };
 
   // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
@@ -851,25 +851,19 @@ const Chat = ({ conversation, setConversation }) => {
           [...messages]
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
             .map((msg) => {
-              if (
-                msg.senderId?._id === user?.id &&
-                !msg.removed?.includes(user?.id)
-              ) {
+              if (msg?.type === "notification") {
                 return (
-                  <MessageSender
-                    key={msg._id}
-                    message={msg}
-                    handleLikeMessage={handleLikeMessage}
-                    handleUnlikeMessage={handleUnlikeMessage}
-                    handleRevokeMessage={handleRevokeMessage}
-                    handleDeleteMessage={handleDeleteMessage}
-                    setReplyToMessage={setReplyToMessage}
-                  />
+                  <>
+                    <Typography sx={{ marginTop: 3, textAlign: "center" }}>{msg?.content}</Typography>
+                  </>
                 );
               } else {
-                if (!msg.removed?.includes(user?.id)) {
+                if (
+                  msg.senderId?._id === user?.id &&
+                  !msg.removed?.includes(user?.id)
+                ) {
                   return (
-                    <MessageReceiver
+                    <MessageSender
                       key={msg._id}
                       message={msg}
                       handleLikeMessage={handleLikeMessage}
@@ -879,6 +873,20 @@ const Chat = ({ conversation, setConversation }) => {
                       setReplyToMessage={setReplyToMessage}
                     />
                   );
+                } else {
+                  if (!msg.removed?.includes(user?.id)) {
+                    return (
+                      <MessageReceiver
+                        key={msg._id}
+                        message={msg}
+                        handleLikeMessage={handleLikeMessage}
+                        handleUnlikeMessage={handleUnlikeMessage}
+                        handleRevokeMessage={handleRevokeMessage}
+                        handleDeleteMessage={handleDeleteMessage}
+                        setReplyToMessage={setReplyToMessage}
+                      />
+                    );
+                  }
                 }
               }
             })}

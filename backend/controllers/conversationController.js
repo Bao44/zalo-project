@@ -256,7 +256,7 @@ const updateAvataConversation = async (req, res) => {
 const addMemberToGroup = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { newMembers } = req.body; // newMembers là mảng các userId mới
+    const { newMembers, userRequest } = req.body; // newMembers là mảng các userId mới
 
     // Tìm cuộc trò chuyện
     const conversation = await Conversation.findById(conversationId);
@@ -272,7 +272,7 @@ const addMemberToGroup = async (req, res) => {
     }
 
     // Thêm các thành viên mới
-    if (conversation.approvedMembers) {
+    if (conversation.approvedMembers && conversation?.admin !== userRequest) {
       conversation.listApprovedMembers.push(...newMembers);
     } else {
       conversation.members.push(...newMembers);
@@ -366,6 +366,43 @@ const changeSettingApproved = async (req, res) => {
   }
 }
 
+// 📌 Duyệt hoặc xóa yêu cầu tham gia nhóm
+const approveOrDeleteMember = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { memberId, userRequest, action } = req.body; // action có thể là "approve" hoặc "delete"
+
+    // Tìm cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Kiểm tra xem userRequest có phải là admin không
+    if (conversation?.admin !== userRequest) {
+      return res.status(403).json({ error: "Chỉ có admin mới có quyền duyệt hoặc xóa yêu cầu tham gia" });
+    }
+
+    if (action === "approve") {
+      // Duyệt yêu cầu tham gia
+      conversation.members.push(memberId); // Thêm thành viên vào danh sách members
+      conversation.listApprovedMembers = conversation.listApprovedMembers.filter(member => member.toString() !== memberId); // Xóa khỏi danh sách yêu cầu tham gia
+    } else if (action === "delete") {
+      // Xóa yêu cầu tham gia
+      conversation.listApprovedMembers = conversation.listApprovedMembers.filter(member => member.toString() !== memberId); // Xóa khỏi danh sách yêu cầu tham gia
+    } else {
+      return res.status(400).json({ error: "Invalid action" });
+    }
+
+    await conversation.save();
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error approving or deleting member:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
 module.exports = {
   create1vs1,
   getUserConversations,
@@ -378,5 +415,6 @@ module.exports = {
   addMemberToGroup,
   removeMemberFromGroup,
   changeAdminGroup,
-  changeSettingApproved
+  changeSettingApproved,
+  approveOrDeleteMember
 };

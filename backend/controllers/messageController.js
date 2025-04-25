@@ -7,7 +7,7 @@ const messageController = {
     // Gửi tin nhắn
     async sendMessage(req, res) {
         try {
-            const { idTemp, conversationId, senderId, content, attachments, media, file, replyTo, receiverId } = req.body;
+            const { idTemp, conversationId, senderId, content, attachments, media, file, replyTo, receiverId, type } = req.body;
 
             if (!conversationId || !senderId) {
                 return res.status(400).json({ error: "conversationId và senderId là bắt buộc" });
@@ -60,6 +60,7 @@ const messageController = {
                     files: null,
                     replyTo: replyTo || null,
                     status: "sent",
+                    type: type || "message"
                 });
 
                 const savedMessage = await newMessage.save();

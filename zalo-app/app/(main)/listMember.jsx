@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Alert } from "react-native";
 import React, { useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { theme } from "@/constants/theme";
@@ -6,9 +6,10 @@ import Icon from "@/assets/icons";
 import { hp, wp } from "@/helpers/common";
 import { router, useLocalSearchParams } from "expo-router";
 import Avatar from "@/components/Avatar";
-import { addMemberToGroup, changeSettingApproved } from "@/api/conversationAPI";
+import { addMemberToGroup, changeSettingApproved, removeMemberFromGroup } from "@/api/conversationAPI";
 import MemberInfoModal from "@/components/MemberInfoModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { sendMessage } from "@/api/messageAPI";
 
 const ListMember = () => {
     const { user } = useAuth();
@@ -34,6 +35,34 @@ const ListMember = () => {
         setSelectedMember(null);
     };
 
+    // Xoa thành viên khỏi nhóm
+    const handleRemoveMember = async () => {
+        try {
+            const response = await removeMemberFromGroup(converInfo._id, selectedMember?._id, user?.id);
+            if (response.success) {
+                //Gửi tin nhắn thông báo cho thành viên bị xóa
+                const messageData = {
+                    senderId: user?.id,
+                    content: `${selectedMember?.name} đã bị xóa khỏi nhóm!`,
+                    attachments: null,
+                    media: null,
+                    file: null,
+                    replyTo: null,
+                    type: "notification",
+                };
+                await sendMessage(converInfo._id, messageData);
+                setModalVisible(false);
+                setSelectedMember(null);
+                Alert.alert("Xóa thành viên thành công!");
+            } else {
+                Alert.alert("Xóa thành viên không thành công!");
+            }
+        } catch (error) {
+            Alert.alert("Xóa thành viên không thành công!");
+            return error.response.data.error || "Lỗi không xác định từ server";
+        }
+    };
+
     return (
         <ScreenWrapper>
             {/* Header */}
@@ -52,26 +81,28 @@ const ListMember = () => {
             </View>
 
             {/* Body */}
-            <TouchableOpacity style={{
-                width: "100%",
-                height: hp(7),
-                justifyContent: "flex-start",
-                alignItems: "center",
-                paddingHorizontal: 20,
-                flexDirection: 'row'
-            }}
-                onPress={handleApprovedMember}
-            >
-                <View style={{ width: wp(10), height: wp(10), borderRadius: wp(5), backgroundColor: theme.colors.grayLight, justifyContent: "center", alignItems: "center" }}>
-                    <Icon
-                        name="tick"
-                        size={24}
-                        strokeWidth={1.6}
-                        color={theme.colors.primary}
-                    />
-                </View>
-                <Text style={{ paddingLeft: 20, fontSize: 16 }}>Duyệt thành viên</Text>
-            </TouchableOpacity>
+            {converInfo?.admin === user?.id && (
+                <TouchableOpacity style={{
+                    width: "100%",
+                    height: hp(7),
+                    justifyContent: "flex-start",
+                    alignItems: "center",
+                    paddingHorizontal: 20,
+                    flexDirection: 'row'
+                }}
+                    onPress={handleApprovedMember}
+                >
+                    <View style={{ width: wp(10), height: wp(10), borderRadius: wp(5), backgroundColor: theme.colors.grayLight, justifyContent: "center", alignItems: "center" }}>
+                        <Icon
+                            name="tick"
+                            size={24}
+                            strokeWidth={1.6}
+                            color={theme.colors.primary}
+                        />
+                    </View>
+                    <Text style={{ paddingLeft: 20, fontSize: 16 }}>Duyệt thành viên</Text>
+                </TouchableOpacity>
+            )}
             <View>
                 <View style={{
                     width: "100%",
@@ -116,6 +147,7 @@ const ListMember = () => {
                 admin={converInfo?.admin === user?.id && selectedMember?._id !== converInfo?.admin}
                 conver_id={converInfo?._id}
                 user_id={user?.id}
+                handleRemoveMember={handleRemoveMember}
             />
         </ScreenWrapper>
     );
