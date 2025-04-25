@@ -1,4 +1,8 @@
 /zalo-app/node_modules
+/zalo-app/constants/index.js
 /zalo-web/node_modules
+/zalo-web/constants/index.js
+/zalo-web/.env
 /backend/node_modules
+/backend/.env
 *.local

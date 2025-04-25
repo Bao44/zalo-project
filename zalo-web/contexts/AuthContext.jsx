@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
         if (session) {
           setAuth(session.user);
           await updateUserData(session.user, session.user.email);
-          navigate("/home");
+          // navigate("/home");
         } else {
           // Nếu không có session, xóa localStorage và chuyển hướng đến /
           console.warn("No valid session found, clearing localStorage");
@@ -100,12 +100,6 @@ export const AuthProvider = ({ children }) => {
       clearInterval(interval);
     };
   }, [navigate]);
-
-  useEffect(() => {
-    if (user) {
-      socket.emit("user-online", user.id);
-    }
-  }, [user]);
 
   // Phát sự kiện user online
   useEffect(() => {

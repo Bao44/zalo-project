@@ -2,6 +2,7 @@ import ChatIcon from "@mui/icons-material/Chat";
 import ContactsIcon from "@mui/icons-material/Contacts";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
+import CallIcon from "@mui/icons-material/Call";
 import {
   Box,
   Grid,
@@ -24,6 +25,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import * as UserAPI from "../../api/user";
 import { logout, setUser } from "../redux/userSlice";
 import UserAvatar from "../components/Avatar";
+import socket from "../../socket/socket";
 
 const Messager = lazy(() => import("./Messager"));
 const Contact = lazy(() => import("./Contact"));
@@ -197,6 +199,27 @@ const Home = () => {
               <ListItem
                 sx={{
                   justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <ListItemButton
+                  onClick={() => {
+                    const sharedRoomId = randomID(5); // Tạo roomId
+                    socket.emit("share-room", {
+                      roomId: sharedRoomId,
+                      userId: user.id,
+                    }); // Chia sẻ qua socket
+                    navigate(`/calls?roomId=${sharedRoomId}`); // Điều hướng với roomId
+                  }}
+                >
+                  <CallIcon
+                    sx={{ color: "#fff", width: "40px", height: "40px" }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem
+                sx={{
+                  justifyContent: "center",
                   marginTop: "auto",
                 }}
               >
@@ -248,5 +271,17 @@ const Home = () => {
     </Suspense>
   );
 };
+
+function randomID(len) {
+  let result = "";
+  var chars = "12345qwertyuiopasdfgh67890jklmnbvcxzMNBVCZXASDQWERTYHGFUIOLKJP",
+    maxPos = chars.length,
+    i;
+  len = len || 5;
+  for (i = 0; i < len; i++) {
+    result += chars.charAt(Math.floor(Math.random() * maxPos));
+  }
+  return result;
+}
 
 export default Home;
