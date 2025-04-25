@@ -10,7 +10,8 @@ const {
     updateAvataConversation,
     addMemberToGroup,
     removeMemberFromGroup,
-    changeAdminGroup
+    changeAdminGroup,
+    changeSettingApproved
 } = require("../controllers/conversationController");
 const router = express.Router();
 
@@ -46,5 +47,8 @@ router.patch("/:conversationId/remove-member", removeMemberFromGroup);
 
 // API: Thay đổi admin nhóm
 router.patch("/:conversationId/change-admin", changeAdminGroup);
+
+// API: Thay đổi cài đặt duyệt
+router.patch("/:conversationId/change-approved", changeSettingApproved);
 
 module.exports = router;

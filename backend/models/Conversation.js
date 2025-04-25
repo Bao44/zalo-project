@@ -42,6 +42,20 @@ const ConversationSchema = new mongoose.Schema(
         }
       }
     ],
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    approvedMembers: {
+      type: Boolean,
+      default: false,
+    },
+    listApprovedMembers: [
+      {
+        type: String,
+        ref: "User",
+      }
+    ],
   },
   { timestamps: true } // Tự động tạo createdAt và updatedAt
 );

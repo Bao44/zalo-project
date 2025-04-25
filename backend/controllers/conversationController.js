@@ -112,6 +112,7 @@ const getConversation = async (req, res) => {
     const conversation = await Conversation.findById(conversationId)
       .populate("members", "name avatar")
       .populate("lastMessage", "type content createdAt")
+      .populate("listApprovedMembers", "name avatar")
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversation);
@@ -264,16 +265,20 @@ const addMemberToGroup = async (req, res) => {
       return res.status(404).json({ error: "Conversation not found" });
     }
 
-    // Kiểm tra xem các thành viên mới đã có trong danh sách members chưa
-    const existingMembers = conversation.members.filter(member => newMembers.includes(member.toString()));
-    if (existingMembers.length > 0) {
-      return res.status(400).json({ error: "Some members already exist in the group" });
+    // Kiểm tra xem các thành viên mới đã có trong danh sách listApprovedMembers chưa
+    const approvedMembers = conversation.listApprovedMembers.filter(member => newMembers.includes(member.toString()));
+    if (approvedMembers.length > 0) {
+      return res.status(400).json({ error: "Some members are already approved" });
     }
 
-    // Cập nhật danh sách thành viên
-    conversation.members.push(...newMembers);
-    await conversation.save();
+    // Thêm các thành viên mới
+    if (conversation.approvedMembers) {
+      conversation.listApprovedMembers.push(...newMembers);
+    } else {
+      conversation.members.push(...newMembers);
+    }
 
+    await conversation.save();
     res.status(200).json(conversation);
   } catch (error) {
     console.error("Error adding members to group:", error);
@@ -285,13 +290,18 @@ const addMemberToGroup = async (req, res) => {
 const removeMemberFromGroup = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { memberId } = req.body; // memberId là id của thành viên cần xóa
+    const { memberId, userRequest } = req.body; // memberId là id của thành viên cần xóa
 
     // Tìm cuộc trò chuyện
     const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
       return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Kiểm tra xem useRequest có phải là admin hoặc người đó tự rời nhóm
+    if (conversation?.admin !== userRequest && memberId !== userRequest) {
+      return res.status(403).json({ error: "You are not authorized to remove this member" });
     }
 
     // Xóa thành viên khỏi danh sách members
@@ -334,6 +344,28 @@ const changeAdminGroup = async (req, res) => {
   }
 };
 
+// 📌 Thay đổi cài đặt duyệt
+const changeSettingApproved = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    // Tìm cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Cập nhật cài đặt duyệt
+    conversation.approvedMembers = !conversation.approvedMembers; // Đảo ngược trạng thái approvedMembers
+    await conversation.save();
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error changing setting approved:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
 module.exports = {
   create1vs1,
   getUserConversations,
@@ -345,5 +377,6 @@ module.exports = {
   updateAvataConversation,
   addMemberToGroup,
   removeMemberFromGroup,
-  changeAdminGroup
+  changeAdminGroup,
+  changeSettingApproved
 };

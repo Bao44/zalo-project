@@ -58,14 +58,6 @@ const SelectAddMembersGroup = () => {
                             return timeB - timeA;
                         });
 
-                    console.log(
-                        "Sorted Private Conversations:",
-                        privateConvs.map((conv) => ({
-                            id: conv._id,
-                            createdAt: conv.lastMessage?.createdAt,
-                        }))
-                    );
-
                     const recentData = resContact.data
                         .map((friend) => {
                             const conv = privateConvs.find(
@@ -86,14 +78,6 @@ const SelectAddMembersGroup = () => {
                             const timeB = b.time ? new Date(b.time) : new Date(0);
                             return timeB - timeA;
                         });
-
-                    console.log(
-                        "Recent Data:",
-                        recentData.map((item) => ({
-                            id: item._id,
-                            time: item.time,
-                        }))
-                    );
 
                     setRecent(recentData);
                 } else {
@@ -272,7 +256,7 @@ const SelectAddMembersGroup = () => {
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 style={styles.buttonItem}
-                                onPress={() => { paramDataConver?.members?.some((i) => i._id === item._id) ? null : toggleSelection(item) }}
+                                onPress={() => { paramDataConver?.members?.some((i) => i._id === item._id) || paramDataConver?.listApprovedMembers?.some((i) => i._id === item._id) ? null : toggleSelection(item) }}
                             >
                                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                                     <Avatar uri={item.avatar} style={styles.avatar} />
@@ -290,12 +274,16 @@ const SelectAddMembersGroup = () => {
                                         Đã tham gia
                                     </Text>
                                 ) : (
-                                    <RadioButton
-                                        isSelect={selectedItems.some((i) => i._id === item._id)}
-                                        size={20}
-                                        color={theme.colors.primaryDark}
-                                        onPress={() => toggleSelection(item)}
-                                    />
+                                    paramDataConver?.listApprovedMembers?.some((i) => i._id === item._id) ? (
+                                        <Text style={{ color: theme.colors.primaryDark }}>Đã thêm</Text>
+                                    ) : (
+                                        <RadioButton
+                                            isSelect={selectedItems.some((i) => i._id === item._id)}
+                                            size={20}
+                                            color={theme.colors.primaryDark}
+                                            onPress={() => toggleSelection(item)}
+                                        />
+                                    )
                                 )}
                             </TouchableOpacity>
                         )}
@@ -310,7 +298,7 @@ const SelectAddMembersGroup = () => {
                         renderItem={({ item }) => (
                             <TouchableOpacity
                                 style={styles.buttonItem}
-                                onPress={() => { paramDataConver?.members?.some((i) => i._id === item._id) ? null : toggleSelection(item) }}
+                                onPress={() => { paramDataConver?.members?.some((i) => i._id === item._id) || paramDataConver?.listApprovedMembers?.some((i) => i._id === item._id) ? null : toggleSelection(item) }}
                             >
                                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                                     <Avatar uri={item.avatar} style={styles.avatar} />
@@ -321,12 +309,16 @@ const SelectAddMembersGroup = () => {
                                         Đã tham gia
                                     </Text>
                                 ) : (
-                                    <RadioButton
-                                        isSelect={selectedItems.some((i) => i._id === item._id)}
-                                        size={20}
-                                        color={theme.colors.primaryDark}
-                                        onPress={() => toggleSelection(item)}
-                                    />
+                                    paramDataConver?.listApprovedMembers?.some((i) => i._id === item._id) ? (
+                                        <Text style={{ color: theme.colors.primaryDark }}>Đã thêm</Text>
+                                    ) : (
+                                        <RadioButton
+                                            isSelect={selectedItems.some((i) => i._id === item._id)}
+                                            size={20}
+                                            color={theme.colors.primaryDark}
+                                            onPress={() => toggleSelection(item)}
+                                        />
+                                    )
                                 )}
                             </TouchableOpacity>
                         )}
