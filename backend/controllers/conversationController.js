@@ -77,7 +77,7 @@ const createGroup = async (req, res) => {
     const savedConversation = await newGroup.save();
 
     // Gửi socket đến tất cả members
-    // io.to(members.map((u) => u?._id).concat(admin)).emit("newConversation", savedConversation);
+    io.to(members.map((u) => u?._id).concat(admin)).emit("newConversation", savedConversation);
 
     res.status(201).json(savedConversation);
   } catch (error) {
@@ -218,4 +218,132 @@ const deleteConversation1vs1 = async (req, res) => {
   }
 };
 
-module.exports = { create1vs1, getUserConversations, getConversation, getConversation1vs1, getConversationsGroup, createGroup, deleteConversation1vs1 };
+// 📌 Cập nhật avatar conversation
+const updateAvataConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { avatar } = req.body;
+
+    // Kiểm tra dữ liệu có tồn tại
+    if (!avatar) {
+      return res.status(400).json({ message: "Thiếu dữ liệu fileBase64" });
+    }
+
+    const resourceType = avatar.isImage ? "image" : "raw";
+    const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
+      folder: "zalo/avatar-group-chat",
+      resource_type: resourceType,
+    });
+
+    const updatedConversation = await Conversation.findByIdAndUpdate(
+      conversationId,
+      { avatar: result.secure_url },
+      { new: true }
+    )
+      .populate("members", "name avatar")
+      .populate("lastMessage", "type content createdAt")
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json(updatedConversation);
+  } catch (error) {
+    console.error("Error updating conversation:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+// 📌 Thêm thành viên
+const addMemberToGroup = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { newMembers } = req.body; // newMembers là mảng các userId mới
+
+    // Tìm cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Kiểm tra xem các thành viên mới đã có trong danh sách members chưa
+    const existingMembers = conversation.members.filter(member => newMembers.includes(member.toString()));
+    if (existingMembers.length > 0) {
+      return res.status(400).json({ error: "Some members already exist in the group" });
+    }
+
+    // Cập nhật danh sách thành viên
+    conversation.members.push(...newMembers);
+    await conversation.save();
+
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error adding members to group:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 📌 Xóa thành viên khỏi group
+const removeMemberFromGroup = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { memberId } = req.body; // memberId là id của thành viên cần xóa
+
+    // Tìm cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Xóa thành viên khỏi danh sách members
+    conversation.members = conversation.members.filter(member => member.toString() !== memberId);
+    await conversation.save();
+
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error removing member from group:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 📌 Thay đổi admin group
+const changeAdminGroup = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { newAdminId } = req.body; // newAdminId là id của admin mới
+
+    // Tìm cuộc trò chuyện
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // Kiểm tra xem newAdminId có trong danh sách members không
+    if (!conversation.members.includes(newAdminId)) {
+      return res.status(400).json({ error: "New admin must be a member of the group" });
+    }
+
+    // Cập nhật admin
+    conversation.admin = newAdminId;
+    await conversation.save();
+
+    res.status(200).json(conversation);
+  } catch (error) {
+    console.error("Error changing group admin:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = {
+  create1vs1,
+  getUserConversations,
+  getConversation,
+  getConversation1vs1,
+  getConversationsGroup,
+  createGroup,
+  deleteConversation1vs1,
+  updateAvataConversation,
+  addMemberToGroup,
+  removeMemberFromGroup,
+  changeAdminGroup
+};

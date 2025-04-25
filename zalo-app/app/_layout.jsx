@@ -403,7 +403,6 @@ const MainLayout = () => {
           }
         }
       } else {
-        console.log("No access_token or refresh_token found in deep link");
         if (isChangePasswordPath) {
           router.replace({
             pathname: "/forgotPassword",

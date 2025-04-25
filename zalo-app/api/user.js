@@ -90,3 +90,13 @@ export const updateUser = async (userId, data) => {
     throw error.response?.data || error;
   }
 };
+
+export const getUserFromMongoDB = async (userId) => {
+  try {
+    const response = await api.get(`/api/users/mongo/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user from MongoDB:", error);
+    throw error.response?.data || error;
+  }
+}

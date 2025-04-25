@@ -39,8 +39,7 @@ export const AuthProvider = ({ children }) => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        console.log("Initial session:", session);
-
+        
         if (session) {
           setAuth(session.user);
           await updateUserData(session.user, session.user.email);
@@ -65,7 +64,6 @@ export const AuthProvider = ({ children }) => {
 
     const authListener = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        console.log("Auth state change event:", _event, "session:", session);
         if (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED") {
           if (session) {
             setAuth(session.user);
