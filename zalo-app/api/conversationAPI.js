@@ -142,9 +142,9 @@ export const addMemberToGroup = async (conversationId, newMembers) => {
 };
 
 // Xóa thành viên khỏi group
-export const removeMemberFromGroup = async (conversationId, memberId) => {
+export const removeMemberFromGroup = async (conversationId, memberId, userRequest) => {
   try {
-    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/remove-member`, { memberId });
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/remove-member`, { memberId, userRequest});
     return { success: true, data: response.data };
   } catch (error) {
     console.error("Error in removeMemberFromGroup:", error);
@@ -152,6 +152,18 @@ export const removeMemberFromGroup = async (conversationId, memberId) => {
     return { success: false, data: { message: errorMessage } };
   }
 };
+
+// Thay đổi cài đặt approved
+export const changeSettingApproved = async (converId) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${converId}/change-approved`);
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in changeSettingApproved:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+}
 
 // Xư lý lỗi trả về từ API
 const handleApiError = (error) => {

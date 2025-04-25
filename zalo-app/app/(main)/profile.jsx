@@ -75,7 +75,7 @@ const Profile = () => {
 
 const UserHeader = ({ user, router }) => {
   return (
-    <View>
+    <View style={{marginBottom: hp(2) }}>
       <Background uri={user?.background} sizeHeight={hp(26)} />
       <View style={styles.header}>
         <BackButton router={router} color="white" />

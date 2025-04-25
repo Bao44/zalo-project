@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { deleteConversation1vs1, getConversation, updateAvataConversation } from "@/api/conversationAPI";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+import ToggleSwitch from "@/components/ToggleSwitch";
 
 const InfoChatGroup = () => {
     const { user } = useAuth();
@@ -124,6 +125,16 @@ const InfoChatGroup = () => {
         } catch (error) {
             Alert.alert("Lỗi", error.message || "Không thể thêm thành viên vào nhóm.");
         }
+    }
+
+    //Duyet thanh vien
+    const handleApprovedMember = async () => {
+        router.push({ pathname: "approvedMembers", params: { conver: JSON.stringify(conversationInfo) } })
+    }
+
+    //Danh sách thành viên
+    const handleMemberList = async () => {
+        router.push({ pathname: "listMember", params: { conver: JSON.stringify(conversationInfo) } })
     }
 
     return (
@@ -288,7 +299,7 @@ const InfoChatGroup = () => {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.container2}>
-                    <TouchableOpacity style={styles.box}>
+                    <TouchableOpacity style={styles.box} onPress={handleMemberList}>
                         <Icon
                             name="userGroup"
                             size={24}
@@ -297,7 +308,7 @@ const InfoChatGroup = () => {
                         />
                         <Text style={{ marginLeft: 20, fontSize: 17 }}>Xem thành viên ({conversationInfo?.members?.length})</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
+                    <TouchableOpacity style={styles.box} onPress={handleApprovedMember}>
                         <Icon
                             name="tick"
                             size={24}
