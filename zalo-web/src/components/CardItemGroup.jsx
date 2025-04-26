@@ -125,7 +125,7 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
             >
               {message ? (
                 <>
-                  {message.senderId === user.id ? "Bạn: " : members.find((mem) => mem._id === message.senderId)?.name + ": "}
+                  { message?.type === "notification" ? "" : message.senderId === user.id ? "Bạn: " : members.find((mem) => mem._id === message.senderId)?.name + ": "}
                   {message.content
                     ? message.content
                     : message.attachments?.length > 0

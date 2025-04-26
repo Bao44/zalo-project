@@ -11,7 +11,6 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  Avatar,
   List,
   ListItem,
   ListItemButton,
@@ -379,7 +378,7 @@ const Chat = ({ conversation, setConversation }) => {
           files: {
             uri: fileBase64,
             name: audioFileName,
-            type: "audio/webm",
+            type: "audio/m4a",
           },
           replyTo: replyTo || null,
           createdAt: new Date().toISOString(),
@@ -866,7 +865,7 @@ const Chat = ({ conversation, setConversation }) => {
               <AvatarGroup max={2}>
                 {members?.length > 0 &&
                   members?.map((mem) => (
-                    <Avatar key={mem?._id} alt={mem?.name} src={mem?.avatar} />
+                    <UserAvatar uri={mem?.avatar} key={mem?._id}/>
                   ))}
               </AvatarGroup>
             )}

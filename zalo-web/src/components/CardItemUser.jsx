@@ -110,7 +110,7 @@ const CardItemUser = ({ conver, setConversation, converSeleted }) => {
               maxWidth: "300px",
             }}
           >
-            {message && (message?.senderId === user.id ? "Bạn: " : "")}
+            {message && (message?.senderId === user.id && message?.type !== "notification" ? "Bạn: " : "")}
             {message &&
               (message?.content
                 ? message?.content
