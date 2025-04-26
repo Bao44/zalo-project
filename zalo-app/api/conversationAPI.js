@@ -130,9 +130,9 @@ export const updateAvataConversation = async (conversationId, avatar) => {
 };
 
 // Thêm thành viên vào group
-export const addMemberToGroup = async (conversationId, newMembers) => {
+export const addMemberToGroup = async (conversationId, newMembers, userRequest) => {
   try {
-    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/add-member`, { newMembers });
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/add-member`, { newMembers, userRequest });
     return { success: true, data: response.data };
   } catch (error) {
     console.error("Error in addMemberToGroup:", error);
@@ -144,7 +144,7 @@ export const addMemberToGroup = async (conversationId, newMembers) => {
 // Xóa thành viên khỏi group
 export const removeMemberFromGroup = async (conversationId, memberId, userRequest) => {
   try {
-    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/remove-member`, { memberId, userRequest});
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/remove-member`, { memberId, userRequest });
     return { success: true, data: response.data };
   } catch (error) {
     console.error("Error in removeMemberFromGroup:", error);
@@ -164,6 +164,18 @@ export const changeSettingApproved = async (converId) => {
     return { success: false, data: { message: errorMessage } };
   }
 }
+
+// Xử lý duyệt or xóa yêu cầu tham gia nhóm
+export const handleApprovedRequest = async (conversationId, memberId, userRequest, action) => {
+  try {
+    const response = await api.patch(BACKEND_URL + `/api/conversations/${conversationId}/handle-request`, { memberId, userRequest, action });
+    return { success: true, data: response.data };
+  } catch (error) {
+    console.error("Error in handleApprovedRequest:", error);
+    const errorMessage = error.response?.data?.error || error.message || "Lỗi không xác định từ server";
+    return { success: false, data: { message: errorMessage } };
+  }
+};
 
 // Xư lý lỗi trả về từ API
 const handleApiError = (error) => {

@@ -23,7 +23,8 @@ export const sendMessage = async (conversationId, messageData) => {
             media: messageData.media,
             file: messageData.files,
             replyTo: messageData.replyTo,
-            receiverId: messageData.receiverId
+            receiverId: messageData.receiverId,
+            type: messageData.type
         });
         return { success: true, data: response.data };
     } catch (error) {

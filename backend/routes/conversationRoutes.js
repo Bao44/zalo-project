@@ -11,7 +11,8 @@ const {
     addMemberToGroup,
     removeMemberFromGroup,
     changeAdminGroup,
-    changeSettingApproved
+    changeSettingApproved,
+    approveOrDeleteMember
 } = require("../controllers/conversationController");
 const router = express.Router();
 
@@ -50,5 +51,8 @@ router.patch("/:conversationId/change-admin", changeAdminGroup);
 
 // API: Thay đổi cài đặt duyệt
 router.patch("/:conversationId/change-approved", changeSettingApproved);
+
+// API: Duyệt hoặc xóa yêu cầu tham gia nhóm
+router.patch("/:conversationId/handle-request", approveOrDeleteMember);
 
 module.exports = router;

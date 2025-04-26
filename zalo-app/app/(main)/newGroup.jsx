@@ -221,7 +221,7 @@ const NewGroup = () => {
             // Gọi API thêm nhóm
             const res = await createConversationGroupChat(groupChat);
             if (res.success) {
-                router.push({ pathname: "chatDetailScreen", params: { type: "group", converId: res.data?._id } })
+                router.push({ pathname: "chatDetailScreen", params: { type: "group", convertId: res?.data?._id } })
             } else {
                 console.log("Thêm thất bại!");
             }

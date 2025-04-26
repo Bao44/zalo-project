@@ -38,24 +38,38 @@ const MessageScreen = () => {
         try {
           const data = await getConversations(user?.id);
           if (data.success) {
-            const filteredConversations = data.data.filter((conversation) => {
-              const isMemberDeleted = conversation.delete_history.find((deleteHistory) => deleteHistory.userId === user?.id);
-              if (isMemberDeleted) {
-                const lastMessageTime = conversation.lastMessage?.createdAt || conversation.createdAt;
-                const lastDeleteTime = conversation.delete_history.find((deleteHistory) => deleteHistory.userId === user?.id)?.time_delete;
-                return lastMessageTime > lastDeleteTime;
-              } else {
-                return true;
-              }
-            });
-            setConversations(filteredConversations || []); // Đảm bảo luôn là mảng
+            const filteredConversations = data.data
+              .filter((conversation) => {
+                const isMemberDeleted = conversation.delete_history.find(
+                  (deleteHistory) => deleteHistory.userId === user?.id
+                );
+                if (isMemberDeleted) {
+                  const lastMessageTime = conversation.lastMessage?.createdAt || conversation.createdAt;
+                  const lastDeleteTime = conversation.delete_history.find(
+                    (deleteHistory) => deleteHistory.userId === user?.id
+                  )?.time_delete;
+                  return lastMessageTime > lastDeleteTime;
+                } else {
+                  return true;
+                }
+              })
+              .sort((a, b) => {
+                const timeA = a?.lastMessage?.createdAt
+                  ? new Date(a.lastMessage.createdAt).getTime()
+                  : new Date(a.createdAt).getTime();
+                const timeB = b?.lastMessage?.createdAt
+                  ? new Date(b.lastMessage.createdAt).getTime()
+                  : new Date(b.createdAt).getTime();
+                return timeB - timeA; // Sắp xếp giảm dần
+              });
+            setConversations(filteredConversations || []);
           } else {
             console.log("Không tìm thấy cuộc hội thoại nào!");
-            setConversations([]); // Đặt lại thành mảng rỗng nếu không có dữ liệu
+            setConversations([]);
           }
         } catch (error) {
           console.error("Failed to fetch conversations:", error);
-          setConversations([]); // Đặt lại thành mảng rỗng nếu có lỗi
+          setConversations([]);
         } finally {
           setLoading(false);
         }
@@ -81,11 +95,15 @@ const MessageScreen = () => {
             );
           }
 
-          // Sort conversations by lastMessage.createdAt in descending order
+          // Sắp xếp dựa trên lastMessage.createdAt hoặc createdAt
           return updatedConversations.sort((a, b) => {
-            const timeA = new Date(a?.lastMessage?.createdAt || 0).getTime();
-            const timeB = new Date(b?.lastMessage?.createdAt || 0).getTime();
-            return timeB - timeA;
+            const timeA = a?.lastMessage?.createdAt
+              ? new Date(a.lastMessage.createdAt).getTime()
+              : new Date(a.createdAt).getTime(); // Sử dụng createdAt nếu lastMessage không có
+            const timeB = b?.lastMessage?.createdAt
+              ? new Date(b.lastMessage.createdAt).getTime()
+              : new Date(b.createdAt).getTime(); // Sử dụng createdAt nếu lastMessage không có
+            return timeB - timeA; // Sắp xếp giảm dần (mới nhất lên đầu)
           });
         });
       }
@@ -188,9 +206,9 @@ const MessageScreen = () => {
                 </View>
                 <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
                   {item?.type === "private" ? (
-                    item?.lastMessage?.senderId === user?.id ? "Bạn: " : "")
+                    item?.lastMessage?.senderId === user?.id && item?.lastMessage?.type !== "notification" ? "Bạn: " : "")
                     : (
-                      item?.lastMessage?.senderId === user?.id ? "Bạn: " : `${item?.members.find((u) => u._id !== user?.id)?.name}: `
+                      item?.lastMessage?.senderId === user?.id && item?.lastMessage?.type !== "notification" ? "Bạn: " : `${item?.members.find((u) => u._id !== user?.id)?.name}: `
                     )}
                   {item?.lastMessage?.revoked ? "[Tin nhắn đã được thu hồi]" : (
                     item?.lastMessage?.content ? item?.lastMessage?.content : "" ||
@@ -268,7 +286,7 @@ const MessageScreen = () => {
                   </Text>
                 </View>
                 <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
-                  {item?.lastMessage && ((item?.lastMessage?.senderId === user?.id ? "Bạn: " : "") || (item?.members.find((u) => u._id !== user?.id)?.name ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""))}
+                  {item?.lastMessage && ((item?.lastMessage?.senderId === user?.id && item?.lastMessage?.type !== "notification" ? "Bạn: " : "") || (item?.members.find((u) => u._id !== user?.id)?.name && item?.lastMessage?.type !== "notification" ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""))}
                   {item?.lastMessage?.revoked ? "[Tin nhắn đã được thu hồi]" : (
                     item?.lastMessage?.content ? item?.lastMessage?.content : "" || item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
                       item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||

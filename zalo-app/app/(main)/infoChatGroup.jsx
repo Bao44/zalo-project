@@ -7,10 +7,10 @@ import { router } from "expo-router";
 import { hp, wp } from "@/helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import { deleteConversation1vs1, getConversation, updateAvataConversation } from "@/api/conversationAPI";
+import { deleteConversation1vs1, getConversation, removeMemberFromGroup, updateAvataConversation } from "@/api/conversationAPI";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
-import ToggleSwitch from "@/components/ToggleSwitch";
+import { sendMessage } from "@/api/messageAPI";
 
 const InfoChatGroup = () => {
     const { user } = useAuth();
@@ -137,6 +137,31 @@ const InfoChatGroup = () => {
         router.push({ pathname: "listMember", params: { conver: JSON.stringify(conversationInfo) } })
     }
 
+    // Rời nhóm
+    const handleLeaveGroup = async () => {
+        try {
+            // Gọi API để rời nhóm
+            const messageData = {
+                senderId: user?.id,
+                content: `${user?.name} đã rời khỏi nhóm!`,
+                attachments: null,
+                media: null,
+                file: null,
+                replyTo: null,
+                type: "notification",
+            };
+            await sendMessage(conversationInfo?._id, messageData);
+            const response = await removeMemberFromGroup(conversationInfo?._id, user?.id, user?.id);
+            if (response.success) {
+                router.push("home");
+            } else {
+                Alert.alert("Lỗi", response.data.message || "Không thể rời nhóm.");
+            }
+        } catch (error) {
+            Alert.alert("Lỗi", error.message || "Không thể rời nhóm.");
+        }
+    };
+
     return (
         <ScreenWrapper>
             {/* Header */}
@@ -174,7 +199,7 @@ const InfoChatGroup = () => {
                     </TouchableOpacity>
                     <Text style={styles.textName} numberOfLines={1} ellipsizeMode="tail">{conversationInfo?.name}</Text>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: 'space-evenly', height: "30%", width: "100%" }}>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "18%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="search"
@@ -185,7 +210,7 @@ const InfoChatGroup = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Tìm tin nhắn</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }} onPress={handleAddMember}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "18%" }} onPress={handleAddMember}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="addGroup"
@@ -196,7 +221,7 @@ const InfoChatGroup = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Thêm thành viên</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "18%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="zTyle"
@@ -207,7 +232,7 @@ const InfoChatGroup = () => {
                             </View>
                             <Text style={{ textAlign: "center" }}>Đổi hình nền</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "17%" }}>
+                        <TouchableOpacity style={{ alignItems: "center", justifyContent: "space-between", height: "100%", width: "18%" }}>
                             <View style={{ backgroundColor: theme.colors.gray, width: wp(10), height: wp(10), borderRadius: wp(5), alignItems: "center", justifyContent: "center" }}>
                                 <Icon
                                     name="notification"
@@ -298,7 +323,7 @@ const InfoChatGroup = () => {
                         <Text style={{ marginLeft: 20, fontSize: 17 }}>Cài đặt nhóm</Text>
                     </TouchableOpacity>
                 </View>
-                <View style={styles.container2}>
+                <View style={[styles.container2, { height: conversationInfo?.admin === user?.id ? hp(25) : hp(15) }]}>
                     <TouchableOpacity style={styles.box} onPress={handleMemberList}>
                         <Icon
                             name="userGroup"
@@ -308,15 +333,17 @@ const InfoChatGroup = () => {
                         />
                         <Text style={{ marginLeft: 20, fontSize: 17 }}>Xem thành viên ({conversationInfo?.members?.length})</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.box} onPress={handleApprovedMember}>
-                        <Icon
-                            name="tick"
-                            size={24}
-                            strokeWidth={1.6}
-                            color="gray"
-                        />
-                        <Text style={{ marginLeft: 20, fontSize: 17 }}>Duyệt thành viên</Text>
-                    </TouchableOpacity>
+                    {conversationInfo?.admin === user?.id && (
+                        <TouchableOpacity style={styles.box} onPress={handleApprovedMember}>
+                            <Icon
+                                name="tick"
+                                size={24}
+                                strokeWidth={1.6}
+                                color="gray"
+                            />
+                            <Text style={{ marginLeft: 20, fontSize: 17 }}>Duyệt thành viên</Text>
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity style={styles.box}>
                         <Icon
                             name="link"
@@ -368,7 +395,7 @@ const InfoChatGroup = () => {
                         <Text style={{ marginLeft: 20, fontSize: 17 }}>Cài đặt cá nhân</Text>
                     </TouchableOpacity>
                 </View>
-                <View style={[styles.container4, { height: conversationInfo?.admin === user?.id ? hp(40) : hp(25) }]}>
+                <View style={[styles.container4, { height: conversationInfo?.admin === user?.id ? hp(40) : hp(30) }]}>
                     <TouchableOpacity style={styles.box}>
                         <Icon
                             name="report"
@@ -407,7 +434,7 @@ const InfoChatGroup = () => {
                         />
                         <Text style={{ marginLeft: 20, fontSize: 17, color: "red" }}>Xóa lịch sử trò truyện</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
+                    <TouchableOpacity style={styles.box} onPress={handleLeaveGroup}>
                         <Icon
                             name="leaveGroup"
                             size={24}

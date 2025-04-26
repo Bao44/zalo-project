@@ -10,6 +10,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Drawer
 } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import ImageIcon from "@mui/icons-material/Image";
@@ -17,6 +24,13 @@ import AttachFileIcon from "@mui/icons-material/AttachFile";
 import CircleIcon from "@mui/icons-material/Circle";
 import PersonIcon from "@mui/icons-material/Person";
 import MicIcon from "@mui/icons-material/Mic";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
+import DeleteIcon from "@mui/icons-material/Delete";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import GroupsIcon from "@mui/icons-material/Groups";
+import DehazeIcon from "@mui/icons-material/Dehaze";
 import { useEffect, useState, useRef } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
@@ -34,9 +48,14 @@ import {
   deleteMessage,
 } from "../../api/messageAPI";
 import EmojiPopover from "./EmojiPopover";
-import { createConversation1vs1 } from "../../api/conversationAPI";
+import { createConversation1vs1, removeMemberFromGroup } from "../../api/conversationAPI";
 import ReplytoMessageSelected from "./ReplytoMessageSelected";
+<<<<<<< HEAD
 import ConversationInfo from "./ConversationInfo";
+=======
+import AddMember from "./AddMember";
+import GroupMember from "./GroupMember";
+>>>>>>> 087e9bb84970eb83e5269a07e9e99ad5955cdd9f
 
 const Chat = ({ conversation, setConversation }) => {
   const { name, members, type } = conversation;
@@ -59,6 +78,15 @@ const Chat = ({ conversation, setConversation }) => {
   const audioChunksRef = useRef([]);
   const [replyToMessage, setReplyToMessage] = useState(null);
   const [openModal, setOpenModal] = useState(false);
+
+  const [open, setOpen] = useState(false);
+  const [openInforProfile, setOpenInforProfile] = useState(false);
+  const [openAddMember, setOpenAddMember] = useState(false);
+  const [openGroupMember, setOpenGroupMember] = useState(false);
+
+  const toggleDrawer = (newOpen) => () => {
+    setOpen(newOpen);
+  };
 
   // SOCKET CHECK ONLINE
   useEffect(() => {
@@ -115,7 +143,7 @@ const Chat = ({ conversation, setConversation }) => {
               msg.idTemp &&
               msg.senderId._id === message.senderId &&
               Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) <
-                1000 && // Within 1 second
+              1000 && // Within 1 second
               msg.attachments?.length > 0 &&
               message.attachments?.length > 0
           );
@@ -354,7 +382,7 @@ const Chat = ({ conversation, setConversation }) => {
           files: {
             uri: fileBase64,
             name: audioFileName,
-            type: "audio/webm",
+            type: "audio/m4a",
           },
           replyTo: replyTo || null,
           createdAt: new Date().toISOString(),
@@ -375,7 +403,7 @@ const Chat = ({ conversation, setConversation }) => {
       console.error("Error in handleSendAudio:", error);
       alert(
         "Không thể gửi file âm thanh: " +
-          (error.message || "Lỗi không xác định")
+        (error.message || "Lỗi không xác định")
       );
       setMessages((prev) => prev.filter((msg) => !msg.idTemp)); // Xóa tin nhắn tạm nếu lỗi
     } finally {
@@ -558,10 +586,10 @@ const Chat = ({ conversation, setConversation }) => {
           files: media
             ? null
             : {
-                uri: fileBase64,
-                name: file.name,
-                type: file.mimeType || file.type,
-              },
+              uri: fileBase64,
+              name: file.name,
+              type: file.mimeType || file.type,
+            },
           receiverId: type === "private" ? friend?._id : null,
           replyTo: replyTo || null,
         };
@@ -577,10 +605,10 @@ const Chat = ({ conversation, setConversation }) => {
             files: media
               ? null
               : {
-                  uri: fileBase64,
-                  name: file.name,
-                  type: file.mimeType || file.type,
-                },
+                uri: fileBase64,
+                name: file.name,
+                type: file.mimeType || file.type,
+              },
             replyTo: replyTo || null,
             createdAt: new Date().toISOString(),
             idTemp: t,
@@ -695,9 +723,9 @@ const Chat = ({ conversation, setConversation }) => {
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => {};
+  const handleTypingStart = () => { };
 
-  const handleTypingEnd = () => {};
+  const handleTypingEnd = () => { };
 
   // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
@@ -751,6 +779,202 @@ const Chat = ({ conversation, setConversation }) => {
     setFriend(fri);
     setOpenModal(true);
   };
+
+  const handleFriendItemClick = async (index) => {
+    if (index === 0) {
+      setOpenInforProfile(true);
+    }
+  };
+
+  // Xử lý sự kiện khi người dùng nhấp vào các mục trong danh sách nhóm
+  const handleGroupItemClick = async (index) => {
+    if (index === 0) {
+      setOpenAddMember(true);
+      return;
+    }
+    if (index === 2) {
+      setOpenGroupMember(true);
+      return;
+    }
+    if (index === 3) {
+      const messageData = {
+        senderId: user?.id,
+        content: `${user?.name} đã rời khỏi nhóm!`,
+        attachments: null,
+        media: null,
+        file: null,
+        replyTo: null,
+        type: "notification",
+      };
+      await sendMessage(conversation?._id, messageData);
+      localStorage.removeItem("selectedConversation");
+      const res = await removeMemberFromGroup(conversation?._id, user?.id, user?.id);
+      if (res.success) {
+        setConversation((prev) => ({
+          ...prev,
+          members: prev.members.filter((mem) => mem._id !== user?.id),
+        }));
+        setConversation(null);
+        setOpen(false);
+      }
+    }
+  }
+
+  const DrawerList = (
+    <Box sx={{ width: 400 }} role="presentation">
+      <Typography
+        textAlign="center"
+        fontWeight="bold"
+        paddingTop="20px"
+        paddingBottom="20px"
+        fontSize="20px"
+      >
+        Thông tin hội thoại
+      </Typography>
+      <Divider />
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "20px 0",
+        }}
+      >
+        {type === "private" ? (
+          <>
+            <UserAvatar
+              uri={friend?.avatar}
+              sx={{ width: 60, height: 60 }}
+            />
+            <Typography
+              textAlign="center"
+              paddingTop="10px"
+              fontWeight="bold"
+              fontSize="18px"
+            >
+              {friend?.name}
+            </Typography>
+          </>
+        ) : (
+          <>
+            {conversation?.avatar ? (
+              <img
+                src={conversation?.avatar}
+                alt={conversation?.name}
+                width={60}
+                height={60}
+                style={{ borderRadius: 30 }}
+              />
+            ) : (
+              <AvatarGroup max={2}>
+                {members?.length > 0 &&
+                  members?.map((mem) => (
+                    <UserAvatar uri={mem?.avatar} key={mem?._id}/>
+                  ))}
+              </AvatarGroup>
+            )}
+            <Typography
+              textAlign="center"
+              paddingTop="10px"
+              fontWeight="bold"
+              fontSize="18px"
+            >
+              {name}
+            </Typography>
+          </>
+        )
+        }
+      </Box >
+      <Divider />
+      {
+        type === "private" && (
+          <List>
+            {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map(
+              (text, index) => (
+                <ListItem
+                  key={text}
+                  disablePadding
+                  onClick={() => handleFriendItemClick(index)}
+                >
+                  <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
+                    <ListItemIcon>
+                      {index === 0 && <AccountCircleIcon />}
+                      {index === 1 && <NotificationsOffIcon />}
+                      {index === 2 && <DeleteIcon color="error" />}
+                    </ListItemIcon>
+                    <ListItemText primary={text} />
+                  </ListItemButton>
+                </ListItem>
+              )
+            )}
+          </List>
+        )
+      }
+      <InforProfile
+        openModal={openInforProfile}
+        setOpenModal={setOpenInforProfile}
+        friend={friend}
+      />
+      {
+        conversation.type === "group" && (
+          <List>
+            {[
+              "Thêm thành viên",
+              "Tắt thông báo",
+              "Xem danh sách thành viên",
+              "Rời khỏi nhóm",
+            ].map((text, index) => (
+              <ListItem
+                key={text}
+                disablePadding
+                onClick={() => handleGroupItemClick(index)}
+              >
+                <ListItemButton
+                  sx={{ color: index === 3 || index === 4 ? "red" : "inherit" }}
+                >
+                  <ListItemIcon>
+                    {index === 0 && <PersonAddIcon />}
+                    {index === 1 && <NotificationsOffIcon />}
+                    {index === 2 && <GroupsIcon />}
+                    {index === 3 && <ExitToAppIcon color="error" />}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={index === 2 ? `${text}(${members.length})` : text}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+            {conversation?.admin === user?.id && (
+              <ListItem
+                key={"Giải tán nhóm"}
+                disablePadding
+              // onClick={handleDeleteConversation}
+              >
+                <ListItemButton sx={{ color: "red" }}>
+                  <ListItemIcon>
+                    <DeleteIcon color="error" />
+                  </ListItemIcon>
+                  <ListItemText primary={"Giải tán nhóm"} />
+                </ListItemButton>
+              </ListItem>
+            )}
+          </List>
+        )
+      }
+      <AddMember
+        openModal={openAddMember}
+        setOpenModal={setOpenAddMember}
+        conversation={conversation}
+        setConversation={setConversation}
+      />
+      <GroupMember
+        openModal={openGroupMember}
+        setOpenModal={setOpenGroupMember}
+        conversation={conversation}
+        setConversation={setConversation}
+      />
+    </Box >
+  );
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -835,7 +1059,12 @@ const Chat = ({ conversation, setConversation }) => {
           <Box sx={{ marginLeft: "auto", color: "#000", padding: "5px" }}>
             <VideocamIcon />
           </Box>
-          <ConversationInfo />
+          <Button
+            sx={{ marginLeft: "10px", color: "#000", padding: "5px" }}
+            onClick={toggleDrawer(true)}
+          >
+            <DehazeIcon />
+          </Button>
         </Box>
       </Box>
       <Box
@@ -851,25 +1080,19 @@ const Chat = ({ conversation, setConversation }) => {
           [...messages]
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
             .map((msg) => {
-              if (
-                msg.senderId?._id === user?.id &&
-                !msg.removed?.includes(user?.id)
-              ) {
+              if (msg?.type === "notification") {
                 return (
-                  <MessageSender
-                    key={msg._id}
-                    message={msg}
-                    handleLikeMessage={handleLikeMessage}
-                    handleUnlikeMessage={handleUnlikeMessage}
-                    handleRevokeMessage={handleRevokeMessage}
-                    handleDeleteMessage={handleDeleteMessage}
-                    setReplyToMessage={setReplyToMessage}
-                  />
+                  <>
+                    <Typography sx={{ marginTop: 3, textAlign: "center" }}>{msg?.content}</Typography>
+                  </>
                 );
               } else {
-                if (!msg.removed?.includes(user?.id)) {
+                if (
+                  msg.senderId?._id === user?.id &&
+                  !msg.removed?.includes(user?.id)
+                ) {
                   return (
-                    <MessageReceiver
+                    <MessageSender
                       key={msg._id}
                       message={msg}
                       handleLikeMessage={handleLikeMessage}
@@ -879,6 +1102,20 @@ const Chat = ({ conversation, setConversation }) => {
                       setReplyToMessage={setReplyToMessage}
                     />
                   );
+                } else {
+                  if (!msg.removed?.includes(user?.id)) {
+                    return (
+                      <MessageReceiver
+                        key={msg._id}
+                        message={msg}
+                        handleLikeMessage={handleLikeMessage}
+                        handleUnlikeMessage={handleUnlikeMessage}
+                        handleRevokeMessage={handleRevokeMessage}
+                        handleDeleteMessage={handleDeleteMessage}
+                        setReplyToMessage={setReplyToMessage}
+                      />
+                    );
+                  }
                 }
               }
             })}
@@ -992,11 +1229,18 @@ const Chat = ({ conversation, setConversation }) => {
           )}
         </Button>
       </Box>
+<<<<<<< HEAD
       <Dialog
         open={openRevokeDialog}
         onClose={() => setOpenRevokeDialog(false)}
         aria-labelledby="revoke-dialog-title"
       >
+=======
+      <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
+        {DrawerList}
+      </Drawer>
+      <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
+>>>>>>> 087e9bb84970eb83e5269a07e9e99ad5955cdd9f
         <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
         <DialogContent>
           <Typography>

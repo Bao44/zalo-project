@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Modal, Box, Typography, IconButton, List, ListItem, ListItemText, Switch, Button, Tabs, Tab, MenuItem, Select, FormControl, InputLabel, TextField, Autocomplete } from '@mui/material';
+import PropTypes from 'prop-types';
+import { Modal, Box, Typography, IconButton, List, ListItem, ListItemText, Switch, Button, Tabs, Tab, MenuItem, Select, FormControl, InputLabel, TextField, Autocomplete, ListItemButton } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -12,6 +13,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ReportIcon from '@mui/icons-material/Report';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
+import Setting from '@mui/icons-material/Settings';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { subDays, subMonths } from 'date-fns';
@@ -19,8 +21,11 @@ import vi from 'date-fns/locale/vi'; // Locale tiếng Việt
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import UserAvatar from './Avatar';
+import { useSelector } from 'react-redux';
 
-const ConversationInfo = () => {
+const ConversationInfo = ({ conver }) => {
+  const { user } = useSelector((state) => state.user);
   const [open, setOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveTab, setArchiveTab] = useState('media'); // Tab mặc định là Ảnh/Video
@@ -114,33 +119,49 @@ const ConversationInfo = () => {
   const HeaderBox = () => (
     <Box>
       <Typography variant="h6">Thông tin hội thoại</Typography>
-      <Box display="flex" alignItems="center" justifyContent="center" mt={2}>
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" mt={2}>
         <img
-          src="https://picsum.photos/200/300"
-          alt="Avatar"
-          style={{ borderRadius: '50%', width: 40, height: 40, marginRight: 10 }}
+          src={conver?.avatar}
+          alt='Avatar'
+          style={{ width: 60, height: 60, borderRadius: 30 }}
         />
-        <Typography variant="subtitle1">Duc tai</Typography>
-        <IconButton size="small" sx={{ ml: 1 }}>
-          <EditIcon fontSize="small" />
-        </IconButton>
+        <Box display="flex" flexDirection="row" ml={2} mt={1} >
+          <Typography variant="h5">{conver?.name}</Typography>
+          <IconButton size="small" sx={{ ml: 1 }}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Box>
       </Box>
-      <Box display="flex" justifyContent="center" mt={2}>
-        <IconButton>
-          <NotificationsIcon />
-        </IconButton>
-        <Typography variant="body2" sx={{ mt: 1 }}>Tất cả</Typography>
-        <IconButton>
-          <PushPinIcon />
-        </IconButton>
-        <Typography variant="body2" sx={{ mt: 1 }}>Ghim hội thoại</Typography>
-        <IconButton>
-          <GroupAddIcon />
-        </IconButton>
-        <Typography variant="body2" sx={{ mt: 1 }}>Tạo nhóm trò chuyện</Typography>
-      </Box>
+      <ListItem display="flex" justifyContent="space-evenly" alignItems="center" mt={2} width="100%">
+        <ListItemButton>
+          <Box display={'flex'} flexDirection={'column'} alignItems={'center'} >
+            <NotificationsIcon />
+            <Typography variant="body2" sx={{ mt: 1 }} textAlign={'center'} >Tắt thông báo</Typography>
+          </Box>
+        </ListItemButton>
+
+        <ListItemButton >
+          <Box display={'flex'} flexDirection={'column'} alignItems={'center'}>
+            <PushPinIcon />
+            <Typography variant="body2" sx={{ mt: 1 }} textAlign={'center'} >Ghim hội thoại</Typography>
+          </Box>
+        </ListItemButton>
+
+        <ListItemButton>
+          <Box display={'flex'} flexDirection={'column'} alignItems={'center'}>
+            <GroupAddIcon />
+            <Typography variant="body2" sx={{ mt: 1 }} textAlign={'center'}>Thêm thành viên</Typography>
+          </Box>
+        </ListItemButton>
+        <ListItemButton>
+          <Box display={'flex'} flexDirection={'column'} alignItems={'center'}>
+            <Setting />
+            <Typography variant="body2" sx={{ mt: 1 }} textAlign={'center'}>Thêm thành viên</Typography>
+          </Box>
+        </ListItemButton>
+      </ListItem>
     </Box>
-);
+  );
 
   // Reminder Box (Danh sách nhạc hẹn)
   const ReminderBox = () => (
@@ -561,23 +582,34 @@ const ConversationInfo = () => {
         <Box sx={modalStyle}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <HeaderBox />
-            <IconButton onClick={handleClose}>
-              <CloseIcon />
-            </IconButton>
           </Box>
-
-          <ReminderBox />
           <MediaBox />
           <FileBox />
           <LinkBox />
           <SecurityBox />
           <ReportBox />
+          <IconButton sx={{ position: 'absolute', right: 20, top: 30 }} onClick={handleClose}>
+            <CloseIcon />
+          </IconButton>
         </Box>
       </Modal>
 
       <ArchiveModal />
     </div>
   );
+};
+ConversationInfo.propTypes = {
+  conver: PropTypes.shape({
+    avatar: PropTypes.string,
+    type: PropTypes.string,
+    members: PropTypes.arrayOf(
+      PropTypes.shape({
+        _id: PropTypes.string,
+        avatar: PropTypes.string,
+      })
+    ),
+    name: PropTypes.string,
+  }),
 };
 
 export default ConversationInfo;
