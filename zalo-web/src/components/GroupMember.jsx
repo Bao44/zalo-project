@@ -19,6 +19,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import UserAvatar from "./Avatar";
 import { changeAdminGroup, removeMemberFromGroup } from "../../api/conversationAPI";
 import PropTypes from "prop-types";
+import { sendMessage } from "../../api/messageAPI";
 
 const style = {
   position: "absolute",
@@ -61,18 +62,30 @@ export default function GroupMember({
   const uid = open ? "simple-popover" : undefined;
 
   // Xóa thành viên
-  const handleRemoveUser = async (memId) => {
+  const handleRemoveUser = async (mem) => {
     const response = await removeMemberFromGroup(
       conversation?._id,
-      memId,
+      mem?._id,
       user?.id
     );
     if (response.success) {
-      setConversation((prev) => ({
-        ...prev,
-        members: prev.members.filter((member) => member._id !== memId),
-      }));
-      toast.success("Xóa thành viên thành công!");
+      const messageData = {
+        senderId: user?.id,
+        content: `${mem?.name} đã bị xóa khỏi nhóm!`,
+        attachments: null,
+        media: null,
+        file: null,
+        replyTo: null,
+        type: "notification",
+      };
+      const res = await sendMessage(conversation?._id, messageData);
+      if (res.success) {
+        setConversation((prev) => ({
+          ...prev,
+          members: prev.members.filter((member) => member._id !== mem?._id),
+        }));
+        setOpenModal(false);
+      } 
     } else {
       toast.error(response.data.message);
     }
@@ -176,7 +189,7 @@ export default function GroupMember({
                         fontSize={"medium"}
                         onClick={(e) => {
                           handleClick(e);
-                          setMemId(member._id);
+                          setMemId(member);
                         }}
                       />
                     )}

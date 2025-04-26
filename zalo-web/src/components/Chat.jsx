@@ -783,6 +783,7 @@ const Chat = ({ conversation, setConversation }) => {
     }
   };
 
+  // Xử lý sự kiện khi người dùng nhấp vào các mục trong danh sách nhóm
   const handleGroupItemClick = async (index) => {
     if (index === 0) {
       setOpenAddMember(true);

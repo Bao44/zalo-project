@@ -11,35 +11,44 @@ import {
   TextField,
   InputAdornment,
   List,
-  Avatar,
   Checkbox,
   ListItemButton,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import { getFriends } from "../../api/friendshipAPI";
+import UserAvatar from "./Avatar";
+import PropTypes from "prop-types";
+import { createConversationGroupChat } from "../../api/conversationAPI";
 
-export default function CreateGroup({ socket }) {
+export default function CreateGroup() {
   const { user } = useSelector((state) => state.user);
   const [name, setName] = useState("");
   const [members, setMembers] = useState([]);
+  const [av, setAv] = useState(null);
   const [open, setOpen] = useState(false);
-  const dispatch = useDispatch();
+  const [listFriend, setListFriend] = useState([""]);
 
+  console.log("Members", members);
+
+  // Lấy danh sách bạn bè từ redux
   useEffect(() => {
-    if (socket) {
-      socket.on("send_create_group", (data) => {
-        if (data.status === "success") {
-          dispatch(createConversation(data.data));
-          toast.success("Tạo nhóm thành công");
-          setName("");
-          setOpen(false);
-        } else if (data.status === "fail") {
-          toast.error("Tạo nhóm thất bại");
+    const fetchFriendList = async () => {
+      try {
+        const response = await getFriends(user?.id);
+        if (response.success) {
+          setListFriend(response.data);
+        } else {
+          toast.error("Lỗi kết nối đến máy chủ");
         }
-      });
-    }
-  }, [socket]);
+      } catch (error) {
+        toast.error("Lỗi kết nối đến máy chủ");
+      }
+    };
+    fetchFriendList();
+  }, [user?.id]);
+
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -59,15 +68,27 @@ export default function CreateGroup({ socket }) {
       return;
     }
 
-    const conver = {
-      name,
-      admin: user.id,
-      members: [...members, user.id],
-      type: "GROUP",
-    };
+    const groupChat = {
+      nameGroup: name,
+      admin: user?.id,
+      members: members,
+      avatar: av,
+    }
 
-    if (socket) {
-      socket.emit("send_create_group", conver);
+    try {
+      const response = await createConversationGroupChat(groupChat);
+      if (response.success) {
+        toast.success("Tạo nhóm thành công");
+        setOpen(false);
+        setName("");
+        setMembers([]);
+        setAv(null);
+      } else {
+        toast.error("Lỗi tạo nhóm");
+      }
+    }
+    catch (error) {
+      toast.error("Lỗi tạo nhóm");
     }
   };
 
@@ -200,10 +221,10 @@ export default function CreateGroup({ socket }) {
                 </Typography>
                 <List>
                   {user &&
-                    user?.friendList?.length > 0 &&
-                    user.friendList.map((friend) => (
+                    listFriend.length > 0 &&
+                    listFriend.map((friend) => (
                       <CardCheck
-                        key={friend.id}
+                        key={friend?._id}
                         friend={friend}
                         setMembers={setMembers}
                       />
@@ -242,9 +263,9 @@ function CardCheck({ friend, setMembers }) {
     setChecked(!checked);
     setMembers((prev) => {
       if (checked) {
-        return prev.filter((item) => item !== friend.id);
+        return prev.filter((item) => item !== friend?._id);
       }
-      return [...prev, friend.id];
+      return [...prev, friend];
     });
   };
 
@@ -266,11 +287,21 @@ function CardCheck({ friend, setMembers }) {
         }}
       >
         <Checkbox checked={checked} />
-        <Avatar alt={friend.fullName} src={friend.avatarUrl} />
+        <UserAvatar uri={friend?.avatar} width={60} height={60} />
       </Box>
       <Box>
-        <Typography fontWeight="bold">{friend.fullName}</Typography>
+        <Typography fontWeight="bold">{friend?.name}</Typography>
       </Box>
     </ListItemButton>
   );
 }
+
+CardCheck.propTypes = {
+  friend: PropTypes.object.isRequired,
+  setMembers: PropTypes.func.isRequired,
+};
+CreateGroup.propTypes = {
+  openModal: PropTypes.bool.isRequired,
+  setOpenModal: PropTypes.func.isRequired,
+  conversation: PropTypes.object,
+};

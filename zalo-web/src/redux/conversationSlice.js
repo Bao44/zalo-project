@@ -131,11 +131,15 @@ const conversationSlice = createSlice({
                 state.conversations.push(newConversation);
             }
 
-            // Sắp xếp danh sách conversations theo lastMessage.createdAt
+            // Sắp xếp danh sách conversations theo lastMessage.createdAt hoặc createdAt
             state.conversations.sort((a, b) => {
-                const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt) : new Date(0);
-                const bTime = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt) : new Date(0);
-                return bTime - aTime; // Sắp xếp giảm dần
+                const timeA = a.lastMessage?.createdAt
+                    ? new Date(a.lastMessage.createdAt).getTime()
+                    : new Date(a.createdAt).getTime(); // Sử dụng createdAt nếu lastMessage không có
+                const timeB = b.lastMessage?.createdAt
+                    ? new Date(b.lastMessage.createdAt).getTime()
+                    : new Date(b.createdAt).getTime(); // Sử dụng createdAt nếu lastMessage không có
+                return timeB - timeA; // Sắp xếp giảm dần (mới nhất lên đầu)
             });
         },
     },

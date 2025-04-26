@@ -69,6 +69,7 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
           paddingLeft: "0px",
           paddingY: "15px",
           alignItems: "center",
+          justifyContent: "space-between", // Thêm dòng này nè
           bgcolor: converSeleted?._id === conver?._id ? "hsla(204, 74.70%, 65.90%, 0.29)" : "transparent",
           "&:hover": {
             backgroundColor: "rgba(0, 0, 0, 0.1)",
@@ -76,50 +77,73 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
         }}
         onClick={() => handleSelectConversation(conver)}
       >
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {avatar ? (
-            <Box sx={{ display: "flex", alignItems: "center", paddingLeft: "20px" }}>
+        <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden", alignItems: "center" }}>
+          {/* Avatar */}
+          <Box sx={{ display: "flex", alignItems: "center", paddingLeft: "20px", flexShrink: 0 }}>
+            {avatar ? (
               <Avatar src={avatar} alt="Avatar" style={{ width: 60, height: 60 }} />
-            </Box>
-          ) : (
-            <AvatarGroup
-              max={2}
-            >
-              {members.map((member) => (
-                <UserAvatar key={member._id} uri={member.avatar} />
-              ))}
-            </AvatarGroup>
-          )}
-        </Box>
-        <Box sx={{ flexGrow: 1, marginLeft: "10px" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography fontWeight="bold" fontSize={16} sx={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "50%"}}>{name}</Typography>
-            <Typography fontSize="14px" color="gray">{convertToTime(lastMessage?.createdAt)}</Typography>
-          </Box>
-          <Typography
-            color="gray"
-            fontSize="14px"
-            marginTop="5px"
-            sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "60%" }}
-          >
-            {message ? (
-              <>
-                {message.senderId === user.id ? "Bạn: " : members.find((mem) => mem._id === message.senderId)?.name + ": "}
-                {message.content
-                  ? message.content
-                  : message.attachments?.length > 0
-                    ? "Đã gửi ảnh"
-                    : message.media?.fileName
-                      ? `[Video] ${message.media.fileName}`
-                      : message.files?.fileName
-                        ? `[File] ${message.files.fileName}`
-                        : "Chưa có tin nhắn"}
-              </>
             ) : (
-              "Chưa có tin nhắn"
+              <AvatarGroup max={2}>
+                {members.map((member) => (
+                  <UserAvatar key={member._id} uri={member.avatar} />
+                ))}
+              </AvatarGroup>
             )}
-          </Typography>
+          </Box>
+
+          {/* Nội dung tin nhắn */}
+          <Box sx={{ flexGrow: 1, marginLeft: "10px", minWidth: 0 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+              <Typography
+                fontWeight="bold"
+                fontSize={16}
+                sx={{
+                  flexGrow: 1,
+                  minWidth: 0,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {name}
+              </Typography>
+              <Typography fontSize="14px" color="gray" sx={{ marginLeft: "8px", flexShrink: 0 }}>
+                {convertToTime(lastMessage?.createdAt || conver?.createdAt)}
+              </Typography>
+            </Box>
+
+            <Typography
+              color="gray"
+              fontSize="14px"
+              marginTop="5px"
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+              }}
+            >
+              {message ? (
+                <>
+                  {message.senderId === user.id ? "Bạn: " : members.find((mem) => mem._id === message.senderId)?.name + ": "}
+                  {message.content
+                    ? message.content
+                    : message.attachments?.length > 0
+                      ? "Đã gửi ảnh"
+                      : message.media?.fileName
+                        ? `[Video] ${message.media.fileName}`
+                        : message.files?.fileName
+                          ? `[File] ${message.files.fileName}`
+                          : "Chưa có tin nhắn"}
+                </>
+              ) : (
+                "Chưa có tin nhắn"
+              )}
+            </Typography>
+          </Box>
         </Box>
+
+        {/* Badge */}
         {unreadCount > 0 && (
           <Badge
             badgeContent={unreadCount > 99 ? "99+" : unreadCount === 1 ? "" : unreadCount}
@@ -148,6 +172,7 @@ CardItemGroup.propTypes = {
     _id: PropTypes.string.isRequired,
     type: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
+    createdAt: PropTypes.string,
     admin: PropTypes.shape({
       _id: PropTypes.string.isRequired,
       name: PropTypes.string,
@@ -165,6 +190,7 @@ CardItemGroup.propTypes = {
       _id: PropTypes.string,
       senderId: PropTypes.string,
       content: PropTypes.string,
+      createdAt: PropTypes.string, // Added createdAt validation
       attachments: PropTypes.arrayOf(
         PropTypes.shape({
           fileName: PropTypes.string,
@@ -184,7 +210,6 @@ CardItemGroup.propTypes = {
         _id: PropTypes.string,
       }),
       seen: PropTypes.arrayOf(PropTypes.string),
-      createdAt: PropTypes.string,
     }),
   }).isRequired,
   setConversation: PropTypes.func.isRequired,
