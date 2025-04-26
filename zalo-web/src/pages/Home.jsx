@@ -196,7 +196,7 @@ const Home = () => {
                   />
                 </ListItemButton>
               </ListItem>
-              <ListItem
+              {/* <ListItem
                 sx={{
                   justifyContent: "center",
                   alignItems: "center",
@@ -210,6 +210,22 @@ const Home = () => {
                       userId: user.id,
                     }); // Chia sẻ qua socket
                     navigate(`/calls?roomId=${sharedRoomId}`); // Điều hướng với roomId
+                  }}
+                >
+                  <CallIcon
+                    sx={{ color: "#fff", width: "40px", height: "40px" }}
+                  />
+                </ListItemButton>
+              </ListItem> */}
+              <ListItem
+                sx={{
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <ListItemButton
+                  onClick={() => {
+                    navigate("/homepage");
                   }}
                 >
                   <CallIcon

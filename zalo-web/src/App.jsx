@@ -1,12 +1,18 @@
 import "./App.css";
 import { AuthProvider } from "../contexts/AuthContext";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import Start from "./pages/Start";
 import Home from "./pages/Home";
 import { Provider } from "react-redux";
 import { store } from "./redux/store";
 import ResetPassword from "./pages/ResetPassword";
-import Calls from "./pages/Calls";
+import HomePage from "./pages/HomePage";
+import Room from "./pages/Room";
 
 function App() {
   return (
@@ -16,7 +22,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Start />} />
             <Route path="/home" element={<Home />} />
-            <Route path="/calls" element={<Calls />} />
+            <Route path="/homepage" element={<HomePage />} />
+            <Route path="/homepage/room/:roomId" element={<Room />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

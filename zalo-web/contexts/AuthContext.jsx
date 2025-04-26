@@ -34,30 +34,25 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (session) {
-          setAuth(session.user);
-          await updateUserData(session.user, session.user.email);
-          // navigate("/home");
-        } else {
-          // Nếu không có session, xóa localStorage và chuyển hướng đến /
-          console.warn("No valid session found, clearing localStorage");
-          localStorage.removeItem("userId");
-          localStorage.removeItem("sessionToken");
-          localStorage.removeItem("user");
-          localStorage.removeItem("lastLoginAt");
-          navigate("/");
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      // Skip auth check for /homepage/room routes
+      if (window.location.pathname.startsWith("/homepage/room")) {
+        return;
+      }
+      if (session) {
+        setAuth(session.user);
+        await updateUserData(session.user, session.user.email);
+      } else {
+        localStorage.removeItem("userId");
+        localStorage.removeItem("sessionToken");
+        localStorage.removeItem("user");
+        localStorage.removeItem("lastLoginAt");
         navigate("/");
       }
     };
-
+    
     initializeAuth();
 
     const authListener = supabase.auth.onAuthStateChange(
