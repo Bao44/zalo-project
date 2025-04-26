@@ -93,14 +93,14 @@ const CardItemGroup = ({ conver, setConversation, converSeleted }) => {
         </Box>
         <Box sx={{ flexGrow: 1, marginLeft: "10px" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography fontWeight="bold" fontSize={16}>{name}</Typography>
+            <Typography fontWeight="bold" fontSize={16} sx={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "50%"}}>{name}</Typography>
             <Typography fontSize="14px" color="gray">{convertToTime(lastMessage?.createdAt)}</Typography>
           </Box>
           <Typography
             color="gray"
             fontSize="14px"
             marginTop="5px"
-            sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}
+            sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "60%" }}
           >
             {message ? (
               <>

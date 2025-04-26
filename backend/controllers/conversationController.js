@@ -1,5 +1,6 @@
 const Conversation = require("../models/Conversation");
 const cloudinary = require("../config/cloudinary");
+const { getSocketInstance } = require("../socket");
 
 // 📌 Tạo cuộc trò chuyện 1-1
 const create1vs1 = async (req, res) => {
@@ -76,8 +77,23 @@ const createGroup = async (req, res) => {
 
     const savedConversation = await newGroup.save();
 
+    // Cập nhật lại danh sách members trong Conversation
+    const updatedConversation = await Conversation.findByIdAndUpdate(
+      savedConversation._id,
+      { members: mb },
+      { new: true }
+    )
+      .populate("members", "name avatar")
+      .populate("lastMessage", "type content createdAt attachments media files senderId seen replyTo revoked")
+
     // Gửi socket đến tất cả members
-    io.to(members.map((u) => u?._id).concat(admin)).emit("newConversation", savedConversation);
+    const io = getSocketInstance();
+    savedConversation.members.forEach((memberId) => {
+      const memberSocketId = io.onlineUsers?.get(memberId);
+      if (memberSocketId) {
+        io.to(memberSocketId).emit("newConversation", updatedConversation);
+      }
+    });
 
     res.status(201).json(savedConversation);
   } catch (error) {

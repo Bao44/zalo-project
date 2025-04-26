@@ -71,7 +71,7 @@ export const searchFriends = async (phone) => {
 export const checkFriendship = async (userId, friendId) => {
     try {
         const response = await api.get(`/api/friendships/check-friend/${userId}/${friendId}`);
-        return {success: true, data: response.data};
+        return { success: true, data: response.data };
     } catch (error) {
         return handleApiError(error);
     }

@@ -7,9 +7,10 @@ import { router } from "expo-router";
 import { hp, wp } from "@/helpers/common";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import { deleteConversation1vs1, getConversation, updateAvataConversation } from "@/api/conversationAPI";
+import { deleteConversation1vs1, getConversation, removeMemberFromGroup, updateAvataConversation } from "@/api/conversationAPI";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+import { sendMessage } from "@/api/messageAPI";
 
 const InfoChatGroup = () => {
     const { user } = useAuth();
@@ -135,6 +136,31 @@ const InfoChatGroup = () => {
     const handleMemberList = async () => {
         router.push({ pathname: "listMember", params: { conver: JSON.stringify(conversationInfo) } })
     }
+
+    // Rời nhóm
+    const handleLeaveGroup = async () => {
+        try {
+            // Gọi API để rời nhóm
+            const messageData = {
+                senderId: user?.id,
+                content: `${user?.name} đã rời khỏi nhóm!`,
+                attachments: null,
+                media: null,
+                file: null,
+                replyTo: null,
+                type: "notification",
+            };
+            await sendMessage(conversationInfo?._id, messageData);
+            const response = await removeMemberFromGroup(conversationInfo?._id, user?.id, user?.id);
+            if (response.success) {
+                router.push("home");
+            } else {
+                Alert.alert("Lỗi", response.data.message || "Không thể rời nhóm.");
+            }
+        } catch (error) {
+            Alert.alert("Lỗi", error.message || "Không thể rời nhóm.");
+        }
+    };
 
     return (
         <ScreenWrapper>
@@ -408,7 +434,7 @@ const InfoChatGroup = () => {
                         />
                         <Text style={{ marginLeft: 20, fontSize: 17, color: "red" }}>Xóa lịch sử trò truyện</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.box}>
+                    <TouchableOpacity style={styles.box} onPress={handleLeaveGroup}>
                         <Icon
                             name="leaveGroup"
                             size={24}
