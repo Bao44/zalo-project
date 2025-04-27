@@ -17,7 +17,6 @@ const EmojiPopover = ({ setContent }) => {
 
     const handleEmojiClick = (emojiObject) => {
         setContent((prev) => prev + emojiObject.emoji);
-        handleClose();
     };
 
     const open = Boolean(anchorEl);

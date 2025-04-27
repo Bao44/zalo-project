@@ -9,22 +9,20 @@ import { removeMemberFromGroup } from '@/api/conversationAPI';
 
 const { height } = Dimensions.get('window');
 
-const MemberInfoModal = ({ visible, onClose, member, admin, conver_id, user_id }) => {
+const MemberInfoModal = ({ visible, onClose, member, admin, conver_id, user_id, handleRemoveMember }) => {
     if (!member) return null;
 
     // Xoa thanh vien khoi nhom
-    const handleRemoveMember = async () => {
-        try {
-            console.log("Xoa thanh vien khoi nhom", member?._id, user_id);
-            console.log("ID nhom", conver_id);
-            const response = await removeMemberFromGroup(conver_id, member?._id, user_id);
-            if (response.success) {
-                alert("Xóa thành viên thành công!");
-            }
-        } catch (error) {
-            alert("Xóa thành viên không thành công!");
-        }
-    }
+    // const handleRemoveMember = async () => {
+    //     try {
+    //         const response = await removeMemberFromGroup(conver_id, member?._id, user_id);
+    //         if (response.success) {
+    //             alert("Xóa thành viên thành công!");
+    //         }
+    //     } catch (error) {
+    //         alert("Xóa thành viên không thành công!");
+    //     }
+    // }
 
     return (
         <Modal

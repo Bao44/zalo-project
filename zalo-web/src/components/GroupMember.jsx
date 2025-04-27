@@ -3,20 +3,23 @@ import {
   IconButton,
   Typography,
   Box,
-  Avatar,
   Divider,
   Button,
   Popover,
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { toast } from "react-toastify";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import UserAvatar from "./Avatar";
+import { changeAdminGroup, removeMemberFromGroup } from "../../api/conversationAPI";
+import PropTypes from "prop-types";
+import { sendMessage } from "../../api/messageAPI";
 
 const style = {
   position: "absolute",
@@ -44,9 +47,7 @@ export default function GroupMember({
 }) {
   const handleCloseModal = () => setOpenModal(false);
   const { user } = useSelector((state) => state.user);
-  const dispatch = useDispatch();
   const [anchorEl, setAnchorEl] = useState(null);
-  const socket = connectSocket();
   const [memId, setMemId] = useState(null);
 
   const handleClick = (event) => {
@@ -60,63 +61,51 @@ export default function GroupMember({
   const open = Boolean(anchorEl);
   const uid = open ? "simple-popover" : undefined;
 
-  useEffect(() => {
-    if (socket) {
-      socket.on("send_assign_admin", (data) => {
-        if (data.status === "success") {
-          dispatch(assignAdmin(data.data));
-          setConversation({ ...conversation, admin: data.data.userId });
-          handleCloseModal();
-          toast.success("Bạn đã trao quyền trưởng nhóm thành công!");
-        } else if (data.status === "fail") {
-          toast.error("Bạn không thể thực hiện hành động này!");
-        }
-      });
+  // Xóa thành viên
+  const handleRemoveUser = async (mem) => {
+    const response = await removeMemberFromGroup(
+      conversation?._id,
+      mem?._id,
+      user?.id
+    );
+    if (response.success) {
+      const messageData = {
+        senderId: user?.id,
+        content: `${mem?.name} đã bị xóa khỏi nhóm!`,
+        attachments: null,
+        media: null,
+        file: null,
+        replyTo: null,
+        type: "notification",
+      };
+      const res = await sendMessage(conversation?._id, messageData);
+      if (res.success) {
+        setConversation((prev) => ({
+          ...prev,
+          members: prev.members.filter((member) => member._id !== mem?._id),
+        }));
+        setOpenModal(false);
+      } 
+    } else {
+      toast.error(response.data.message);
     }
-  }, [socket]);
+  }
 
-  useEffect(() => {
-    if (socket) {
-      socket.on("send_remove_member", (data) => {
-        if (data.status === "success") {
-          dispatch(removeUser(data.data));
-          setConversation({
-            ...conversation,
-            members: conversation.members.filter(
-              (mem) => mem.id !== data.data.userId
-            ),
-          });
-          handleCloseModal();
-          toast.success("Bạn đã xóa thành viên khỏi nhóm thành công!");
-        } else if (data.status === "fail") {
-          toast.error("Bạn không thể thực hiện hành động này!");
-        }
-      });
-    }
-  }, [socket]);
-
-  const handleAssignAdmin = async (id) => {
-    if (socket) {
-      socket.emit("send_assign_admin", {
-        conversationId: conversation.id,
-        userId: id,
-      });
+  // Chuyển quyền admin
+  const handleAssignAdmin = async (memId) => {
+    // Chuyển quyền admin cho thành viên
+    const response = await changeAdminGroup(conversation?._id, memId);
+    if (response.success) {
+      setConversation((prev) => ({
+        ...prev,
+        admin: memId,
+      }));
+      toast.success("Chuyển quyền admin thành công!");
+    } else {
+      toast.error(response.data.message);
     }
   };
 
-  const handleRemoveUser = async (id) => {
-    if (conversation.members.length === 3) {
-      toast.warning("Nhóm phải có ít nhất 3 thành viên");
-      return;
-    }
-
-    if (socket) {
-      socket.emit("send_remove_member", {
-        conversationId: conversation.id,
-        userId: id,
-      });
-    }
-  };
 
   return (
     <Modal
@@ -148,23 +137,23 @@ export default function GroupMember({
         <Box>
           {conversation &&
             conversation?.members?.map((member) => {
-              if (member.id === conversation.admin) {
+              if (member?._id === conversation?.admin) {
                 return (
                   <Box
-                    key={member.id}
+                    key={member?._id}
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       padding: "15px",
                     }}
                   >
-                    <Avatar
-                      src={member.avatarUrl}
-                      alt="avatar"
-                      style={{ width: "40px", height: "40px" }}
+                    <UserAvatar
+                      uri={member?.avatar}
+                      width={40}
+                      height={40}
                     />
                     <Typography marginLeft="10px" fontWeight="bold">
-                      {member.fullName}
+                      {member?.name}
                     </Typography>
                     <AdminPanelSettingsIcon
                       color="inherit"
@@ -179,28 +168,28 @@ export default function GroupMember({
               } else {
                 return (
                   <Box
-                    key={member.id}
+                    key={member?._id}
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       padding: "15px",
                     }}
                   >
-                    <Avatar
-                      src={member.avatarUrl}
-                      alt="avatar"
-                      style={{ width: "40px", height: "40px" }}
+                    <UserAvatar
+                      uri={member?.avatar}
+                      width={40}
+                      height={40}
                     />
                     <Typography marginLeft="10px" fontWeight="bold">
-                      {member.fullName}
+                      {member.name}
                     </Typography>
-                    {conversation.admin === user.id && (
+                    {conversation?.admin === user?.id && (
                       <MoreVertIcon
                         style={{ marginLeft: "auto" }}
                         fontSize={"medium"}
                         onClick={(e) => {
                           handleClick(e);
-                          setMemId(member.id);
+                          setMemId(member);
                         }}
                       />
                     )}
@@ -265,3 +254,10 @@ export default function GroupMember({
     </Modal>
   );
 }
+
+GroupMember.propTypes = {
+  openModal: PropTypes.bool.isRequired,
+  setOpenModal: PropTypes.func.isRequired,
+  conversation: PropTypes.object.isRequired,
+  setConversation: PropTypes.func.isRequired,
+};

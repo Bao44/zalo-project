@@ -3,15 +3,19 @@ import {
   IconButton,
   Typography,
   Box,
-  Avatar,
   Divider,
   Button,
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getFriends } from "../../api/friendshipAPI";
+import UserAvatar from "./Avatar";
+import PropTypes from "prop-types";
+import { addMemberToGroup } from "../../api/conversationAPI";
+import { sendMessage } from "../../api/messageAPI";
 
 const style = {
   position: "absolute",
@@ -39,36 +43,58 @@ export default function AddMember({
 }) {
   const handleCloseModal = () => setOpenModal(false);
   const { user } = useSelector((state) => state.user);
-  const socket = connectSocket();
-  const dispatch = useDispatch();
+  const [listFriend, setListFriend] = useState([]);
+
+  console.log(listFriend);
 
   useEffect(() => {
-    if (socket) {
-      socket.on("send_add_member", (data) => {
-        if (data.status === "success") {
-          dispatch(addUser(data.data));
-          setConversation({
-            ...conversation,
-            members: [...conversation.members, data.data.user],
-          });
-          handleCloseModal();
-          toast.success("Bạn đã thêm thành viên thành công!");
-        } else if (data.status === "fail") {
-          toast.error("Thêm thành viên thất bại");
+    const fetchFriendList = async () => {
+      try {
+        const response = await getFriends(user?.id);
+        if (response.success) {
+          setListFriend(response.data);
+        } else {
+          toast.error("Lỗi kết nối đến máy chủ");
         }
-      });
-    }
-  }, [socket]);
+      } catch (error) {
+        toast.error("Lỗi kết nối đến máy chủ");
+      }
+    };
+    fetchFriendList();
+  }, [user?.id]);
 
-  const handleAddMember = async (id) => {
-    if (socket) {
-      socket.emit("send_add_member", {
-        userId: id,
-        conversationId: conversation.id,
-        senderId: user.id,
-      });
+  // Thêm thành viên
+  const handleAddMember = async (friend) => {
+    try {
+      const response = await addMemberToGroup(
+        conversation?._id,
+        [friend?._id],
+        user?._id
+      );
+      if (response.success) {
+        const messageData = {
+          senderId: user?.id,
+          content: `${friend?.name} trở thành thành viên của nhóm!`,
+          attachments: null,
+          media: null,
+          file: null,
+          replyTo: null,
+          type: "notification",
+        };
+        await sendMessage(conversation?._id, messageData);
+        setConversation((prev) => ({
+          ...prev,
+          members: [...prev.members, friend],
+        }));
+        toast.success("Thêm thành viên thành công");
+      } else {
+        toast.error("Lỗi kết nối đến máy chủ");
+      }
+    } catch (error) {
+      toast.error("Lỗi kết nối đến máy chủ");
     }
-  };
+    handleCloseModal();
+  }
 
   return (
     <Modal
@@ -98,53 +124,53 @@ export default function AddMember({
         </Box>
         <Divider />
         <Box>
-          {user?.friendList &&
-            user?.friendList?.map((friend) => {
+          {listFriend &&
+            listFriend.map((friend) => {
               if (
-                conversation.members.find((member) => member.id === friend.id)
+                conversation?.members.find((member) => member?._id === friend?._id)
               ) {
                 return (
                   <Box
-                    key={friend.id}
+                    key={friend?._id}
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       padding: "15px",
                     }}
                   >
-                    <Avatar
-                      src={friend.avatarUrl}
-                      alt="avatar"
-                      style={{ width: "40px", height: "40px" }}
+                    <UserAvatar
+                      uri={friend?.avatar}
+                      width={40}
+                      height={40}
                     />
                     <Typography marginLeft="10px" fontWeight="bold">
-                      {friend.fullName}
+                      {friend?.name}
                     </Typography>
                   </Box>
                 );
               } else {
                 return (
                   <Box
-                    key={friend.id}
+                    key={friend?._id}
                     sx={{
                       display: "flex",
                       alignItems: "center",
                       padding: "15px",
                     }}
                   >
-                    <Avatar
-                      src={friend.avatarUrl}
-                      alt="avatar"
-                      style={{ width: "40px", height: "40px" }}
+                    <UserAvatar
+                      uri={friend?.avatar}
+                      width={40}
+                      height={40}
                     />
                     <Typography marginLeft="10px" fontWeight="bold">
-                      {friend.fullName}
+                      {friend.name}
                     </Typography>
                     <Button
                       variant="contained"
                       color="primary"
                       style={{ marginLeft: "auto" }}
-                      onClick={() => handleAddMember(friend.id)}
+                      onClick={() => handleAddMember(friend)}
                     >
                       Thêm
                     </Button>
@@ -157,3 +183,10 @@ export default function AddMember({
     </Modal>
   );
 }
+
+AddMember.propTypes = {
+  openModal: PropTypes.bool.isRequired,
+  setOpenModal: PropTypes.func.isRequired,
+  conversation: PropTypes.object,
+  setConversation: PropTypes.func,
+};

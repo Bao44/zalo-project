@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Alert } from "react-native";
 import React, { useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { theme } from "@/constants/theme";
@@ -7,9 +7,11 @@ import { hp, wp } from "@/helpers/common";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import { router, useLocalSearchParams } from "expo-router";
 import Avatar from "@/components/Avatar";
-import { addMemberToGroup, changeSettingApproved } from "@/api/conversationAPI";
+import { changeSettingApproved, handleApprovedRequest } from "@/api/conversationAPI";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ApprovedMembers = () => {
+    const { user } = useAuth();
     const { conver } = useLocalSearchParams();
     const converInfo = JSON.parse(conver);
     const [isEnabled, setIsEnabled] = useState(converInfo?.approvedMembers || false); // Lấy trạng thái ban đầu từ converInfo
@@ -25,13 +27,12 @@ const ApprovedMembers = () => {
     };
 
     // Duyệt or xóa thành viên
-    const handleApproveMember = async (memberId, type) => {
-        if(type === "approve") {
-            // Gọi API duyệt thành viên
-            const response = await addMemberToGroup(converInfo._id, memberId);
-        }
-        else if(type === "delete") {
-            // Gọi API xóa thành viên
+    const handleApproveMember = async (member, type) => {
+        const response = await handleApprovedRequest(converInfo._id, member?._id, user?.id, type);
+        if (response.success) {
+            Alert.alert(type === "approve" ? `Đã duyệt ${member?.name} vào nhóm!` : `Xóa yêu cầu tham gia của ${member?.name}!`);
+        } else {
+            Alert.alert(type === "approve" ? "Duyệt thành viên không thành công!" : "Xóa yêu cầu tham gia không thành công!");
         }
     };
 
@@ -74,10 +75,10 @@ const ApprovedMembers = () => {
                                 <Text style={styles.textName}>{item?.name}</Text>
                             </View>
                             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "30%" }}>
-                                <TouchableOpacity style={[styles.button, { backgroundColor: theme.colors.primary }]}>
+                                <TouchableOpacity style={[styles.button, { backgroundColor: theme.colors.primary }]} onPress={() => handleApproveMember(item, "approve")}>
                                     <Text style={{ color: "white" }}>Duyệt</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={[styles.button, { backgroundColor: "red" }]}>
+                                <TouchableOpacity style={[styles.button, { backgroundColor: "red" }]} onPress={() => handleApproveMember(item, "delete")}>
                                     <Text style={{ color: "white" }}>Xóa</Text>
                                 </TouchableOpacity>
                             </View>

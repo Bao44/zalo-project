@@ -46,7 +46,11 @@ const MessageSchema = new mongoose.Schema({
   revoked: { type: Boolean, default: false },
   removed: [{
     type: String, ref: "User"
-  }]
+  }],
+  type: {
+    type: String,
+    default: "message"
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Message", MessageSchema);

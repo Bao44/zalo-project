@@ -23,6 +23,7 @@ import { getFriends } from "../../api/friendshipAPI";
 import { useAuth } from "../../contexts/AuthContext";
 import Avatar from "../../components/Avatar";
 import Loading from "@/components/Loading";
+import { sendMessage } from "@/api/messageAPI";
 
 const SelectAddMembersGroup = () => {
     const { user } = useAuth();
@@ -193,8 +194,22 @@ const SelectAddMembersGroup = () => {
     const handleAddMembers = async () => {
         setLoading(true);
         try {
-            const response = await addMemberToGroup(paramDataConver._id, selectedItems.map((item) => item._id));
+            const response = await addMemberToGroup(paramDataConver._id, selectedItems.map((item) => item._id), user?.id);
             if (response.success) {
+                if (paramDataConver?.admin === user?.id) {
+                    selectedItems.forEach(async (item) => {
+                        const messageData = {
+                            senderId: user?.id,
+                            content: `${item?.name} trở thành thành viên của nhóm!`,
+                            attachments: null,
+                            media: null,
+                            file: null,
+                            replyTo: null,
+                            type: "notification",
+                        };
+                        await sendMessage(paramDataConver?._id, messageData);
+                    })
+                }
                 router.back();
             } else {
                 Alert.alert("Lỗi", response.data.message || "Có lỗi xảy ra!");
