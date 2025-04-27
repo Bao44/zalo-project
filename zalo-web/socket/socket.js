@@ -20,9 +20,4 @@ socket.on("disconnect", (reason) => {
   console.log("Socket disconnected:", reason);
 });
 
-socket.on("share-room", (data) => {
-  console.log("Received share-room:", data);
-  socket.broadcast.emit("share-room", data); // Phát lại cho các client khác
-});
-
 export default socket;

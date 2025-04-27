@@ -29,14 +29,14 @@ import socket from "../../socket/socket";
 
 const Messager = lazy(() => import("./Messager"));
 const Contact = lazy(() => import("./Contact"));
+const Call = lazy(() => import("./Call"));
 
 const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, setAuth } = useAuth();
   const hasDataBeenFetched = useRef(false);
-
-  const [showMess, setShowMess] = useState(true);
+  const [activeTab, setActiveTab] = useState("mess");
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const open = Boolean(anchorEl);
@@ -172,62 +172,39 @@ const Home = () => {
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  backgroundColor: showMess ? "rgba(0,0,0,0.2)" : "transparent",
+                  backgroundColor:
+                    activeTab === "mess" ? "rgba(0,0,0,0.2)" : "transparent",
                 }}
               >
-                <ListItemButton onClick={() => setShowMess(true)}>
+                <ListItemButton onClick={() => setActiveTab("mess")}>
                   <ChatIcon
                     sx={{ color: "#fff", width: "40px", height: "40px" }}
                   />
                 </ListItemButton>
               </ListItem>
+
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: !showMess
-                    ? "rgba(0,0,0,0.2)"
-                    : "transparent",
+                  backgroundColor:
+                    activeTab === "contact" ? "rgba(0,0,0,0.2)" : "transparent",
                 }}
               >
-                <ListItemButton onClick={() => setShowMess(false)}>
+                <ListItemButton onClick={() => setActiveTab("contact")}>
                   <ContactsIcon
                     sx={{ color: "#fff", width: "40px", height: "40px" }}
                   />
                 </ListItemButton>
               </ListItem>
-              {/* <ListItem
-                sx={{
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <ListItemButton
-                  onClick={() => {
-                    const sharedRoomId = randomID(5); // Tạo roomId
-                    socket.emit("share-room", {
-                      roomId: sharedRoomId,
-                      userId: user.id,
-                    }); // Chia sẻ qua socket
-                    navigate(`/calls?roomId=${sharedRoomId}`); // Điều hướng với roomId
-                  }}
-                >
-                  <CallIcon
-                    sx={{ color: "#fff", width: "40px", height: "40px" }}
-                  />
-                </ListItemButton>
-              </ListItem> */}
+
               <ListItem
                 sx={{
                   justifyContent: "center",
-                  alignItems: "center",
+                  backgroundColor:
+                    activeTab === "call" ? "rgba(0,0,0,0.2)" : "transparent",
                 }}
               >
-                <ListItemButton
-                  onClick={() => {
-                    navigate("/homepage");
-                  }}
-                >
+                <ListItemButton onClick={() => setActiveTab("call")}>
                   <CallIcon
                     sx={{ color: "#fff", width: "40px", height: "40px" }}
                   />
@@ -275,8 +252,10 @@ const Home = () => {
           <Grid item xs={11.3}>
             {isLoading || !isUserLoaded ? (
               <Loading />
-            ) : showMess ? (
+            ) : activeTab === "mess" ? (
               <Messager />
+            ) : activeTab === "call" ? (
+              <Call />
             ) : (
               <Contact />
             )}
@@ -287,17 +266,5 @@ const Home = () => {
     </Suspense>
   );
 };
-
-function randomID(len) {
-  let result = "";
-  var chars = "12345qwertyuiopasdfgh67890jklmnbvcxzMNBVCZXASDQWERTYHGFUIOLKJP",
-    maxPos = chars.length,
-    i;
-  len = len || 5;
-  for (i = 0; i < len; i++) {
-    result += chars.charAt(Math.floor(Math.random() * maxPos));
-  }
-  return result;
-}
 
 export default Home;
