@@ -50,12 +50,8 @@ import {
 import EmojiPopover from "./EmojiPopover";
 import { createConversation1vs1, removeMemberFromGroup } from "../../api/conversationAPI";
 import ReplytoMessageSelected from "./ReplytoMessageSelected";
-<<<<<<< HEAD
-import ConversationInfo from "./ConversationInfo";
-=======
 import AddMember from "./AddMember";
 import GroupMember from "./GroupMember";
->>>>>>> 087e9bb84970eb83e5269a07e9e99ad5955cdd9f
 
 const Chat = ({ conversation, setConversation }) => {
   const { name, members, type } = conversation;
@@ -1229,18 +1225,10 @@ const Chat = ({ conversation, setConversation }) => {
           )}
         </Button>
       </Box>
-<<<<<<< HEAD
-      <Dialog
-        open={openRevokeDialog}
-        onClose={() => setOpenRevokeDialog(false)}
-        aria-labelledby="revoke-dialog-title"
-      >
-=======
       <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
         {DrawerList}
       </Drawer>
       <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
->>>>>>> 087e9bb84970eb83e5269a07e9e99ad5955cdd9f
         <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
         <DialogContent>
           <Typography>
