@@ -67,3 +67,12 @@ export const updateUser = async (userId, data) => {
     throw error.response?.data || error;
   }
 };
+
+export const checkUserOnline = async (userId) => {
+  try {
+    const response = await api.get(`/api/users/online/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};

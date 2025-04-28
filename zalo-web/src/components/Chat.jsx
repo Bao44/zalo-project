@@ -16,7 +16,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Drawer
+  Drawer,
+  Alert
 } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import ImageIcon from "@mui/icons-material/Image";
@@ -52,6 +53,9 @@ import { createConversation1vs1, removeMemberFromGroup } from "../../api/convers
 import ReplytoMessageSelected from "./ReplytoMessageSelected";
 import AddMember from "./AddMember";
 import GroupMember from "./GroupMember";
+import { useNavigate } from "react-router-dom";
+import { checkUserOnline } from "../../api/user";
+import { toast } from "react-toastify";
 
 const Chat = ({ conversation, setConversation }) => {
   const { name, members, type } = conversation;
@@ -79,6 +83,19 @@ const Chat = ({ conversation, setConversation }) => {
   const [openInforProfile, setOpenInforProfile] = useState(false);
   const [openAddMember, setOpenAddMember] = useState(false);
   const [openGroupMember, setOpenGroupMember] = useState(false);
+  const [roomId, setRoomId] = useState("");
+  const navigate = useNavigate();
+
+
+  const handleRoomIdGenerate = () => {
+    const randomId = Math.random().toString(36).substring(2, 9);
+    const timestamp = Date.now().toString().slice(-4);
+    setRoomId(randomId + timestamp);
+  };
+
+  useEffect(() => {
+    handleRoomIdGenerate(); // Tạo roomId ngay khi component được tải
+  }, []);
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
@@ -232,6 +249,15 @@ const Chat = ({ conversation, setConversation }) => {
       }
     };
   }, [conversation?._id, user?.id, isFocused]);
+
+  // Nhan thong bao cuoc goi
+  useEffect(() => {
+    socket.on("receive-room-invitation", ({ roomId, callType }) => {
+      console.log("aaaaaaaaa", {roomId, callType})
+      alert(`Bạn nhận được lời mời tham gia một cuộc gọi. Room ID: ${roomId}`);
+      navigate(`/room/${roomId}?type=${callType}`);
+    });
+  }, [navigate])
 
   // Cleanup stale temporary messages
   // useEffect(() => {
@@ -865,7 +891,7 @@ const Chat = ({ conversation, setConversation }) => {
               <AvatarGroup max={2}>
                 {members?.length > 0 &&
                   members?.map((mem) => (
-                    <UserAvatar uri={mem?.avatar} key={mem?._id}/>
+                    <UserAvatar uri={mem?.avatar} key={mem?._id} />
                   ))}
               </AvatarGroup>
             )}
@@ -972,6 +998,27 @@ const Chat = ({ conversation, setConversation }) => {
     </Box >
   );
 
+  const handleCall = async (userId, roomId, type) => {
+    console.log("RoomID", roomId);
+    if (type === "private") {
+      // check user online
+      const isOnline = await checkUserOnline(userId);
+      if (!isOnline) {
+        toast.warning("Người dùng không online");
+        return;
+      } else {
+        socket.emit("send-room-invitation", {
+          targetUserId: userId, // Gửi cho một người
+          roomId,
+          callType: "one-on-one",
+        });
+        navigate(`/room/${roomId}?type=one-on-one`);
+      }
+    } else {
+      // 
+    }
+  }
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Box
@@ -1053,7 +1100,9 @@ const Chat = ({ conversation, setConversation }) => {
             )}
           </Box>
           <Box sx={{ marginLeft: "auto", color: "#000", padding: "5px" }}>
-            <VideocamIcon />
+            <Button onClick={() => handleCall(friend?._id, roomId, conversation?.type)}>
+              <VideocamIcon />
+            </Button>
           </Box>
           <Button
             sx={{ marginLeft: "10px", color: "#000", padding: "5px" }}

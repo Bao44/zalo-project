@@ -92,21 +92,21 @@ function Room() {
     }
   }, [location.search]);
 
-  useEffect(() => {
-    const requestPermissions = async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      } catch (error) {
-        console.error("Permission error:", error);
-        alert(
-          "Vui lòng cấp quyền sử dụng camera và micrô để tham gia cuộc gọi"
-        );
-        navigate("/home");
-      }
-    };
+  // useEffect(() => {
+  //   const requestPermissions = async () => {
+  //     try {
+  //       await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  //     } catch (error) {
+  //       console.error("Permission error:", error);
+  //       alert(
+  //         "Vui lòng cấp quyền sử dụng camera và micrô để tham gia cuộc gọi"
+  //       );
+  //       navigate("/home");
+  //     }
+  //   };
 
-    requestPermissions();
-  }, [navigate]);
+  //   requestPermissions();
+  // }, [navigate]);
 
   useEffect(() => {
     if (callType && user) {

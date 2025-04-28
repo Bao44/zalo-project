@@ -114,11 +114,15 @@ const Home = () => {
         console.warn("No active session found, skipping Supabase signOut");
       }
 
+      // Socket off
+      socket.emit("user-offline", user?.id);
+
       // Xóa dữ liệu trong localStorage
       localStorage.removeItem("userId");
       localStorage.removeItem("sessionToken");
       localStorage.removeItem("user");
       localStorage.removeItem("lastLoginAt");
+
 
       // Cập nhật trạng thái Redux và AuthContext
       dispatch(logout());

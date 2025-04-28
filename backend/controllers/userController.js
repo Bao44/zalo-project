@@ -1,5 +1,6 @@
 const authService = require("../services/authService");
 const User = require("../models/User");
+const { getSocketInstance } = require("../socket");
 
 const userController = {
   async getUserData(req, res) {
@@ -262,6 +263,31 @@ const userController = {
       return res.status(500).json({ success: false, message: error.message });
     }
   },
+
+  // Check user online status
+  async checkUserOnline(req, res) {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing user ID",
+        });
+      }
+
+      const io = getSocketInstance();
+      console.log("io", Array.from(io.onlineUsers.keys()));
+      const isOnline = io.onlineUsers.has(userId);
+
+      return res.status(200).json({
+        success: true,
+        isOnline,
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
 };
 
 module.exports = userController;
