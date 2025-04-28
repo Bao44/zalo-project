@@ -23,4 +23,7 @@ router.post('/:supabaseId/friends', userController.addFriend);
 // Thêm cuộc trò chuyện
 router.post('/:supabaseId/conversations', userController.addConversation);
 
+//Check user online
+router.get('/online/:userId', userController.checkUserOnline);
+
 module.exports = router;

@@ -111,9 +111,15 @@ const initSocket = (server) => {
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
+    // mỗi 5s in onlineUsers
+    setInterval(() => {
+
+    }, 5000);
+
     // Khi user online, gửi RoomID để xác nhận vào room
     socket.on("send-room-invitation", ({ targetUserId, roomId, callType }) => {
       const targetSocketId = onlineUsers.get(targetUserId);
+      console.log("Received room invitation:", { targetUserId, roomId, callType });
       if (targetSocketId) {
         io.to(targetSocketId).emit("receive-room-invitation", { roomId, callType });
         console.log(`Sent room invitation to user ${targetUserId}: roomId=${roomId}, callType=${callType}`);
