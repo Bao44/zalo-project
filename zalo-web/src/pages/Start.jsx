@@ -7,6 +7,7 @@ import Login from "../components/Login";
 import { supabase } from "../../lib/supabase";
 import Signup from "../components/Signup";
 import ForgotPassword from "../components/ForgotPassword";
+import socket from "../../socket/socket";
 
 const style = {
   position: "absolute",

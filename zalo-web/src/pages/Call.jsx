@@ -93,7 +93,7 @@ function Call() {
 
   useEffect(() => {
     socket.on("online-users", (users) => {
-      setOnlineUsers(users.filter((id) => id !== user.id));
+      setOnlineUsers(users.filter((id) => id !== user?.id));
     });
 
     socket.on("receive-room-invitation", ({ roomId, callType }) => {
