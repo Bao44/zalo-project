@@ -11,14 +11,11 @@ const initSocket = (server) => {
     transports: ["websocket", "polling"],
   });
 
-  console.log("Socket.IO server initialized");
-
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
     socket.on("user-online", (userId) => {
       if (!userId) {
-        console.error("Received invalid userId:", userId);
         return;
       }
       onlineUsers.set(userId, socket.id);
@@ -32,48 +29,83 @@ const initSocket = (server) => {
 
     socket.on(
       "send-room-invitation",
-      ({ targetUserId, roomId, callType, callerId, callerName }) => {
-        const targetSocketId = onlineUsers.get(targetUserId);
+      ({
+        targetUserIds,
+        roomId,
+        callType,
+        callerId,
+        callerName,
+        conversationId,
+      }) => {
+        // Gửi lời mời đến từng thành viên
+        const offlineUsers = [];
+        targetUserIds.forEach((targetUserId) => {
+          const targetSocketId = onlineUsers.get(targetUserId);
+          if (targetSocketId) {
+            io.to(targetSocketId).emit("receive-room-invitation", {
+              roomId,
+              callType,
+              callerId,
+              callerName,
+              conversationId,
+            });
+          } else {
+            console.error(
+              `User ${targetUserId} is not online or socket not found`
+            );
+            offlineUsers.push(targetUserId);
+          }
+        });
 
-        if (targetSocketId) {
-          io.to(targetSocketId).emit("receive-room-invitation", {
-            roomId,
-            callType,
-            callerId,
-            callerName,
-          });
-        } else {
-          console.error(`${targetUserId} không online`);
-          socket.emit("call-error", {
-            message: `Người nhận ${targetUserId} hiện không online`,
-          });
+        // Thông báo cho người gọi nếu có thành viên offline
+        if (offlineUsers.length > 0) {
+          const message =
+            callType === "group"
+              ? `Các thành viên ${offlineUsers.join(", ")} không online`
+              : `Người nhận ${offlineUsers[0]} không online`;
+          socket.emit("call-error", { message, callType });
         }
       }
     );
 
     socket.on(
       "accept-room-invitation",
-      ({ roomId, callerId, targetUserId }) => {
+      ({ roomId, callerId, targetUserId, conversationId }) => {
         const callerSocketId = onlineUsers.get(callerId);
 
         if (callerSocketId) {
-          io.to(callerSocketId).emit("call-accepted", { roomId, targetUserId });
-        } else {
-          console.error(`${callerId} không online`);
-          // Có thể gửi thông báo lỗi tới người nhận
-          socket.emit("call-error", {
-            message: `Người gọi ${callerId} hiện không online`,
+          io.to(callerSocketId).emit("call-accepted", {
+            roomId,
+            targetUserId,
+            conversationId,
           });
+        } else {
+          console.error(`Caller ${callerId} is not online or socket not found`);
+          socket.emit("call-error", {
+            message: "Người gọi không còn online. Cuộc gọi bị hủy.",
+            callType: "group",
+          });
+        }
+
+        // Thông báo cho các thành viên khác trong nhóm (nếu là group call)
+        if (conversationId) {
+          socket
+            .to(conversationId)
+            .emit("member-joined-call", { roomId, userId: targetUserId });
         }
       }
     );
 
     socket.on(
       "reject-room-invitation",
-      ({ roomId, callerId, targetUserId }) => {
+      ({ roomId, callerId, targetUserId, conversationId }) => {
         const callerSocketId = onlineUsers.get(callerId);
+
         if (callerSocketId) {
-          io.to(callerSocketId).emit("call-rejected", { targetUserId });
+          io.to(callerSocketId).emit("call-rejected", {
+            targetUserId,
+            conversationId,
+          });
         }
       }
     );

@@ -90,6 +90,7 @@ const Chat = ({ conversation, setConversation }) => {
   const navigate = useNavigate();
   const [openCallDialog, setOpenCallDialog] = useState(false);
   const [callDetails, setCallDetails] = useState(null);
+  const [acceptedMembers, setAcceptedMembers] = useState([]);
 
   const handleRoomIdGenerate = () => {
     const randomId = Math.random().toString(36).substring(2, 9);
@@ -110,7 +111,6 @@ const Chat = ({ conversation, setConversation }) => {
     if (user?.id) {
       socket.emit("user-online", user.id); // Gửi user-online
       socket.on("online-users", (users) => {
-        console.log("Online users:", users);
         isOnline(users.includes(friend?._id)); // Cập nhật trạng thái online của friend
       });
     }
@@ -993,34 +993,192 @@ const Chat = ({ conversation, setConversation }) => {
     </Box>
   );
 
+  // const handleCall = async (userId, roomId, type) => {
+  //   if (type === "private") {
+  //     const isOnline = await checkUserOnline(userId);
+  //     if (!isOnline) {
+  //       toast.warning("Người dùng không online");
+  //       return;
+  //     }
+  //     socket.emit("send-room-invitation", {
+  //       targetUserIds: [userId], // Gửi dưới dạng mảng
+  //       roomId,
+  //       callType: "one-on-one",
+  //       callerId: user?.id,
+  //       callerName: user?.name,
+  //       conversationId: conversation?._id,
+  //     });
+  //     toast.info("Đang chờ người nhận chấp nhận cuộc gọi...");
+  //   } else if (type === "group") {
+  //     // Lấy danh sách thành viên trừ người gọi
+  //     const targetUserIds = conversation.members
+  //       .filter((member) => member._id !== user?.id)
+  //       .map((member) => member._id);
+
+  //     if (targetUserIds.length === 0) {
+  //       toast.warning("Không có thành viên nào trong nhóm để gọi");
+  //       return;
+  //     }
+
+  //     // Kiểm tra trạng thái online của các thành viên
+  //     const onlineChecks = await Promise.all(
+  //       targetUserIds.map((id) => checkUserOnline(id))
+  //     );
+  //     const onlineUserIds = targetUserIds.filter(
+  //       (_, index) => onlineChecks[index]
+  //     );
+
+  //     if (onlineUserIds.length === 0) {
+  //       toast.warning("Không có thành viên nào online");
+  //       return;
+  //     }
+
+  //     socket.emit("send-room-invitation", {
+  //       targetUserIds: onlineUserIds,
+  //       roomId,
+  //       callType: "group",
+  //       callerId: user?.id,
+  //       callerName: user?.name,
+  //       conversationId: conversation?._id,
+  //     });
+  //     toast.info("Đang chờ các thành viên chấp nhận cuộc gọi...");
+  //   }
+  // };
+
+  // const handleAcceptCall = () => {
+  //   if (callDetails) {
+  //     socket.emit("accept-room-invitation", {
+  //       roomId: callDetails.roomId,
+  //       callerId: callDetails.callerId,
+  //       targetUserId: user?.id,
+  //       conversationId: callDetails.conversationId,
+  //     });
+  //     navigate(`/room/${callDetails.roomId}?type=${callDetails.callType}`);
+  //     setOpenCallDialog(false);
+  //   }
+  // };
+
+  // const handleRejectCall = () => {
+  //   if (callDetails) {
+  //     socket.emit("reject-room-invitation", {
+  //       roomId: callDetails.roomId,
+  //       callerId: callDetails.callerId,
+  //       targetUserId: user?.id,
+  //       conversationId: callDetails.conversationId,
+  //     });
+  //     setOpenCallDialog(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   socket.on("call-error", ({ message }) => {
+  //     toast.error(message);
+  //     setOpenCallDialog(false);
+  //   });
+
+  //   socket.on(
+  //     "receive-room-invitation",
+  //     ({ roomId, callType, callerId, callerName, conversationId }) => {
+  //       setOpenCallDialog(true);
+  //       setCallDetails({
+  //         roomId,
+  //         callType,
+  //         callerId,
+  //         callerName,
+  //         conversationId,
+  //       });
+  //     }
+  //   );
+
+  //   socket.on("call-accepted", ({ roomId, targetUserId, conversationId }) => {
+  //     if (user?.id !== targetUserId) {
+  //       // Người gửi (caller)
+  //       setAcceptedMembers((prev) => [...prev, targetUserId]);
+  //       toast.success(`Thành viên ${targetUserId} đã chấp nhận cuộc gọi!`);
+  //       // Chuyển hướng ngay khi có ít nhất một người chấp nhận (cho group call)
+  //       if (conversation?._id === conversationId) {
+  //         navigate(`/room/${roomId}?type=group`);
+  //       }
+  //     }
+  //   });
+
+  //   socket.on("call-rejected", ({ targetUserId, conversationId }) => {
+  //     if (user?.id !== targetUserId && conversation?._id === conversationId) {
+  //       toast.info(`Thành viên ${targetUserId} đã từ chối cuộc gọi.`);
+  //     }
+  //   });
+
+  //   socket.on("member-joined-call", ({ roomId, userId }) => {
+  //     if (user?.id !== userId) {
+  //       toast.info(`Thành viên ${userId} đã tham gia cuộc gọi.`);
+  //     }
+  //   });
+  //   return () => {
+  //     socket.off("call-error");
+  //     socket.off("receive-room-invitation");
+  //     socket.off("call-accepted");
+  //     socket.off("call-rejected");
+  //     socket.off("member-joined-call");
+  //   };
+  // }, [navigate, user?.id, conversation?._id]);
+
   const handleCall = async (userId, roomId, type) => {
-    console.log("RoomID:", roomId);
-    console.log("nhận: ", userId);
-    console.log("gửi: ", user);
     if (type === "private") {
       const isOnline = await checkUserOnline(userId);
       if (!isOnline) {
-        toast.warning("Người dùng không online");
+        toast.warning("Người nhận không online");
         return;
       }
       socket.emit("send-room-invitation", {
-        targetUserId: userId,
+        targetUserIds: [userId],
         roomId,
         callType: "one-on-one",
-        callerId: user.id,
-        callerName: user.name,
+        callerId: user?.id,
+        callerName: user?.name,
+        conversationId: conversation?._id,
       });
       toast.info("Đang chờ người nhận chấp nhận cuộc gọi...");
+    } else if (type === "group") {
+      const targetUserIds = conversation.members
+        .filter((member) => member._id !== user?.id)
+        .map((member) => member._id);
+
+      if (targetUserIds.length === 0) {
+        toast.warning("Không có thành viên nào trong nhóm để gọi");
+        return;
+      }
+
+      const onlineChecks = await Promise.all(
+        targetUserIds.map((id) => checkUserOnline(id))
+      );
+      const onlineUserIds = targetUserIds.filter(
+        (_, index) => onlineChecks[index]
+      );
+
+      if (onlineUserIds.length === 0) {
+        toast.warning("Không có thành viên nào online");
+        return;
+      }
+
+      socket.emit("send-room-invitation", {
+        targetUserIds: onlineUserIds,
+        roomId,
+        callType: "group",
+        callerId: user?.id,
+        callerName: user?.name,
+        conversationId: conversation?._id,
+      });
+      toast.info("Đang chờ các thành viên chấp nhận cuộc gọi...");
     }
   };
 
   const handleAcceptCall = () => {
-    console.log("nhận: ", user?.id);
     if (callDetails) {
       socket.emit("accept-room-invitation", {
         roomId: callDetails.roomId,
         callerId: callDetails.callerId,
         targetUserId: user?.id,
+        conversationId: callDetails.conversationId,
       });
       navigate(`/room/${callDetails.roomId}?type=${callDetails.callType}`);
       setOpenCallDialog(false);
@@ -1033,37 +1191,55 @@ const Chat = ({ conversation, setConversation }) => {
         roomId: callDetails.roomId,
         callerId: callDetails.callerId,
         targetUserId: user?.id,
+        conversationId: callDetails.conversationId,
       });
       setOpenCallDialog(false);
     }
   };
 
   useEffect(() => {
-    socket.on("call-error", ({ message }) => {
+    socket.on("call-error", ({ message, callType }) => {
       toast.error(message);
+      setOpenCallDialog(false);
     });
 
     socket.on(
       "receive-room-invitation",
-      ({ roomId, callType, callerId, callerName }) => {
+      ({ roomId, callType, callerId, callerName, conversationId }) => {
         setOpenCallDialog(true);
-        setCallDetails({ roomId, callType, callerId, callerName });
+        setCallDetails({
+          roomId,
+          callType,
+          callerId,
+          callerName,
+          conversationId,
+        });
       }
     );
 
-    socket.on("call-accepted", ({ roomId, targetUserId }) => {
-      // Kiểm tra nếu là người gửi (caller) bằng cách so sánh với user.id
+    socket.on("call-accepted", ({ roomId, targetUserId, conversationId }) => {
       if (user?.id !== targetUserId) {
-        // Người gửi là người không phải targetUserId
-        toast.success("Cuộc gọi được chấp nhận!");
-        navigate(`/room/${roomId}?type=one-on-one`);
+        setAcceptedMembers((prev) => [...prev, targetUserId]);
+        toast.success(`Thành viên ${targetUserId} đã chấp nhận cuộc gọi!`);
+        if (conversation?._id === conversationId) {
+          navigate(`/room/${roomId}?type=group`);
+        }
       }
     });
 
-    socket.on("call-rejected", ({ targetUserId }) => {
-      if (user?.id !== targetUserId) {
-        // Người gửi nhận thông báo từ chối
-        toast.error("Cuộc gọi bị từ chối.");
+    socket.on("call-rejected", ({ targetUserId, conversationId }) => {
+      if (user?.id !== targetUserId && conversation?._id === conversationId) {
+        if (conversation?.type == "group") {
+          toast.info(`Thành viên ${targetUserId} đã từ chối cuộc gọi.`);
+        } else {
+          toast.info(`${targetUserId} đã từ chối cuộc gọi.`);
+        }
+      }
+    });
+
+    socket.on("member-joined-call", ({ roomId, userId }) => {
+      if (user?.id !== userId) {
+        toast.info(`Thành viên ${userId} đã tham gia cuộc gọi.`);
       }
     });
 
@@ -1072,8 +1248,9 @@ const Chat = ({ conversation, setConversation }) => {
       socket.off("receive-room-invitation");
       socket.off("call-accepted");
       socket.off("call-rejected");
+      socket.off("member-joined-call");
     };
-  }, [navigate, user?.id]);
+  }, [navigate, user?.id, conversation?._id]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -1160,6 +1337,7 @@ const Chat = ({ conversation, setConversation }) => {
               onClick={() =>
                 handleCall(friend?._id, roomId, conversation?.type)
               }
+              disabled={loading}
             >
               <VideocamIcon />
             </Button>
@@ -1172,8 +1350,9 @@ const Chat = ({ conversation, setConversation }) => {
             <DialogTitle id="call-dialog-title">Cuộc gọi đến</DialogTitle>
             <DialogContent>
               <Typography>
-                {callDetails?.callerName} đang gọi bạn. Bạn có muốn tham gia
-                cuộc gọi không?
+                {callDetails?.callerName} đang mời bạn tham gia cuộc gọi{" "}
+                {callDetails?.callType === "group" ? "nhóm" : "cá nhân"}. Bạn có
+                muốn tham gia không?
               </Typography>
             </DialogContent>
             <DialogActions>
