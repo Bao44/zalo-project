@@ -17,7 +17,7 @@
     "@mui/x-date-pickers": "^8.0.0",
     "@reduxjs/toolkit": "^2.2.1",
     "@supabase/supabase-js": "^2.49.3",
-    "@zegocloud/zego-uikit-prebuilt": "^2.14.3-beta",
+    "@zegocloud/zego-uikit-prebuilt": "^2.14.2",
     "axios": "^1.6.7",
     "date-fns": "^4.1.0",
     "emoji-picker-react": "^4.12.2",

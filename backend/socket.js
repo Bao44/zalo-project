@@ -1,81 +1,3 @@
-// const { Server } = require("socket.io");
-
-// let io;
-// let onlineUsers = new Map();
-
-// const initSocket = (server) => {
-//   io = new Server(server, {
-//     cors: {
-//       origin: "*", // Thay bằng domain cụ thể trong production để tăng bảo mật
-//     },
-//     transports: ["websocket", "polling"], // Hỗ trợ cả WebSocket và polling làm fallback
-//   });
-
-//   // Log khi server Socket.IO khởi động
-//   console.log("Socket.IO server initialized");
-
-//   io.on("connection", (socket) => {
-//     console.log("A user connected:", socket.id);
-
-//     // Khi user online, lưu vào danh sách
-//     socket.on("user-online", (userId) => {
-//       if (!userId) {
-//         console.error("Received invalid userId:", userId);
-//         return;
-//       }
-//       onlineUsers.set(userId, socket.id);
-//       io.emit("online-users", Array.from(onlineUsers.keys()));
-//     });
-
-//     // Khi user offline, xóa khỏi danh sách
-//     socket.on("user-offline", (userId) => {
-//       onlineUsers.delete(userId);
-//       io.emit("online-users", Array.from(onlineUsers.keys()));
-//     });
-
-//     // Khi user rời đi, xóa khỏi danh sách online
-//     socket.on("disconnect", () => {
-//       for (let [userId, socketId] of onlineUsers) {
-//         if (socketId === socket.id) {
-//           onlineUsers.delete(userId);
-//           console.log(`User ${userId} disconnected`);
-//           break;
-//         }
-//       }
-//       io.emit("online-users", Array.from(onlineUsers.keys()));
-//     });
-
-//     // Tham gia và rời khỏi room
-//     socket.on("join", (conversationId) => {
-//       socket.join(conversationId);
-//     });
-
-//     // Rời khỏi room
-//     socket.on("leave", (conversationId) => {
-//       socket.leave(conversationId);
-//     });
-//   });
-
-//   // Gán onlineUsers vào io để truy cập từ controller
-//   io.onlineUsers = onlineUsers;
-
-//   // Log các lỗi kết nối từ client
-//   io.on("connect_error", (error) => {
-//     console.error("Socket.IO server connection error:", error);
-//   });
-
-//   return io;
-// };
-
-// const getSocketInstance = () => {
-//   if (!io) {
-//     console.error("Socket.IO instance not initialized yet!");
-//   }
-//   return io;
-// };
-
-// module.exports = { initSocket, getSocketInstance };
-
 const { Server } = require("socket.io");
 
 let io;
@@ -84,18 +6,16 @@ let onlineUsers = new Map();
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "*", // Thay bằng domain cụ thể trong production để tăng bảo mật
+      origin: "*", // Thay bằng domain cụ thể trong production
     },
-    transports: ["websocket", "polling"], // Hỗ trợ cả WebSocket và polling làm fallback
+    transports: ["websocket", "polling"],
   });
 
-  // Log khi server Socket.IO khởi động
   console.log("Socket.IO server initialized");
 
   io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    // Khi user online, lưu vào danh sách
     socket.on("user-online", (userId) => {
       if (!userId) {
         console.error("Received invalid userId:", userId);
@@ -105,30 +25,59 @@ const initSocket = (server) => {
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
-    // Khi user offline, xóa khỏi danh sách
     socket.on("user-offline", (userId) => {
       onlineUsers.delete(userId);
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
-    // mỗi 5s in onlineUsers
-    setInterval(() => {
+    socket.on(
+      "send-room-invitation",
+      ({ targetUserId, roomId, callType, callerId, callerName }) => {
+        const targetSocketId = onlineUsers.get(targetUserId);
 
-    }, 5000);
-
-    // Khi user online, gửi RoomID để xác nhận vào room
-    socket.on("send-room-invitation", ({ targetUserId, roomId, callType }) => {
-      const targetSocketId = onlineUsers.get(targetUserId);
-      console.log("Received room invitation:", { targetUserId, roomId, callType });
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("receive-room-invitation", { roomId, callType });
-        console.log(`Sent room invitation to user ${targetUserId}: roomId=${roomId}, callType=${callType}`);
-      } else {
-        console.error(`User ${targetUserId} is not online`);
+        if (targetSocketId) {
+          io.to(targetSocketId).emit("receive-room-invitation", {
+            roomId,
+            callType,
+            callerId,
+            callerName,
+          });
+        } else {
+          console.error(`${targetUserId} không online`);
+          socket.emit("call-error", {
+            message: `Người nhận ${targetUserId} hiện không online`,
+          });
+        }
       }
-    });
+    );
 
-    // Khi user rời đi, xóa khỏi danh sách online
+    socket.on(
+      "accept-room-invitation",
+      ({ roomId, callerId, targetUserId }) => {
+        const callerSocketId = onlineUsers.get(callerId);
+
+        if (callerSocketId) {
+          io.to(callerSocketId).emit("call-accepted", { roomId, targetUserId });
+        } else {
+          console.error(`${callerId} không online`);
+          // Có thể gửi thông báo lỗi tới người nhận
+          socket.emit("call-error", {
+            message: `Người gọi ${callerId} hiện không online`,
+          });
+        }
+      }
+    );
+
+    socket.on(
+      "reject-room-invitation",
+      ({ roomId, callerId, targetUserId }) => {
+        const callerSocketId = onlineUsers.get(callerId);
+        if (callerSocketId) {
+          io.to(callerSocketId).emit("call-rejected", { targetUserId });
+        }
+      }
+    );
+
     socket.on("disconnect", () => {
       for (let [userId, socketId] of onlineUsers) {
         if (socketId === socket.id) {
@@ -140,21 +89,19 @@ const initSocket = (server) => {
       io.emit("online-users", Array.from(onlineUsers.keys()));
     });
 
-    // Tham gia và rời khỏi room
     socket.on("join", (conversationId) => {
       socket.join(conversationId);
+      console.log(`Socket ${socket.id} joined room ${conversationId}`);
     });
 
-    // Rời khỏi room
     socket.on("leave", (conversationId) => {
       socket.leave(conversationId);
+      console.log(`Socket ${socket.id} left room ${conversationId}`);
     });
   });
 
-  // Gán onlineUsers vào io để truy cập từ controller
   io.onlineUsers = onlineUsers;
 
-  // Log các lỗi kết nối từ client
   io.on("connect_error", (error) => {
     console.error("Socket.IO server connection error:", error);
   });

@@ -16,12 +16,15 @@ function Room() {
 
   const myMeeting = (type) => {
     if (!user) {
-      console.error("No authenticated user found");
       navigate("/home");
       return;
     }
 
-    console.log("Initializing ZegoUIKitPrebuilt with type:", type);
+    if (!videoContainerRef.current) {
+      console.error("Video container not found");
+      return;
+    }
+
     const appID = app_Id;
     const serverSecret = server_Secret;
     const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
@@ -83,7 +86,6 @@ function Room() {
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const type = query.get("type");
-    console.log("Query type:", type);
     if (!type) {
       console.error("No call type specified, defaulting to one-on-one");
       setCallType("one-on-one");
@@ -92,24 +94,8 @@ function Room() {
     }
   }, [location.search]);
 
-  // useEffect(() => {
-  //   const requestPermissions = async () => {
-  //     try {
-  //       await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  //     } catch (error) {
-  //       console.error("Permission error:", error);
-  //       alert(
-  //         "Vui lòng cấp quyền sử dụng camera và micrô để tham gia cuộc gọi"
-  //       );
-  //       navigate("/home");
-  //     }
-  //   };
-
-  //   requestPermissions();
-  // }, [navigate]);
-
   useEffect(() => {
-    if (callType && user) {
+    if (callType && user && videoContainerRef.current) {
       myMeeting(callType);
     }
 
@@ -119,9 +105,8 @@ function Room() {
         zpRef.current.destroy();
         zpRef.current = null;
       }
-
     };
-  }, [callType, user]);
+  }, [callType, user, videoContainerRef.current]);
 
   return (
     <>
@@ -160,23 +145,44 @@ function Room() {
           height: calc(100vh - 3rem);
         }
       `}</style>
-      <div className="room-container">
-        {!joined && (
-          <>
-            <header className="room-header">
-              {callType === "one-on-one"
-                ? "One-on-One Video Call"
-                : "Group Video Call"}
-            </header>
-            <button className="exit-button" onClick={handleExit}>
-              Thoát
-            </button>
-          </>
-        )}
-        <div ref={videoContainerRef} className="video-container" />
-      </div>
+      <ErrorBoundary>
+        <div className="room-container">
+          {!joined && (
+            <>
+              <header className="room-header">
+                {callType === "one-on-one"
+                  ? "One-on-One Video Call"
+                  : "Group Video Call"}
+              </header>
+              <button className="exit-button" onClick={handleExit}>
+                Thoát
+              </button>
+            </>
+          )}
+          <div ref={videoContainerRef} className="video-container" />
+        </div>
+      </ErrorBoundary>
     </>
   );
+}
+
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <h1>Đã xảy ra lỗi. Vui lòng thử lại.</h1>;
+    }
+    return this.props.children;
+  }
 }
 
 export default Room;
