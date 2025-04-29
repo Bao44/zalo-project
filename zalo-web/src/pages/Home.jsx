@@ -2,7 +2,6 @@ import ChatIcon from "@mui/icons-material/Chat";
 import ContactsIcon from "@mui/icons-material/Contacts";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SettingsIcon from "@mui/icons-material/Settings";
-import CallIcon from "@mui/icons-material/Call";
 import {
   Box,
   Grid,
@@ -29,7 +28,6 @@ import socket from "../../socket/socket";
 
 const Messager = lazy(() => import("./Messager"));
 const Contact = lazy(() => import("./Contact"));
-const Call = lazy(() => import("./Call"));
 
 const Home = () => {
   const navigate = useNavigate();
@@ -123,7 +121,6 @@ const Home = () => {
       localStorage.removeItem("user");
       localStorage.removeItem("lastLoginAt");
 
-
       // Cập nhật trạng thái Redux và AuthContext
       dispatch(logout());
       setAuth(null);
@@ -200,20 +197,6 @@ const Home = () => {
                   />
                 </ListItemButton>
               </ListItem>
-
-              <ListItem
-                sx={{
-                  justifyContent: "center",
-                  backgroundColor:
-                    activeTab === "call" ? "rgba(0,0,0,0.2)" : "transparent",
-                }}
-              >
-                <ListItemButton onClick={() => setActiveTab("call")}>
-                  <CallIcon
-                    sx={{ color: "#fff", width: "40px", height: "40px" }}
-                  />
-                </ListItemButton>
-              </ListItem>
               <ListItem
                 sx={{
                   justifyContent: "center",
@@ -258,8 +241,6 @@ const Home = () => {
               <Loading />
             ) : activeTab === "mess" ? (
               <Messager />
-            ) : activeTab === "call" ? (
-              <Call />
             ) : (
               <Contact />
             )}

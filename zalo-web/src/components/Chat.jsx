@@ -17,7 +17,7 @@ import {
   ListItemIcon,
   ListItemText,
   Drawer,
-  Alert
+  Alert,
 } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import ImageIcon from "@mui/icons-material/Image";
@@ -49,7 +49,10 @@ import {
   deleteMessage,
 } from "../../api/messageAPI";
 import EmojiPopover from "./EmojiPopover";
-import { createConversation1vs1, removeMemberFromGroup } from "../../api/conversationAPI";
+import {
+  createConversation1vs1,
+  removeMemberFromGroup,
+} from "../../api/conversationAPI";
 import ReplytoMessageSelected from "./ReplytoMessageSelected";
 import AddMember from "./AddMember";
 import GroupMember from "./GroupMember";
@@ -85,7 +88,8 @@ const Chat = ({ conversation, setConversation }) => {
   const [openGroupMember, setOpenGroupMember] = useState(false);
   const [roomId, setRoomId] = useState("");
   const navigate = useNavigate();
-
+  const [openCallDialog, setOpenCallDialog] = useState(false);
+  const [callDetails, setCallDetails] = useState(null);
 
   const handleRoomIdGenerate = () => {
     const randomId = Math.random().toString(36).substring(2, 9);
@@ -103,16 +107,20 @@ const Chat = ({ conversation, setConversation }) => {
 
   // SOCKET CHECK ONLINE
   useEffect(() => {
-    socket.emit("checkOnline", user?.id);
-    socket.on("statusOnline", (status) => {
-      isOnline(status);
-    });
+    if (user?.id) {
+      socket.emit("user-online", user.id); // Gửi user-online
+      socket.on("online-users", (users) => {
+        console.log("Online users:", users);
+        isOnline(users.includes(friend?._id)); // Cập nhật trạng thái online của friend
+      });
+    }
     return () => {
-      if (socket) {
-        socket.off("statusOnline");
+      if (socket && user?.id) {
+        socket.emit("user-offline", user.id);
+        socket.off("online-users");
       }
     };
-  }, [user?.id]);
+  }, [user?.id, friend?._id]);
 
   // SOCKET NHẬN TIN NHẮN MỚI
   useEffect(() => {
@@ -156,7 +164,7 @@ const Chat = ({ conversation, setConversation }) => {
               msg.idTemp &&
               msg.senderId._id === message.senderId &&
               Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) <
-              1000 && // Within 1 second
+                1000 && // Within 1 second
               msg.attachments?.length > 0 &&
               message.attachments?.length > 0
           );
@@ -249,15 +257,6 @@ const Chat = ({ conversation, setConversation }) => {
       }
     };
   }, [conversation?._id, user?.id, isFocused]);
-
-  // Nhan thong bao cuoc goi
-  useEffect(() => {
-    socket.on("receive-room-invitation", ({ roomId, callType }) => {
-      console.log("aaaaaaaaa", {roomId, callType})
-      alert(`Bạn nhận được lời mời tham gia một cuộc gọi. Room ID: ${roomId}`);
-      navigate(`/room/${roomId}?type=${callType}`);
-    });
-  }, [navigate])
 
   // Cleanup stale temporary messages
   // useEffect(() => {
@@ -425,7 +424,7 @@ const Chat = ({ conversation, setConversation }) => {
       console.error("Error in handleSendAudio:", error);
       alert(
         "Không thể gửi file âm thanh: " +
-        (error.message || "Lỗi không xác định")
+          (error.message || "Lỗi không xác định")
       );
       setMessages((prev) => prev.filter((msg) => !msg.idTemp)); // Xóa tin nhắn tạm nếu lỗi
     } finally {
@@ -608,10 +607,10 @@ const Chat = ({ conversation, setConversation }) => {
           files: media
             ? null
             : {
-              uri: fileBase64,
-              name: file.name,
-              type: file.mimeType || file.type,
-            },
+                uri: fileBase64,
+                name: file.name,
+                type: file.mimeType || file.type,
+              },
           receiverId: type === "private" ? friend?._id : null,
           replyTo: replyTo || null,
         };
@@ -627,10 +626,10 @@ const Chat = ({ conversation, setConversation }) => {
             files: media
               ? null
               : {
-                uri: fileBase64,
-                name: file.name,
-                type: file.mimeType || file.type,
-              },
+                  uri: fileBase64,
+                  name: file.name,
+                  type: file.mimeType || file.type,
+                },
             replyTo: replyTo || null,
             createdAt: new Date().toISOString(),
             idTemp: t,
@@ -745,9 +744,9 @@ const Chat = ({ conversation, setConversation }) => {
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => { };
+  const handleTypingStart = () => {};
 
-  const handleTypingEnd = () => { };
+  const handleTypingEnd = () => {};
 
   // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
@@ -830,7 +829,11 @@ const Chat = ({ conversation, setConversation }) => {
       };
       await sendMessage(conversation?._id, messageData);
       localStorage.removeItem("selectedConversation");
-      const res = await removeMemberFromGroup(conversation?._id, user?.id, user?.id);
+      const res = await removeMemberFromGroup(
+        conversation?._id,
+        user?.id,
+        user?.id
+      );
       if (res.success) {
         setConversation((prev) => ({
           ...prev,
@@ -840,7 +843,7 @@ const Chat = ({ conversation, setConversation }) => {
         setOpen(false);
       }
     }
-  }
+  };
 
   const DrawerList = (
     <Box sx={{ width: 400 }} role="presentation">
@@ -864,10 +867,7 @@ const Chat = ({ conversation, setConversation }) => {
       >
         {type === "private" ? (
           <>
-            <UserAvatar
-              uri={friend?.avatar}
-              sx={{ width: 60, height: 60 }}
-            />
+            <UserAvatar uri={friend?.avatar} sx={{ width: 60, height: 60 }} />
             <Typography
               textAlign="center"
               paddingTop="10px"
@@ -904,85 +904,80 @@ const Chat = ({ conversation, setConversation }) => {
               {name}
             </Typography>
           </>
-        )
-        }
-      </Box >
+        )}
+      </Box>
       <Divider />
-      {
-        type === "private" && (
-          <List>
-            {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map(
-              (text, index) => (
-                <ListItem
-                  key={text}
-                  disablePadding
-                  onClick={() => handleFriendItemClick(index)}
-                >
-                  <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
-                    <ListItemIcon>
-                      {index === 0 && <AccountCircleIcon />}
-                      {index === 1 && <NotificationsOffIcon />}
-                      {index === 2 && <DeleteIcon color="error" />}
-                    </ListItemIcon>
-                    <ListItemText primary={text} />
-                  </ListItemButton>
-                </ListItem>
-              )
-            )}
-          </List>
-        )
-      }
+      {type === "private" && (
+        <List>
+          {["Thông tin cá nhân", "Tắt thông báo", "Xoá cuộc hội thoại"].map(
+            (text, index) => (
+              <ListItem
+                key={text}
+                disablePadding
+                onClick={() => handleFriendItemClick(index)}
+              >
+                <ListItemButton sx={{ color: index === 2 ? "red" : "inherit" }}>
+                  <ListItemIcon>
+                    {index === 0 && <AccountCircleIcon />}
+                    {index === 1 && <NotificationsOffIcon />}
+                    {index === 2 && <DeleteIcon color="error" />}
+                  </ListItemIcon>
+                  <ListItemText primary={text} />
+                </ListItemButton>
+              </ListItem>
+            )
+          )}
+        </List>
+      )}
       <InforProfile
         openModal={openInforProfile}
         setOpenModal={setOpenInforProfile}
         friend={friend}
       />
-      {
-        conversation.type === "group" && (
-          <List>
-            {[
-              "Thêm thành viên",
-              "Tắt thông báo",
-              "Xem danh sách thành viên",
-              "Rời khỏi nhóm",
-            ].map((text, index) => (
-              <ListItem
-                key={text}
-                disablePadding
-                onClick={() => handleGroupItemClick(index)}
+      {conversation.type === "group" && (
+        <List>
+          {[
+            "Thêm thành viên",
+            "Tắt thông báo",
+            "Xem danh sách thành viên",
+            "Rời khỏi nhóm",
+          ].map((text, index) => (
+            <ListItem
+              key={text}
+              disablePadding
+              onClick={() => handleGroupItemClick(index)}
+            >
+              <ListItemButton
+                sx={{ color: index === 3 || index === 4 ? "red" : "inherit" }}
               >
-                <ListItemButton
-                  sx={{ color: index === 3 || index === 4 ? "red" : "inherit" }}
-                >
-                  <ListItemIcon>
-                    {index === 0 && <PersonAddIcon />}
-                    {index === 1 && <NotificationsOffIcon />}
-                    {index === 2 && <GroupsIcon />}
-                    {index === 3 && <ExitToAppIcon color="error" />}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={index === 2 ? `${text}(${members.length})` : text}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-            {conversation?.admin === user?.id && (
-              <ListItem
-                key={"Giải tán nhóm"}
-                disablePadding
+                <ListItemIcon>
+                  {index === 0 && <PersonAddIcon />}
+                  {index === 1 && <NotificationsOffIcon />}
+                  {index === 2 && <GroupsIcon />}
+                  {index === 3 && <ExitToAppIcon color="error" />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={index === 2 ? `${text}(${members.length})` : text}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+          {conversation?.admin === user?.id && (
+            <ListItem
+              key={"Giải tán nhóm"}
+              disablePadding
               // onClick={handleDeleteConversation}
-              >
-                <ListItemButton sx={{ color: "red" }}>
-                  <ListItemIcon>
-                    <DeleteIcon color="error" />
-                  </ListItemIcon>
-                  <ListItemText primary={"Giải tán nhóm"} />
-                </ListItemButton>
-              </ListItem>
-            )}
-          </List>
-        )
-      }
+            >
+              <ListItemButton sx={{ color: "red" }}>
+                <ListItemIcon>
+                  <DeleteIcon color="error" />
+                </ListItemIcon>
+                <ListItemText primary={"Giải tán nhóm"} />
+              </ListItemButton>
+            </ListItem>
+          )}
+        </List>
+      )}
       <AddMember
         openModal={openAddMember}
         setOpenModal={setOpenAddMember}
@@ -995,29 +990,90 @@ const Chat = ({ conversation, setConversation }) => {
         conversation={conversation}
         setConversation={setConversation}
       />
-    </Box >
+    </Box>
   );
 
   const handleCall = async (userId, roomId, type) => {
-    console.log("RoomID", roomId);
+    console.log("RoomID:", roomId);
+    console.log("nhận: ", userId);
+    console.log("gửi: ", user);
     if (type === "private") {
-      // check user online
       const isOnline = await checkUserOnline(userId);
       if (!isOnline) {
         toast.warning("Người dùng không online");
         return;
-      } else {
-        socket.emit("send-room-invitation", {
-          targetUserId: userId, // Gửi cho một người
-          roomId,
-          callType: "one-on-one",
-        });
+      }
+      socket.emit("send-room-invitation", {
+        targetUserId: userId,
+        roomId,
+        callType: "one-on-one",
+        callerId: user.id,
+        callerName: user.name,
+      });
+      toast.info("Đang chờ người nhận chấp nhận cuộc gọi...");
+    }
+  };
+
+  const handleAcceptCall = () => {
+    console.log("nhận: ", user?.id);
+    if (callDetails) {
+      socket.emit("accept-room-invitation", {
+        roomId: callDetails.roomId,
+        callerId: callDetails.callerId,
+        targetUserId: user?.id,
+      });
+      navigate(`/room/${callDetails.roomId}?type=${callDetails.callType}`);
+      setOpenCallDialog(false);
+    }
+  };
+
+  const handleRejectCall = () => {
+    if (callDetails) {
+      socket.emit("reject-room-invitation", {
+        roomId: callDetails.roomId,
+        callerId: callDetails.callerId,
+        targetUserId: user?.id,
+      });
+      setOpenCallDialog(false);
+    }
+  };
+
+  useEffect(() => {
+    socket.on("call-error", ({ message }) => {
+      toast.error(message);
+    });
+
+    socket.on(
+      "receive-room-invitation",
+      ({ roomId, callType, callerId, callerName }) => {
+        setOpenCallDialog(true);
+        setCallDetails({ roomId, callType, callerId, callerName });
+      }
+    );
+
+    socket.on("call-accepted", ({ roomId, targetUserId }) => {
+      // Kiểm tra nếu là người gửi (caller) bằng cách so sánh với user.id
+      if (user?.id !== targetUserId) {
+        // Người gửi là người không phải targetUserId
+        toast.success("Cuộc gọi được chấp nhận!");
         navigate(`/room/${roomId}?type=one-on-one`);
       }
-    } else {
-      // 
-    }
-  }
+    });
+
+    socket.on("call-rejected", ({ targetUserId }) => {
+      if (user?.id !== targetUserId) {
+        // Người gửi nhận thông báo từ chối
+        toast.error("Cuộc gọi bị từ chối.");
+      }
+    });
+
+    return () => {
+      socket.off("call-error");
+      socket.off("receive-room-invitation");
+      socket.off("call-accepted");
+      socket.off("call-rejected");
+    };
+  }, [navigate, user?.id]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -1100,10 +1156,39 @@ const Chat = ({ conversation, setConversation }) => {
             )}
           </Box>
           <Box sx={{ marginLeft: "auto", color: "#000", padding: "5px" }}>
-            <Button onClick={() => handleCall(friend?._id, roomId, conversation?.type)}>
+            <Button
+              onClick={() =>
+                handleCall(friend?._id, roomId, conversation?.type)
+              }
+            >
               <VideocamIcon />
             </Button>
           </Box>
+          <Dialog
+            open={openCallDialog}
+            onClose={handleRejectCall}
+            aria-labelledby="call-dialog-title"
+          >
+            <DialogTitle id="call-dialog-title">Cuộc gọi đến</DialogTitle>
+            <DialogContent>
+              <Typography>
+                {callDetails?.callerName} đang gọi bạn. Bạn có muốn tham gia
+                cuộc gọi không?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleRejectCall} color="error">
+                Từ chối
+              </Button>
+              <Button
+                onClick={handleAcceptCall}
+                color="primary"
+                variant="contained"
+              >
+                Chấp nhận
+              </Button>
+            </DialogActions>
+          </Dialog>
           <Button
             sx={{ marginLeft: "10px", color: "#000", padding: "5px" }}
             onClick={toggleDrawer(true)}
@@ -1128,7 +1213,9 @@ const Chat = ({ conversation, setConversation }) => {
               if (msg?.type === "notification") {
                 return (
                   <>
-                    <Typography sx={{ marginTop: 3, textAlign: "center" }}>{msg?.content}</Typography>
+                    <Typography sx={{ marginTop: 3, textAlign: "center" }}>
+                      {msg?.content}
+                    </Typography>
                   </>
                 );
               } else {
@@ -1277,7 +1364,11 @@ const Chat = ({ conversation, setConversation }) => {
       <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
         {DrawerList}
       </Drawer>
-      <Dialog open={openRevokeDialog} onClose={() => setOpenRevokeDialog(false)} aria-labelledby="revoke-dialog-title">
+      <Dialog
+        open={openRevokeDialog}
+        onClose={() => setOpenRevokeDialog(false)}
+        aria-labelledby="revoke-dialog-title"
+      >
         <DialogTitle id="revoke-dialog-title">Thu hồi tin nhắn</DialogTitle>
         <DialogContent>
           <Typography>
