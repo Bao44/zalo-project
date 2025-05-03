@@ -82,7 +82,7 @@ const SignUp = () => {
         {/* welcome */}
 
         <View>
-          <Text style={styles.welcomeText}>Hãy,</Text>
+          <Text style={styles.welcomeText}>Hi,</Text>
           <Text style={styles.welcomeText}>Đăng kí tài khoản nào</Text>
         </View>
 
@@ -93,23 +93,23 @@ const SignUp = () => {
           </Text>
           <Input
             icon={<Icon name="profile" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your name"
+            placeholder="Nhâp tên của bạn"
             onChangeText={(value) => (nameRef.current = value)}
           />
           <Input
             icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your email"
+            placeholder="Nhâp email của bạn"
             onChangeText={(value) => (emailRef.current = value)}
           />
           <Input
             icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your password"
+            placeholder="Nhâp mật khẩu của bạn"
             secureTextEntry
             onChangeText={(value) => (passwordRef.current = value)}
           />
           <Input
             icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your confirmPassword"
+            placeholder="Nhập lại mật khẩu của bạn"
             secureTextEntry
             onChangeText={(value) => (confirmPasswordRef.current = value)}
           />

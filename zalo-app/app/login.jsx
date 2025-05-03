@@ -27,7 +27,7 @@ const Login = () => {
 
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert("Error", "Vui lòng điền đầy đủ thông tin!");
       return;
     }
 
@@ -115,12 +115,12 @@ const Login = () => {
           </Text>
           <Input
             icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your email"
+            placeholder="Nhập email của bạn"
             onChangeText={(value) => (emailRef.current = value)}
           />
           <Input
             icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your password"
+            placeholder="Nhập mật khẩu của bạn"
             secureTextEntry
             onChangeText={(value) => (passwordRef.current = value)}
           />
@@ -130,7 +130,7 @@ const Login = () => {
 
           {/* button */}
           <Button
-            title={"Login"}
+            title={"Đăng nhập"}
             loading={loading}
             onPress={onSubmit}
             disabled={loading}

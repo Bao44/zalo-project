@@ -14,7 +14,7 @@ const Welcome = () => {
       <StatusBar style="dark" />
       {/* title */}
       <View style={{ gap: 20 }}>
-        <Text style={styles.title}>Yalo</Text>
+        <Text style={styles.title}>Zalo</Text>
       </View>
 
       <View style={styles.container}>

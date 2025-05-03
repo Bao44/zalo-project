@@ -1,32 +1,21 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router"; //
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter, useFocusEffect } from "expo-router"; 
 import {
   Ionicons,
   FontAwesome5,
   MaterialCommunityIcons,
   Entypo,
 } from "@expo/vector-icons";
+import { useAuth } from "../../contexts/AuthContext";
+import Avatar from "../../components/Avatar";
+import { hp } from "@/helpers/common";
+import { theme } from "@/constants/theme";
 
 const PersonalScreen = () => {
   const router = useRouter();
-  const [avatarUri, setAvatarUri] = useState(null);
-
-  // ✅ Tải avatar khi quay lại màn hình
-  useFocusEffect(
-    useCallback(() => {
-      const fetchAvatar = async () => {
-        try {
-          const uri = await AsyncStorage.getItem("avatarUri");
-          if (uri) setAvatarUri(uri);
-        } catch (error) {
-          console.log("Lỗi tải avatar:", error);
-        }
-      };
-      fetchAvatar();
-    }, [])
-  );
+  const { user } = useAuth();
+  console.log("User in PersonalScreen:", user);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -34,18 +23,15 @@ const PersonalScreen = () => {
         {/* Hồ sơ cá nhân */}
         <TouchableOpacity
           style={styles.profileCard}
-          onPress={() => router.push("editProfileUser")}
+          onPress={() => router.push("profile")}
         >
-          <Image
-            source={
-              avatarUri
-                ? { uri: avatarUri }
-                : require("../../assets/images/default_user.png")
-            }
-            style={styles.avatar}
+          <Avatar
+            uri={user?.avatar}
+            size={hp(7.5)}
+            rounded={theme.radius.xxl * 100}
           />
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.profileName}>Nguyễn Minh Hải</Text>
+            <Text style={styles.profileName}>{user.name}</Text>
             <Text style={styles.profileSubtitle}>Xem trang cá nhân</Text>
           </View>
           <Ionicons name="person-add" size={24} color="blue" />

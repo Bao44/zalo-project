@@ -211,7 +211,7 @@ const DiaryScreen = () => {
               </View>
             ) : (
               <View style={{ marginVertical: 30 }}>
-                <Text style={styles.noPosts}>No more posts</Text>
+                <Text style={styles.noPosts}>Không còn bài viết nào nữa</Text>
               </View>
             )
           }

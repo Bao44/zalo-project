@@ -133,7 +133,7 @@ const EditProfile = () => {
             </Pressable>
           </View>
           <Text style={{ fontSize: hp(1.5), color: theme.fonts.text }}>
-            Please fill your profile details
+            Vui lòng điền thông tin hồ sơ của bạn
           </Text>
           <Input
             icon={<Icon name="profile" />}
