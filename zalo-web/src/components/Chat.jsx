@@ -960,6 +960,7 @@ const Chat = ({ conversation, setConversation }) => {
   //   };
   // }, [navigate, user?.id, conversation?._id]);
 
+  // HANDLE CALL
   const handleCall = async (userId, roomId, type) => {
     if (type === "private") {
       const isOnline = await checkUserOnline(userId);
@@ -1010,6 +1011,7 @@ const Chat = ({ conversation, setConversation }) => {
     }
   };
 
+  // HANDLE ACCEPT CALL
   const handleAcceptCall = () => {
     if (callDetails) {
       socket.emit("accept-room-invitation", {
@@ -1023,6 +1025,8 @@ const Chat = ({ conversation, setConversation }) => {
     }
   };
 
+
+  // HANDLE REJECT CALL
   const handleRejectCall = () => {
     if (callDetails) {
       socket.emit("reject-room-invitation", {
@@ -1336,6 +1340,12 @@ const Chat = ({ conversation, setConversation }) => {
           placeholder="Nhập tin nhắn..."
           value={content}
           onChange={handleChange}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault(); // Prevent adding a new line
+              handleSendMessage();
+            }
+          }}
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: "20px",

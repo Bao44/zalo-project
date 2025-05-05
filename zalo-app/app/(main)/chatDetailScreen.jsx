@@ -545,7 +545,7 @@ const ChatDetailScreen = () => {
             });
 
             if (!result.canceled && result.assets?.length > 0) {
-                const maxSizeMB = 50; // Giới hạn kích thước tối đa (50MB)
+                const maxSizeMB = 10; // Giới hạn kích thước tối đa (10MB)
                 const maxSizeBytes = maxSizeMB * 1024 * 1024; // Chuyển đổi sang bytes
 
                 const selectedVideos = await Promise.all(
@@ -553,7 +553,7 @@ const ChatDetailScreen = () => {
                         // Kiểm tra kích thước file
                         const fileInfo = await FileSystem.getInfoAsync(video.uri);
                         if (fileInfo.size > maxSizeBytes) {
-                            throw new Error(`Video "${video.name}" vượt quá giới hạn ${maxSizeMB}MB.`);
+                            Alert.alert(`Video "${video.name}" vượt quá giới hạn ${maxSizeMB}MB.`);
                         }
 
                         const fileBase64 = await FileSystem.readAsStringAsync(video.uri, {
