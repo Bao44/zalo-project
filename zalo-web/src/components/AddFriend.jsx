@@ -258,13 +258,16 @@ export default function AddFriend({ socket }) {
                     {friend.name}
                   </Typography>
                   {status === "request" && (
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={handleRequestFriend}
-                    >
-                      Gửi lời mời
-                    </Button>
+                    friend?._id !== user.id ? (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={handleRequestFriend}
+                      >
+                        Gửi lời mời
+                      </Button>) : (
+                      <Typography>Bạn</Typography>
+                    )
                   )}
                   {status === "revoke" && (
                     <Button

@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.kilasami123.zaloapp'
+    namespace 'com.quocbao44.zaloapp'
     defaultConfig {
-        applicationId 'com.kilasami123.zaloapp'
+        applicationId 'com.quocbao44.zaloapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

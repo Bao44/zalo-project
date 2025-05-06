@@ -3,35 +3,11 @@
     "name": "zalo-app",
     "slug": "zalo-app",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "zalo-project",
+    "newArchEnabled": true,
     "platforms": [
       "ios",
       "android"
     ],
-    "extra": {
-      "eas": {
-        "deeplinkPath": "zalo-project://",
-        "projectId": "465ff846-e5b4-443e-a36f-47cccd27a49d"
-      },
-      "router": {
-        "origin": false
-      }
-    },
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.kilasami123.zaloapp",
-      "usesCleartextTraffic": true
-    },
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -57,6 +33,18 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5c7825d9-0615-40d2-a1d7-4322467831ac"
+      }
+    },
+    "owner": "quocbao44",
+    "android": {
+      "package": "com.quocbao44.zaloapp"
     }
   }
 }

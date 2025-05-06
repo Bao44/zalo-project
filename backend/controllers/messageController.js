@@ -2,6 +2,7 @@ const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
 const { getSocketInstance } = require("../socket");
 const cloudinary = require("../config/cloudinary");
+const path = require('path');
 
 const messageController = {
     // Gửi tin nhắn
@@ -88,6 +89,11 @@ const messageController = {
 
                 const mimeType = file.type || 'application/octet-stream';
                 const dataUri = `data:${mimeType};base64,${file.uri}`;
+                // Generate unique public_id with extension
+                const timestamp = Date.now();
+                const baseName = path.parse(file.name).name; // E.g., "myfile"
+                const ext = path.parse(file.name).ext || ''; // E.g., ".jpg" or empty string if no extension
+                const uniquePublicId = `${baseName}_${timestamp}${ext}`;
 
                 let result;
 
@@ -101,7 +107,7 @@ const messageController = {
                     result = await cloudinary.uploader.upload(dataUri, {
                         folder: "zalo/messages/files",
                         resource_type: "auto",
-                        // public_id: file.name,
+                        public_id: uniquePublicId,
                     });
                 }
 
