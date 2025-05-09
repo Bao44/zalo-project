@@ -286,7 +286,16 @@ const MessageScreen = () => {
                   </Text>
                 </View>
                 <Text style={[styles.textMessage, styleNotification(item?.lastMessage?.seen, item?.lastMessage?.senderId)]} numberOfLines={1} ellipsizeMode="tail">
-                  {item?.lastMessage && ((item?.lastMessage?.senderId === user?.id && item?.lastMessage?.type !== "notification" ? "Bạn: " : "") || (item?.members.find((u) => u._id !== user?.id)?.name && item?.lastMessage?.type !== "notification" ? `${item?.members.find((u) => u._id !== user?.id)?.name}: ` : ""))}
+                  {
+                    item?.lastMessage && item?.lastMessage?.type !== "notification"
+                      ? item?.lastMessage?.senderId === user?.id
+                        ? "Bạn: "
+                        : (() => {
+                          const sender = item?.members.find((u) => u._id === item?.lastMessage?.senderId);
+                          return sender ? `${sender.name}: ` : "";
+                        })()
+                      : ""
+                  }
                   {item?.lastMessage?.revoked ? "[Tin nhắn đã được thu hồi]" : (
                     item?.lastMessage?.content ? item?.lastMessage?.content : "" || item?.lastMessage?.attachments?.length > 0 ? "[Ảnh]" : "" ||
                       item?.lastMessage?.media?.fileName ? `[Media] ${item?.lastMessage?.media?.fileName}` : "" ||

@@ -33,7 +33,6 @@ const newPost = () => {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(file);
 
-
   useEffect(() => {
     if (post && post.id) {
       bodyRef.current = post.body;
@@ -93,22 +92,22 @@ const newPost = () => {
       Alert.alert("Post", "Please add some content or media to post");
       return;
     }
-    
+
     let data = {
       file,
       body: bodyRef.current,
       userId: user?.id,
     };
-  
+
     if (post && post.id) data.id = post.id;
-    
+
     // create post
     setLoading(true);
     let res = await createOrUpdatePost(data);
     setLoading(false);
 
     console.log("Post response:", res);
-    
+
     if (res.success) {
       setFile(null);
       bodyRef.current = "";
@@ -133,7 +132,7 @@ const newPost = () => {
             />
             <View style={{ gap: 2 }}>
               <Text style={styles.username}>{user && user.name}</Text>
-              <Text style={styles.publicText}>Public</Text>
+              <Text style={styles.publicText}>Công khai</Text>
             </View>
           </View>
 
@@ -169,7 +168,7 @@ const newPost = () => {
           )}
 
           <View style={styles.media}>
-            <Text style={styles.addImageText}>Add to your post</Text>
+            <Text style={styles.addImageText}>Thêm vào bài viết của bạn</Text>
             <View style={styles.mediaIcons}>
               <TouchableOpacity onPress={() => onPick(true)}>
                 <Icon name="imageFile" size={30} color={theme.colors.dark} />

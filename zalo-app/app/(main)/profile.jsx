@@ -75,11 +75,11 @@ const Profile = () => {
 
 const UserHeader = ({ user, router }) => {
   return (
-    <View style={{marginBottom: hp(2) }}>
+    <View style={{ marginBottom: hp(2), marginTop: hp(2) }}>
       <Background uri={user?.background} sizeHeight={hp(26)} />
       <View style={styles.header}>
         <BackButton router={router} color="white" />
-        <TouchableOpacity onPress={() => router.push("optionsUser")}>
+        <TouchableOpacity onPress={() => router.push("settingsProfile")}>
           <Icon name="moreHorizontal" size={20} color={"white"} />
         </TouchableOpacity>
       </View>
