@@ -20,4 +20,10 @@ router.get('/friend-requests/:receiverId', friendshipController.getFriendRequest
 // Check da là bạn hay chưa
 router.get('/check-friend/:userId/:friendId', friendshipController.checkFriendship);
 
+// Lấy danh sách bạn bè đã gửi lời mời kết bạn
+router.get('/sent-requests/:userId', friendshipController.getSentFriendRequests);
+
+// Thu hồi lời mời kết bạn
+router.post('/withdraw-friend-request', friendshipController.withdrawFriendRequest);
+
 module.exports = router;

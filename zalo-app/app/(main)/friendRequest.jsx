@@ -6,7 +6,7 @@ import Icon from "../../assets/icons";
 import { hp, wp } from "../../helpers/common";
 import { router } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
-import { getFriendRequests, respondToFriendRequest } from "../../api/friendshipAPI";
+import { getFriendRequests, respondToFriendRequest, getSentFriendRequests, withdrawFriendRequest } from "../../api/friendshipAPI";
 import Avatar from "../../components/Avatar";
 import socket from "../../utils/socket";
 
@@ -26,18 +26,27 @@ const FriendRequest = () => {
     useEffect(() => {
         const fetchFriendRequest = async () => {
             try {
-                const response = await getFriendRequests(user.id);
-                if (response.success) {
-                    setListFriendRequest(response.data);
+                if (selected === "received") {
+                    const response = await getFriendRequests(user.id);
+                    if (response.success) {
+                        setListFriendRequest(response.data);
+                    } else {
+                        alert("Lỗi lấy danh sách lời mời kết bạn!");
+                    }
                 } else {
-                    alert("Lỗi lấy danh sách lời mời kết bạn!");
+                    const response = await getSentFriendRequests(user.id);
+                    if (response.success) {
+                        setListFriendRequest(response.data);
+                    } else {
+                        alert("Lỗi lấy danh sách lời mời đã gửi!");
+                    }
                 }
             } catch (error) {
                 console.log("Lỗi lấy danh sách lời mời kết bạn:", error);
             }
         }
         fetchFriendRequest();
-    }, [reload]);
+    }, [reload, selected]);
 
     // Khởi tạo Socket.IO
     useEffect(() => {
@@ -64,6 +73,21 @@ const FriendRequest = () => {
             }
         } catch (error) {
             console.log("Lỗi xử lý yêu cầu kết bạn:", error);
+        }
+    };
+
+    // Thu hồi lời mời kết bạn
+    const handleWithdrawFriendRequest = async (receiverId) => {
+        try {
+            const response = await withdrawFriendRequest(user.id, receiverId);
+            if (response.success) {
+                alert("Đã thu hồi lời mời kết bạn!");
+                reloadRequest();
+            } else {
+                alert("Đã xảy ra lỗi khi thu hồi lời mời kết bạn!");
+            }
+        } catch (error) {
+            console.log("Lỗi thu hồi lời mời kết bạn:", error);
         }
     };
 
@@ -99,7 +123,7 @@ const FriendRequest = () => {
                     <Text style={selected === "received" ? styles.textActive : styles.textNoActive}>Đã nhận ({listFriendRequest.reduce((count, month) => count + month.data.length, 0)})</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setSelected("sent")}>
-                    <Text style={selected === "sent" ? styles.textActive : styles.textNoActive}>Đã gửi</Text>
+                    <Text style={selected === "sent" ? styles.textActive : styles.textNoActive}>Đã gửi ({listFriendRequest.reduce((count, month) => count + month.data.length, 0)})</Text>
                 </TouchableOpacity>
             </View>
             <SectionList
@@ -107,9 +131,9 @@ const FriendRequest = () => {
                 keyExtractor={(item, index) => `${item.id}-${index}`} // Tránh key trùng lặp
                 renderItem={({ item, section }) => (
                     <TouchableOpacity style={styles.buttonUser}>
-                        <Avatar uri={item.sender?.avatar} size={hp(6.5)} rounded={theme.radius.xxl * 100} />
+                        <Avatar uri={selected === "received" ? item.sender?.avatar : item.receiver?.avatar} size={hp(6.5)} rounded={theme.radius.xxl * 100} />
                         <View style={styles.boxContent}>
-                            <Text style={styles.textNameUser}>{item.sender?.name}</Text>
+                            <Text style={styles.textNameUser}>{selected === "received" ? item.sender?.name : item.receiver?.name}</Text>
                             {section.title !== "Cũ hơn" ? (
                                 <>
                                     <Text style={styles.textDateRequest}>
@@ -133,12 +157,16 @@ const FriendRequest = () => {
                             )
 
                             }
-                            <View style={styles.boxButton}>
-                                <TouchableOpacity style={styles.button}>
+                            <View style={[styles.boxButton, { justifyContent: selected !== "received" ? "flex-end" : "space-between" }]}>
+                                <TouchableOpacity style={[styles.button, {display: selected !== "received" && "none"}]}>
                                     <Text style={styles.textDecline} onPress={() => handleRespondToFriendRequest(item.sender?._id, "rejected")}>Từ chối</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.button}>
-                                    <Text style={styles.textAccept} onPress={() => handleRespondToFriendRequest(item.sender?._id, "accepted")}>Đồng ý</Text>
+                                    {selected === "received" ? (
+                                        <Text style={styles.textAccept} onPress={() => handleRespondToFriendRequest(item.sender?._id, "accepted")}>Đồng ý</Text>
+                                    ) : (
+                                        <Text style={[styles.textAccept, {color: "red"}]} onPress={() => handleWithdrawFriendRequest(item.receiver?._id, "cancelled")}>Hủy gửi</Text>
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>

@@ -150,7 +150,7 @@ const Chat = ({ conversation, setConversation }) => {
               msg.idTemp &&
               msg.senderId._id === message.senderId &&
               Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) <
-                1000 && // Within 1 second
+              1000 && // Within 1 second
               msg.attachments?.length > 0 &&
               message.attachments?.length > 0
           );
@@ -410,7 +410,7 @@ const Chat = ({ conversation, setConversation }) => {
       console.error("Error in handleSendAudio:", error);
       alert(
         "Không thể gửi file âm thanh: " +
-          (error.message || "Lỗi không xác định")
+        (error.message || "Lỗi không xác định")
       );
       setMessages((prev) => prev.filter((msg) => !msg.idTemp)); // Xóa tin nhắn tạm nếu lỗi
     } finally {
@@ -593,10 +593,10 @@ const Chat = ({ conversation, setConversation }) => {
           files: media
             ? null
             : {
-                uri: fileBase64,
-                name: file.name,
-                type: file.mimeType || file.type,
-              },
+              uri: fileBase64,
+              name: file.name,
+              type: file.mimeType || file.type,
+            },
           receiverId: type === "private" ? friend?._id : null,
           replyTo: replyTo || null,
         };
@@ -612,10 +612,10 @@ const Chat = ({ conversation, setConversation }) => {
             files: media
               ? null
               : {
-                  uri: fileBase64,
-                  name: file.name,
-                  type: file.mimeType || file.type,
-                },
+                uri: fileBase64,
+                name: file.name,
+                type: file.mimeType || file.type,
+              },
             replyTo: replyTo || null,
             createdAt: new Date().toISOString(),
             idTemp: t,
@@ -730,9 +730,9 @@ const Chat = ({ conversation, setConversation }) => {
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => {};
+  const handleTypingStart = () => { };
 
-  const handleTypingEnd = () => {};
+  const handleTypingEnd = () => { };
 
   // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
@@ -1091,7 +1091,7 @@ const Chat = ({ conversation, setConversation }) => {
       socket.off("call-rejected");
       socket.off("member-joined-call");
     };
-  }, [navigate, user?.id, conversation?._id]);
+  }, [navigate, user?.id, conversation?._id, conversation?.type]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -1290,16 +1290,16 @@ const Chat = ({ conversation, setConversation }) => {
       )}
       <Box
         sx={{
-          height: "80px",
           borderTop: "1px solid #ddd",
           display: "flex",
           alignItems: "center",
-          padding: "10px 20px",
           backgroundColor: "#fff",
+          flexDirection: "column",
+          width: "100%",
         }}
       >
-        <Box sx={{ display: "flex", gap: "10px", marginRight: "10px" }}>
-          <label htmlFor="uploadImg">
+        <Box sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2, paddingY: "10px"}}>
+          <label htmlFor="uploadImg" style={{ alignItems: "center", display: "flex", marginLeft: "15px" }}>
             <ImageIcon
               sx={{
                 cursor: "pointer",
@@ -1313,10 +1313,10 @@ const Chat = ({ conversation, setConversation }) => {
             type="file"
             accept=".png, .jpg, .jpeg, .gif"
             multiple
-            style={{ display: "none" }}
+            style={{ display: "none"}}
             onChange={handleSendImage}
           />
-          <label htmlFor="uploadFile">
+          <label htmlFor="uploadFile" style={{ alignItems: "center", display: "flex" }}>
             <AttachFileIcon
               sx={{
                 cursor: "pointer",
@@ -1334,58 +1334,74 @@ const Chat = ({ conversation, setConversation }) => {
             onChange={handleSendFile}
           />
         </Box>
-        <TextField
-          fullWidth
-          placeholder="Nhập tin nhắn..."
-          value={content}
-          onChange={handleChange}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault(); // Prevent adding a new line
-              handleSendMessage();
-            }
-          }}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "20px",
-              backgroundColor: "#f5f5f5",
-            },
-          }}
-        />
-        <EmojiPopover content={content} setContent={setContent} />
-        <Button
-          onClick={isRecording ? stopRecording : startRecording}
-          sx={{
-            color: isRecording ? "#f44336" : "#555",
-            "&:hover": { color: isRecording ? "#d32f2f" : "#1976d2" },
-          }}
-        >
-          <MicIcon />
-          {isRecording && (
-            <CircularProgress
-              size={20}
-              sx={{ color: "#f44336", marginLeft: "5px" }}
-            />
-          )}
-        </Button>
-        <Button
-          onClick={handleSendMessage}
-          sx={{
-            marginLeft: "10px",
-            backgroundColor: "#1976d2",
-            color: "#fff",
-            "&:hover": { backgroundColor: "#1565c0" },
-          }}
-        >
-          Gửi
-          {loading && (
-            <CircularProgress
-              color="inherit"
-              size="20px"
-              sx={{ marginLeft: "5px" }}
-            />
-          )}
-        </Button>
+        <Box sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #ddd", paddingY: "10px"}}>
+          <TextField
+            fullWidth
+            placeholder="Nhập tin nhắn..."
+            value={content}
+            onChange={handleChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault(); // Prevent adding a new line
+                handleSendMessage();
+              }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  border: 'none', 
+                },
+                '&:hover fieldset': {
+                  border: 'none', 
+                },
+                '&.Mui-focused fieldset': {
+                  border: 'none', 
+                },
+              },
+              '& .MuiInputBase-input': {
+                padding: '8px',
+                '&:focus': {
+                  outline: 'none',
+                },
+              },
+              marginLeft: "10px",
+            }}
+          />
+          <EmojiPopover content={content} setContent={setContent} />
+          <Button
+            onClick={isRecording ? stopRecording : startRecording}
+            sx={{
+              color: isRecording ? "#f44336" : "#555",
+              "&:hover": { color: isRecording ? "#d32f2f" : "#1976d2" },
+            }}
+          >
+            <MicIcon />
+            {isRecording && (
+              <CircularProgress
+                size={20}
+                sx={{ color: "#f44336", marginLeft: "5px" }}
+              />
+            )}
+          </Button>
+          <Button
+            onClick={handleSendMessage}
+            sx={{
+              backgroundColor: "#1976d2",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#1565c0" },
+              marginRight: "20px",
+            }}
+          >
+            Gửi
+            {loading && (
+              <CircularProgress
+                color="inherit"
+                size="20px"
+                sx={{ marginLeft: "5px" }}
+              />
+            )}
+          </Button>
+        </Box>
       </Box>
       <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
         <ConversationInfo

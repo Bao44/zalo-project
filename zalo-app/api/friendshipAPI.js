@@ -77,6 +77,29 @@ export const checkFriendship = async (userId, friendId) => {
     }
 };
 
+// Lấy danh sách đã gửi yêu cầu kết bạn
+export const getSentFriendRequests = async (userId) => {
+    try {
+        const response = await api.get(`/api/friendships/sent-requests/${userId}`);
+        return response.data;
+    } catch (error) {
+        return handleApiError(error);
+    }
+};
+
+// Thu hồi lời mời kết bạn
+export const withdrawFriendRequest = async (senderId, receiverId) => {
+    try {
+        const response = await api.post("/api/friendships/withdraw-friend-request", {
+            senderId,
+            receiverId,
+        });
+        return response.data;
+    } catch (error) {
+        return handleApiError(error);
+    }
+};
+
 // Xư lý lỗi trả về từ API
 const handleApiError = (error) => {
     if (error.response) {

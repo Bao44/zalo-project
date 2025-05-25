@@ -165,7 +165,7 @@ const friendshipController = {
             const friend = await User.find({ phone: phone });
             if (friend.length === 0) {
                 return res.status(404).json({ success: false, message: "User not found" });
-            }else{
+            } else {
                 return res.status(200).json({ success: true, data: friend });
             }
         } catch (error) {
@@ -217,6 +217,103 @@ const friendshipController = {
             } else {
                 return res.status(404).json({ success: false, message: "No friendship found" });
             }
+        } catch (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    // Lấy danh sách đã gửi yêu cầu kết bạn
+    async getSentFriendRequests(req, res) {
+        try {
+            const { userId } = req.params;
+
+            const now = new Date();
+            const limitDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+            const sentRequests = await Friendship.aggregate([
+                { $match: { sender_id: userId, status: "pending" } },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "receiver_id",
+                        foreignField: "_id",
+                        as: "receiver",
+                    },
+                },
+                { $unwind: "$receiver" },
+                {
+                    $project: {
+                        _id: 1,
+                        "receiver.name": 1,
+                        "receiver.email": 1,
+                        "receiver.avatar": 1,
+                        "receiver._id": 1,
+                        content: 1,
+                        createdAt: 1,
+                        type: 1,
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" },
+                    },
+                },
+                { $sort: { year: -1, month: -1, createdAt: -1 } },
+                {
+                    $group: {
+                        _id: { year: "$year", month: "$month" },
+                        data: { $push: "$$ROOT" },
+                    },
+                },
+            ]);
+
+            let groupedRequests = [];
+            let olderRequests = [];
+
+            sentRequests.forEach((group) => {
+                const { year, month } = group._id;
+                const monthDate = new Date(year, month - 1, 1);
+
+                if (monthDate >= limitDate) {
+                    groupedRequests.push({
+                        title: `Tháng ${month}, ${year}`,
+                        data: group.data,
+                    });
+                } else {
+                    olderRequests = olderRequests.concat(group.data);
+                }
+            });
+
+            if (olderRequests.length > 0) {
+                groupedRequests.push({ title: "Cũ hơn", data: olderRequests });
+            }
+
+            return res.status(200).json({ success: true, data: groupedRequests });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    // Thu hồi lời mời kết bạn
+    async withdrawFriendRequest(req, res) {
+        try {
+            const { senderId, receiverId } = req.body;
+
+            // Tìm và xóa lời mời kết bạn
+            const result = await Friendship.deleteOne({ sender_id: senderId, receiver_id: receiverId, status: "pending" });
+
+            if (result.deletedCount === 0) {
+                return res.status(404).json({ success: false, message: "Friend request not found or already accepted/rejected" });
+            }
+
+            // Gửi thông báo real-time qua Socket.IO
+            const io = getSocketInstance();
+            const receiverSocketId = io.onlineUsers?.get(receiverId); // Lấy socketId từ Map onlineUsers
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("friend-request-withdrawn", {
+                    message: "A friend request has been withdrawn",
+                    senderId,
+                });
+            }
+
+            return res.status(200).json({ success: true, message: "Friend request withdrawn successfully" });
         } catch (error) {
             return res.status(500).json({ success: false, message: error.message });
         }
