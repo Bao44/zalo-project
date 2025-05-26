@@ -93,8 +93,43 @@
 
 ## ⚙ Yêu Cầu Cài Đặt
 
+## 📚 Hướng Dẫn Cài Đặt
 
+- Clone mã nguồn:
+```
+      git clone https://github.com/Bao44/zalo-project.git
+      cd chat-application
+```
 
+- Cài đặt Back-end:
+```
+      cd backend
+      npm install
+```
+- Cài đặt zalo-app:
+```
+      cd zalo-app
+      npm install
+```
+- Cài đặt zalo-web:
+```
+      cd zalo-web
+      npm install
+```
+- Cấu hình biến môi trường `.env ...`
+- Chạy ứng dụng
+```
+      cd backend
+      npm run dev
+
+      # Mở terminal mới
+      cd zalo-app
+      npm start
+
+      # Mở terminal mới
+      cd zalo-web
+      npm run dev
+```
 
 ## 👥 Đội Ngũ Phát Triển
 
