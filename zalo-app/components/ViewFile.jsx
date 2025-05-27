@@ -10,32 +10,32 @@ import { iconFile } from "@/components/iconFile";
 const ViewFile = ({ file }) => {
     // Optional: Keep the download/share function
     const handleDownload = async () => {
-        try {
-            if (!file?.fileUrl) {
-                Alert.alert("Lỗi", "Không tìm thấy URL của file.");
-                return;
-            }
+        // try {
+        //     if (!file?.fileUrl) {
+        //         Alert.alert("Lỗi", "Không tìm thấy URL của file.");
+        //         return;
+        //     }
 
-            const downloadPath = `${FileSystem.documentDirectory}${file.fileName}`;
-            const { uri } = await FileSystem.downloadAsync(file.fileUrl, downloadPath);
+        //     const downloadPath = `${FileSystem.documentDirectory}${file.fileName}`;
+        //     const { uri } = await FileSystem.downloadAsync(file.fileUrl, downloadPath);
 
-            const fileInfo = await FileSystem.getInfoAsync(uri);
-            if (!fileInfo.exists) {
-                Alert.alert("Lỗi", "File không được tải thành công.");
-                return;
-            }
+        //     const fileInfo = await FileSystem.getInfoAsync(uri);
+        //     if (!fileInfo.exists) {
+        //         Alert.alert("Lỗi", "File không được tải thành công.");
+        //         return;
+        //     }
 
-            const canShare = await Sharing.isAvailableAsync();
-            if (canShare) {
-                await Sharing.shareAsync(uri);
-                Alert.alert("Thành công", "File đã được tải, bạn có thể mở hoặc lưu từ đây!");
-            } else {
-                Alert.alert("Lỗi", "Không thể chia sẻ file trên thiết bị này.");
-            }
-        } catch (error) {
-            console.error("Error downloading file:", error);
-            Alert.alert("Lỗi", `Không thể tải file: ${error.message}`);
-        }
+        //     const canShare = await Sharing.isAvailableAsync();
+        //     if (canShare) {
+        //         await Sharing.shareAsync(uri);
+        //         Alert.alert("Thành công", "File đã được tải, bạn có thể mở hoặc lưu từ đây!");
+        //     } else {
+        //         Alert.alert("Lỗi", "Không thể chia sẻ file trên thiết bị này.");
+        //     }
+        // } catch (error) {
+        //     console.error("Error downloading file:", error);
+        //     Alert.alert("Lỗi", `Không thể tải file: ${error.message}`);
+        // }
     };
 
     return (

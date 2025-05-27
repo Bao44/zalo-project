@@ -29,6 +29,7 @@ import AudioPlayer from "@/components/AudioPlayer";
 import ReplytoMessageSelected from "@/components/ReplytoMessageSelected";
 import AttachReplytoMessage from "@/components/AttachReplytoMessage";
 import ParsedText from "react-native-parsed-text";
+import * as ImagePicker from 'expo-image-picker';
 
 
 const ChatDetailScreen = () => {
@@ -539,23 +540,25 @@ const ChatDetailScreen = () => {
             }
 
             // Chọn video từ thư viện
-            const result = await DocumentPicker.getDocumentAsync({
-                type: ["video/*"], // Chỉ chọn các file video
-                copyToCacheDirectory: true,
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+                allowsMultipleSelection: false, // Chỉ chọn 1 video
+                quality: 1,
             });
 
             if (!result.canceled && result.assets?.length > 0) {
                 const maxSizeMB = 10; // Giới hạn kích thước tối đa (10MB)
                 const maxSizeBytes = maxSizeMB * 1024 * 1024; // Chuyển đổi sang bytes
 
+                // Kiểm tra kích thước video
+                const videoInfo = await FileSystem.getInfoAsync(result.assets[0].uri);
+                if (videoInfo.size > maxSizeBytes) {
+                    Alert.alert("Lỗi", `Video quá lớn. Vui lòng chọn video nhỏ hơn ${maxSizeMB}MB.`);
+                    return;
+                }
+
                 const selectedVideos = await Promise.all(
                     result.assets.map(async (video) => {
-                        // Kiểm tra kích thước file
-                        const fileInfo = await FileSystem.getInfoAsync(video.uri);
-                        if (fileInfo.size > maxSizeBytes) {
-                            Alert.alert(`Video "${video.name}" vượt quá giới hạn ${maxSizeMB}MB.`);
-                        }
-
                         const fileBase64 = await FileSystem.readAsStringAsync(video.uri, {
                             encoding: FileSystem.EncodingType.Base64,
                         });
@@ -837,7 +840,7 @@ const ChatDetailScreen = () => {
                     {
                         loading ? (<Loading />) : messages?.length === 0 ? (
                             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                                <Text style={{ textAlign: "center"}}>Bạn hãy là người đầu tiên mở đầu cho cuộc trò chuyện này!</Text>
+                                <Text style={{ textAlign: "center" }}>Bạn hãy là người đầu tiên mở đầu cho cuộc trò chuyện này!</Text>
                             </View>
                         ) : (
                             <FlatList
