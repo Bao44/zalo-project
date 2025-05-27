@@ -1,4 +1,11 @@
-import { View, Text, Button, Alert, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Button,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import React, { useState } from "react";
 import ScreenWrapper from "../../components/ScreenWrapper";
 import { useAuth } from "../../contexts/AuthContext";
@@ -19,31 +26,95 @@ const DiscoverScreen = () => {
   const { user, setAuth } = useAuth();
   const [loading, setLoading] = useState(false);
 
+  // const handleLogout = async () => {
+  //   setLoading(true);
+  //   try {
+  //     // Lấy userId và sessionToken từ AsyncStorage
+  //     const userId = await AsyncStorage.getItem("userId");
+  //     const sessionToken = await AsyncStorage.getItem("sessionToken");
+
+  //     if (!userId || !sessionToken) {
+  //       console.warn("Không tìm thấy thông tin đăng nhập trong AsyncStorage");
+  //     } else {
+  //       // Gọi API signout để xóa thiết bị
+  //       const result = await logout(userId, sessionToken);
+  //       if (!result.success) {
+  //         throw new Error(result.message || "Lỗi khi xóa thiết bị");
+  //       }
+  //     }
+
+  //     // Kiểm tra session trước khi đăng xuất
+  //     const {
+  //       data: { session },
+  //     } = await supabase.auth.getSession();
+  //     console.log("Session before signOut:", session);
+
+  //     if (session) {
+  //       // Đăng xuất khỏi Supabase
+  //       const { error } = await supabase.auth.signOut();
+  //       if (error && error.message !== "Auth session missing") {
+  //         throw new Error(error.message);
+  //       }
+  //     } else {
+  //       console.warn("No active session found, skipping Supabase signOut");
+  //     }
+
+  //     // Gửi sự kiện user-offline (nếu user tồn tại)
+  //     if (user?.id) {
+  //       try {
+  //         socket.emit("user-offline", user.id);
+  //       } catch (socketError) {
+  //         console.warn("Error emitting user-offline event:", socketError);
+  //       }
+  //     } else {
+  //       console.warn("User not found, cannot emit user-offline event");
+  //     }
+
+  //     // Xóa dữ liệu trong AsyncStorage
+  //     await AsyncStorage.removeItem("userId");
+  //     await AsyncStorage.removeItem("sessionToken");
+  //     await AsyncStorage.removeItem("user");
+  //     await AsyncStorage.removeItem("supabase.auth.token");
+  //     await AsyncStorage.removeItem("lastLoginAt");
+
+  //     // Cập nhật trạng thái AuthContext
+  //     setAuth(null);
+
+  //     // Chuyển hướng về trang đăng nhập
+  //     router.replace("/welcome");
+  //   } catch (error) {
+  //     Alert.alert("Error", "Lỗi khi đăng xuất: " + error.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleLogout = async () => {
     setLoading(true);
     try {
-      // Lấy userId và sessionToken từ AsyncStorage
       const userId = await AsyncStorage.getItem("userId");
       const sessionToken = await AsyncStorage.getItem("sessionToken");
 
-      if (!userId || !sessionToken) {
-        console.warn("Không tìm thấy thông tin đăng nhập trong AsyncStorage");
-      } else {
-        // Gọi API signout để xóa thiết bị
+      if (userId && sessionToken) {
+        // Gọi API đăng xuất
         const result = await logout(userId, sessionToken);
-        if (!result.success) {
+        if (
+          !result.success &&
+          result.message !==
+            "Thiết bị không tồn tại trên server, tiếp tục đăng xuất cục bộ"
+        ) {
           throw new Error(result.message || "Lỗi khi xóa thiết bị");
         }
+      } else {
+        console.warn("Không tìm thấy thông tin đăng nhập trong AsyncStorage");
       }
 
-      // Kiểm tra session trước khi đăng xuất
+      // Kiểm tra session từ Supabase
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      console.log("Session before signOut:", session);
 
       if (session) {
-        // Đăng xuất khỏi Supabase
         const { error } = await supabase.auth.signOut();
         if (error && error.message !== "Auth session missing") {
           throw new Error(error.message);
@@ -52,23 +123,23 @@ const DiscoverScreen = () => {
         console.warn("No active session found, skipping Supabase signOut");
       }
 
-      // Gửi sự kiện user-offline (nếu user tồn tại)
+      // Gửi sự kiện user-offline
       if (user?.id) {
         try {
           socket.emit("user-offline", user.id);
         } catch (socketError) {
           console.warn("Error emitting user-offline event:", socketError);
         }
-      } else {
-        console.warn("User not found, cannot emit user-offline event");
       }
 
       // Xóa dữ liệu trong AsyncStorage
-      await AsyncStorage.removeItem("userId");
-      await AsyncStorage.removeItem("sessionToken");
-      await AsyncStorage.removeItem("user");
-      await AsyncStorage.removeItem("supabase.auth.token");
-      await AsyncStorage.removeItem("lastLoginAt");
+      await AsyncStorage.multiRemove([
+        "userId",
+        "sessionToken",
+        "user",
+        "supabase.auth.token",
+        "lastLoginAt",
+      ]);
 
       // Cập nhật trạng thái AuthContext
       setAuth(null);
@@ -76,7 +147,21 @@ const DiscoverScreen = () => {
       // Chuyển hướng về trang đăng nhập
       router.replace("/welcome");
     } catch (error) {
-      Alert.alert("Error", "Lỗi khi đăng xuất: " + error.message);
+      console.error("Logout error:", error);
+      // Vẫn xóa AsyncStorage nếu có lỗi để đảm bảo trạng thái sạch
+      await AsyncStorage.multiRemove([
+        "userId",
+        "sessionToken",
+        "user",
+        "supabase.auth.token",
+        "lastLoginAt",
+      ]);
+      setAuth(null);
+      router.replace("/welcome");
+      Alert.alert(
+        "Thông báo",
+        "Đăng xuất thành công, nhưng có lỗi xảy ra: " + error.message
+      );
     } finally {
       setLoading(false);
     }

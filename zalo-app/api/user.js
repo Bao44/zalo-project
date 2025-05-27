@@ -44,6 +44,14 @@ export const logout = async (userId, sessionToken) => {
     return response.data;
   } catch (error) {
     console.error("Logout API error:", error);
+    if (error.response?.status === 404) {
+      // Nếu thiết bị không tồn tại trên server, trả về success để tiếp tục xóa cục bộ
+      return {
+        success: true,
+        message:
+          "Thiết bị không tồn tại trên server, tiếp tục đăng xuất cục bộ",
+      };
+    }
     throw error.response?.data || error;
   }
 };
@@ -99,4 +107,4 @@ export const getUserFromMongoDB = async (userId) => {
     console.error("Error fetching user from MongoDB:", error);
     throw error.response?.data || error;
   }
-}
+};
