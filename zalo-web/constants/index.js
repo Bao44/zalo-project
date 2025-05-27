@@ -2,5 +2,5 @@ export const supabaseUrl='https://mffhjkirygsbltgsxbcz.supabase.co';
 export const supabaseAnonKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mZmhqa2lyeWdzYmx0Z3N4YmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MjY1NDksImV4cCI6MjA1NjUwMjU0OX0.zoH-EdQuM81ktoZofnFcpF4Q2DocCDs_BvsdIGksH7Q';
 export const supabaseRoleKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mZmhqa2lyeWdzYmx0Z3N4YmN6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MDkyNjU0OSwiZXhwIjoyMDU2NTAyNTQ5fQ._Fv5hEhvP2hdV50mChJggPD-kqSzNKO9AFhppHtmyKE'
 
-export const app_Id = 1029886648;
-export const server_Secret = '40448dab078931ac60ba232fe278f62f';
+export const app_Id = 61625383;
+export const server_Secret = '4c330bad5f484740f9ea87238066ed82';
