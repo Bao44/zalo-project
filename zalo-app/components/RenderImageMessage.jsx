@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Image, FlatList } from "react-native";
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, Linking } from "react-native";
 import React from "react";
 
 const RenderImageMessage = ({ images, wh }) => {
@@ -38,23 +38,25 @@ const RenderImageMessage = ({ images, wh }) => {
                 renderItem={({ item }) => (
                     <View style={styles.row}>
                         {item.map((img, index) => (
-                            <Image
-                                key={index}
-                                source={{ uri: img }}
-                                style={[
-                                    styles.image,
-                                    {
-                                        width:
-                                            item.length === 1 ? fullWidth :
-                                                item.length === 2 ? halfWidth :
-                                                    thirdWidth,
-                                        height:
-                                            item.length === 1 ? fullWidth :
-                                                item.length === 2 ? halfWidth :
-                                                    thirdWidth,
-                                    },
-                                ]}
-                            />
+                            <TouchableOpacity onPress={() => Linking.openURL(img)} key={index}>
+                                <Image
+                                    key={index}
+                                    source={{ uri: img }}
+                                    style={[
+                                        styles.image,
+                                        {
+                                            width:
+                                                item.length === 1 ? fullWidth :
+                                                    item.length === 2 ? halfWidth :
+                                                        thirdWidth,
+                                            height:
+                                                item.length === 1 ? fullWidth :
+                                                    item.length === 2 ? halfWidth :
+                                                        thirdWidth,
+                                        },
+                                    ]}
+                                />
+                            </TouchableOpacity>
                         ))}
                     </View>
                 )}
