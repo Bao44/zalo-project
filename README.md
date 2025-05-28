@@ -38,6 +38,7 @@
 - **ReactJS**: Xây dựng giao diện web với hiệu suất cao.
 - **React Native**: Phát triển ứng dụng di động đa nền tảng.
 - **Mui UI**: Thiết kế giao diện hiện đại, đáp ứng.
+- **ZegoCloud**: Tính năng Call Video.
 
 ### Back-end
 - **Node.js**: Môi trường chạy server JavaScript.
