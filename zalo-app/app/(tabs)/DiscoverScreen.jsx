@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
 } from "react-native";
 import React, { useState } from "react";
-import ScreenWrapper from "../../components/ScreenWrapper";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   Ionicons,
@@ -53,14 +52,14 @@ const DiscoverScreen = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (session) {
-        const { error } = await supabase.auth.signOut();
-        if (error && error.message !== "Auth session missing") {
-          throw new Error(error.message);
-        }
-      } else {
-        console.warn("No active session found, skipping Supabase signOut");
-      }
+      // if (session) {
+      //   const { error } = await supabase.auth.signOut();
+      //   if (error && error.message !== "Auth session missing") {
+      //     throw new Error(error.message);
+      //   }
+      // } else {
+      //   console.warn("No active session found, skipping Supabase signOut");
+      // }
 
       // Gửi sự kiện user-offline
       if (user?.id) {

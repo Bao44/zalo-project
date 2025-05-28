@@ -73,64 +73,13 @@ const Home = () => {
     fetchUser();
   }, [user?.id, dispatch, navigate]);
 
-  const handleLogout = async () => {
-    setIsLoading(true);
+  const { handleLogout } = useAuth();
+  const handleLogoutAction = async () => {
     try {
-      // Lấy userId và sessionToken từ localStorage
-      const userId = localStorage.getItem("userId");
-      const sessionToken = localStorage.getItem("sessionToken");
-
-      if (!userId || !sessionToken) {
-        console.warn("Không tìm thấy thông tin đăng nhập trong localStorage");
-      } else {
-        // Gọi API signout để xóa thiết bị, bỏ qua lỗi 404
-        try {
-          const result = await UserAPI.logout(userId, sessionToken);
-          if (!result.success) {
-            console.warn(
-              "Lỗi khi gọi API signout:",
-              result.message || "Unknown error"
-            );
-          }
-        } catch (error) {
-          console.warn("Error calling logout API:", error.message);
-        }
-      }
-
-      // Kiểm tra session trước khi đăng xuất
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("Session before signOut:", session);
-
-      if (session) {
-        const { error } = await supabase.auth.signOut();
-        if (error && error.message !== "Auth session missing") {
-          throw new Error(error.message);
-        }
-      } else {
-        console.warn("No active session found, skipping Supabase signOut");
-      }
-
-      // Socket off
-      socket.emit("user-offline", user?.id);
-
-      // Xóa dữ liệu trong localStorage
-      localStorage.removeItem("userId");
-      localStorage.removeItem("sessionToken");
-      localStorage.removeItem("user");
-      localStorage.removeItem("lastLoginAt");
-
-      // Cập nhật trạng thái Redux và AuthContext
-      dispatch(logout());
-      setAuth(null);
-
-      // Chuyển hướng về trang đăng nhập
-      navigate("/");
+      await handleLogout();
     } catch (error) {
-      toast.error("Lỗi khi đăng xuất: " + error.message);
-    } finally {
-      setIsLoading(false);
+      console.error("Lỗi khi đăng xuất:", error);
+      toast.error("Không thể đăng xuất. Vui lòng thử lại.");
     }
   };
 
@@ -224,7 +173,7 @@ const Home = () => {
                       <ChangePassword />
                     </ListItem>
                     <ListItem sx={{ padding: 0 }}>
-                      <ListItemButton onClick={handleLogout}>
+                      <ListItemButton onClick={handleLogoutAction}>
                         <Box sx={{ marginRight: "10px" }}>
                           <LogoutIcon />
                         </Box>

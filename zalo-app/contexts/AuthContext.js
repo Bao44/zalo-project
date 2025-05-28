@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      socket.emit("user-online", user.id);
+      socket.emit("user-online", user.id, "mobile");
     }
   }, [user]);
 
