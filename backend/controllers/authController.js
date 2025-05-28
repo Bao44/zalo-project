@@ -2,6 +2,7 @@ const authService = require("../services/authService");
 const User = require("../models/User");
 const { v4: uuidv4 } = require("uuid");
 const { createClient } = require("@supabase/supabase-js");
+const { getSocketInstance } = require("../socket");
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ROLE_KEY;
@@ -177,7 +178,6 @@ const authController = {
         .single();
 
       if (deviceError && deviceError.code !== "PGRST116") {
-        // PGRST116 là mã lỗi khi không tìm thấy bản ghi (không phải lỗi nghiêm trọng)
         return res.status(500).json({
           success: false,
           message: "Lỗi khi kiểm tra thiết bị: " + deviceError.message,
@@ -185,11 +185,61 @@ const authController = {
       }
 
       if (existingDevice) {
-        // Nếu đã có thiết bị, từ chối đăng nhập
-        return res.status(403).json({
-          success: false,
-          message: "Tài khoản đã được đăng nhập trên một thiết bị web khác",
-        });
+        // Lấy instance socket
+        const io = getSocketInstance();
+
+        // Kiểm tra xem người dùng đang online không
+        const targetSocketId = io.onlineUsers.get(user.id);
+        if (targetSocketId) {
+          // Gửi thông báo qua socket đến người dùng đang online
+          io.to(targetSocketId).emit("login-attempt", {
+            message: `Có một thiết bị ${device_type} đang cố gắng đăng nhập vào tài khoản của bạn.`,
+            timestamp: new Date().toISOString(),
+            data: {
+              user: { id: user.id, email: user.email },
+              session: {
+                device_type,
+                session_token: existingDevice.session_token,
+              },
+            },
+          });
+
+          // Chờ phản hồi từ client
+          const response = await waitForClientResponse(
+            io,
+            user.id,
+            device_type
+          );
+
+          if (response.action === "logout") {
+            // Xóa thiết bị hiện tại
+            const { error: deleteError } = await supabase
+              .from("devices")
+              .delete()
+              .eq("id", existingDevice.id);
+
+            if (deleteError) {
+              return res.status(500).json({
+                success: false,
+                message: "Lỗi khi xóa thiết bị: " + deleteError.message,
+              });
+            }
+
+            // Tiếp tục đăng nhập thiết bị mới
+          } else {
+            // Nếu bỏ qua hoặc timeout, trả về lỗi 403
+            return res.status(403).json({
+              success: false,
+              message: "Tài khoản đã được đăng nhập trên một thiết bị web khác",
+            });
+          }
+        } else {
+          // Nếu người dùng không online, trả về lỗi 403
+          return res.status(403).json({
+            success: false,
+            message: "Tài khoản đã được đăng nhập trên một thiết bị web khác",
+          });
+        }
       }
 
       // Tạo session_token mới
@@ -282,6 +332,27 @@ const authController = {
       });
     }
   },
+};
+
+const waitForClientResponse = (io, userId, device_type, timeout = 10000) => {
+  return new Promise((resolve) => {
+    const socketId = io.onlineUsers.get(userId);
+    if (!socketId) {
+      return resolve({ action: "ignore" }); // Người dùng không online, coi như bỏ qua
+    }
+
+    // Lắng nghe sự kiện request-logout-device
+    io.on("request-logout-device", (data) => {
+      if (data.userId === userId && data.device_type === device_type) {
+        resolve({ action: "logout", session_token: data.session_token });
+      }
+    });
+
+    // Timeout sau 10 giây, coi như bỏ qua
+    setTimeout(() => {
+      resolve({ action: "ignore" });
+    }, timeout);
+  });
 };
 
 module.exports = authController;

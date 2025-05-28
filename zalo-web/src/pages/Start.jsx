@@ -76,43 +76,6 @@ const Start = () => {
     setValue(newValue);
   };
 
-  // const handleLogin = async (email, password) => {
-  //   if (email.trim() === "") {
-  //     toast.error("Bạn chưa nhập email!");
-  //     return;
-  //   }
-
-  //   if (password.trim() === "") {
-  //     toast.error("Bạn chưa nhập mật khẩu!");
-  //     return;
-  //   }
-
-  //   setLoading(true);
-
-  //   try {
-  //     const { data, error } = await supabase.auth.signInWithPassword({
-  //       email,
-  //       password,
-  //     });
-
-  //     if (error) {
-  //       console.error("SignIn error:", error);
-  //       toast.error(error.message || "Đăng nhập thất bại!");
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     console.log("Đăng nhập thành công:", data.user);
-  //     // Supabase handles session automatically; no need for localStorage
-  //     navigate("/home", { replace: true });
-  //   } catch (error) {
-  //     console.error("Lỗi đăng nhập:", error);
-  //     toast.error(error.message || "Đã xảy ra lỗi khi đăng nhập!");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleLogin = async (email, password) => {
     if (email.trim() === "") {
       toast.error("Bạn chưa nhập email!");
