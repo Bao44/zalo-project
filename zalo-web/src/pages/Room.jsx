@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 import { useAuth } from "../../contexts/AuthContext";
 
-const app_Id = import.meta.env.VITE_ZEGOCLOUD_APP_ID;
+const app_Id = Number(import.meta.env.VITE_ZEGOCLOUD_APP_ID);
 const server_Secret = import.meta.env.VITE_ZEGOCLOUD_SERVER_SECRET;
 
 function Room() {
@@ -60,7 +60,7 @@ function Room() {
             ? ZegoUIKitPrebuilt.OneONoneCall
             : ZegoUIKitPrebuilt.GroupCall,
       },
-      maxUsers: type === "one-on-one" ? 2 : 4,
+      maxUsers: type === "one-on-one" ? 2 : 6,
       onJoinRoom: () => {
         console.log("Successfully joined room");
         setJoined(true);

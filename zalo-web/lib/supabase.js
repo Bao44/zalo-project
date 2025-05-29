@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseRoleKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
 export const supabase = createClient(supabaseUrl, supabaseRoleKey, {
   auth: {
