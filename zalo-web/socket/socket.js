@@ -1,6 +1,7 @@
 import io from "socket.io-client";
-import { BACKEND_URL } from "../constants/ip";
 import { toast } from "react-toastify";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const socket = io(BACKEND_URL, {
   transports: ["websocket"],

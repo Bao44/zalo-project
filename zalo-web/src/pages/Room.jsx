@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
-import { app_Id, server_Secret } from "../../constants";
 import { useAuth } from "../../contexts/AuthContext";
+
+const app_Id = import.meta.env.VITE_ZEGOCLOUD_APP_ID;
+const server_Secret = import.meta.env.VITE_ZEGOCLOUD_SERVER_SECRET;
 
 function Room() {
   const { user } = useAuth();

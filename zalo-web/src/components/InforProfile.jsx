@@ -23,7 +23,8 @@ import ModalImage from "./ModalImage";
 import { getUserData } from "../../api/user"; // API lấy thông tin người dùng
 import socket from "../../socket/socket";
 import { useAuth } from "../../contexts/AuthContext";
-import { supabaseUrl } from "../../constants";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
 const style = {
   position: "absolute",

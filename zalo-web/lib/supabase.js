@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { supabaseRoleKey, supabaseUrl } from "../../zalo-app/constants";
+
+const supabaseRoleKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
 
 export const supabase = createClient(supabaseUrl, supabaseRoleKey, {
   auth: {

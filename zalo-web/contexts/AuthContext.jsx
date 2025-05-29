@@ -179,12 +179,6 @@ export const AuthProvider = ({ children }) => {
     };
   }, [navigate, location.pathname]);
 
-  // useEffect(() => {
-  //   if (user) {
-  //     socket.emit("user-online", user.id);
-  //   }
-  // }, [user]);
-
   useEffect(() => {
     if (user) {
       socket.emit("user-online", user.id, "web"); // Thêm device_type

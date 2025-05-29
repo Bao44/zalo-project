@@ -24,7 +24,6 @@ import AvatarEditor from "react-avatar-editor";
 import { useDispatch, useSelector } from "react-redux";
 
 import ModalImage from "./ModalImage";
-import { supabaseUrl } from "../../constants";
 import { updateUser } from "../../api/user";
 import {
   getUserBackgroundImageSrc,
@@ -32,6 +31,8 @@ import {
   uploadFile,
 } from "../../api/image";
 import { setUser } from "../redux/userSlice";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
 const style = {
   position: "absolute",
@@ -247,7 +248,6 @@ function AvatarHome({ name, avatar, background, changeBody }) {
                   objectFit: "cover",
                 }}
               />
-              
             ) : (
               <Box
                 sx={{
