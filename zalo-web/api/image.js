@@ -1,5 +1,4 @@
 import axios from "axios";
-import { supabaseUrl } from "../constants";
 import defaultUserImage from "../src/assets/images/img-user.png";
 
 const api = axios.create({
@@ -9,13 +8,15 @@ const api = axios.create({
   },
 });
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
 export const getUserImageSrc = (imagePath) => {
   if (imagePath) {
     console.log("imagePath", imagePath);
     if (typeof imagePath === "string") {
       return `${supabaseUrl}/storage/v1/object/public/uploads/${imagePath}`; // Trả về string URL trực tiếp
     }
-    return imagePath; 
+    return imagePath;
   }
   return defaultUserImage; // Trả về ảnh mặc định
 };
