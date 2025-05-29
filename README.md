@@ -201,6 +201,9 @@ zalo-project/
 
 - Chạy ứng dụng
 
+`Lưu ý khi chạy ở môi trường local:` cần thay đổi ip ở zalo-app và zalo-web.
+Kiểm tra IP bằng cách mở `CMD` và chạy câu lệnh `ipconfig` sau đó tìm `IPv4 Address` và thay thế vào `constants/ip.js`
+
 ```
       cd backend
       npm run dev
