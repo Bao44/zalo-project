@@ -1,10 +1,9 @@
 import axios from "axios";
 import { supabaseUrl } from "../constants";
-import { BACKEND_URL } from '../constants/ip';
 import defaultUserImage from "../src/assets/images/img-user.png";
 
 const api = axios.create({
-  baseURL: BACKEND_URL,
+  baseURL: import.meta.env.VITE_BACKEND_URL,
   headers: {
     "Content-Type": "application/json",
   },
