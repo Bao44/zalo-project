@@ -4,7 +4,6 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import { theme } from "../constants/theme";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import FileViewer from "react-native-file-viewer"; // Import FileViewer
 import { iconFile } from "@/components/iconFile";
 
 const ViewFile = ({ file }) => {
