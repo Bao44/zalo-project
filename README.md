@@ -12,7 +12,7 @@
 
 - **Link GitHub**: [Zalo-Project](https://github.com/Bao44/zalo-project)
 - **Demo Web**: [Truy cập Demo](https://zalo-project.vercel.app/)
-- **Demo App**: Tải về trên [iOS](#) | [Android](#) _(Lưu ý: Link tải app sẽ được cập nhật sau)_
+- **Link tải App**: [Truy cập vào dây](https://expo.dev/accounts/quocbao44/projects/zalo-app/builds/59b0efde-951a-496d-b841-b556b5b66087) 
 
 ---
 
