@@ -94,15 +94,15 @@ const Chat = ({ conversation, setConversation }) => {
 
   // SOCKET CHECK ONLINE
   useEffect(() => {
-    if (user?.id) {
-      socket.emit("user-online", user.id); // Gửi user-online
+    if (user) {
+      socket.emit("user-online", user.id, "web"); // Gửi user-online
       socket.on("online-users", (users) => {
         isOnline(users.includes(friend?._id)); // Cập nhật trạng thái online của friend
       });
     }
     return () => {
       if (socket && user?.id) {
-        socket.emit("user-offline", user.id);
+        socket.emit("user-offline", user.id, "web");
         socket.off("online-users");
       }
     };
@@ -150,7 +150,7 @@ const Chat = ({ conversation, setConversation }) => {
               msg.idTemp &&
               msg.senderId._id === message.senderId &&
               Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) <
-              1000 && // Within 1 second
+                1000 && // Within 1 second
               msg.attachments?.length > 0 &&
               message.attachments?.length > 0
           );
@@ -410,7 +410,7 @@ const Chat = ({ conversation, setConversation }) => {
       console.error("Error in handleSendAudio:", error);
       alert(
         "Không thể gửi file âm thanh: " +
-        (error.message || "Lỗi không xác định")
+          (error.message || "Lỗi không xác định")
       );
       setMessages((prev) => prev.filter((msg) => !msg.idTemp)); // Xóa tin nhắn tạm nếu lỗi
     } finally {
@@ -593,10 +593,10 @@ const Chat = ({ conversation, setConversation }) => {
           files: media
             ? null
             : {
-              uri: fileBase64,
-              name: file.name,
-              type: file.mimeType || file.type,
-            },
+                uri: fileBase64,
+                name: file.name,
+                type: file.mimeType || file.type,
+              },
           receiverId: type === "private" ? friend?._id : null,
           replyTo: replyTo || null,
         };
@@ -612,10 +612,10 @@ const Chat = ({ conversation, setConversation }) => {
             files: media
               ? null
               : {
-                uri: fileBase64,
-                name: file.name,
-                type: file.mimeType || file.type,
-              },
+                  uri: fileBase64,
+                  name: file.name,
+                  type: file.mimeType || file.type,
+                },
             replyTo: replyTo || null,
             createdAt: new Date().toISOString(),
             idTemp: t,
@@ -730,9 +730,9 @@ const Chat = ({ conversation, setConversation }) => {
     handleTypingEnd();
   };
 
-  const handleTypingStart = () => { };
+  const handleTypingStart = () => {};
 
-  const handleTypingEnd = () => { };
+  const handleTypingEnd = () => {};
 
   // TỰ ĐỘNG CUỘN TỚI CUỐI KHI CÓ TIN NHẮN MỚI
   const messagesEndRef = useRef(null);
@@ -1169,8 +1169,23 @@ const Chat = ({ conversation, setConversation }) => {
           width: "100%",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", width: "100%", gap: 2, paddingY: "10px"}}>
-          <label htmlFor="uploadImg" style={{ alignItems: "center", display: "flex", marginLeft: "15px" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            width: "100%",
+            gap: 2,
+            paddingY: "10px",
+          }}
+        >
+          <label
+            htmlFor="uploadImg"
+            style={{
+              alignItems: "center",
+              display: "flex",
+              marginLeft: "15px",
+            }}
+          >
             <ImageIcon
               sx={{
                 cursor: "pointer",
@@ -1184,10 +1199,13 @@ const Chat = ({ conversation, setConversation }) => {
             type="file"
             accept=".png, .jpg, .jpeg, .gif"
             multiple
-            style={{ display: "none"}}
+            style={{ display: "none" }}
             onChange={handleSendImage}
           />
-          <label htmlFor="uploadFile" style={{ alignItems: "center", display: "flex" }}>
+          <label
+            htmlFor="uploadFile"
+            style={{ alignItems: "center", display: "flex" }}
+          >
             <AttachFileIcon
               sx={{
                 cursor: "pointer",
@@ -1205,7 +1223,16 @@ const Chat = ({ conversation, setConversation }) => {
             onChange={handleSendFile}
           />
         </Box>
-        <Box sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #ddd", paddingY: "10px"}}>
+        <Box
+          sx={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderTop: "1px solid #ddd",
+            paddingY: "10px",
+          }}
+        >
           <TextField
             fullWidth
             placeholder="Nhập tin nhắn..."
@@ -1218,21 +1245,21 @@ const Chat = ({ conversation, setConversation }) => {
               }
             }}
             sx={{
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  border: 'none', 
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  border: "none",
                 },
-                '&:hover fieldset': {
-                  border: 'none', 
+                "&:hover fieldset": {
+                  border: "none",
                 },
-                '&.Mui-focused fieldset': {
-                  border: 'none', 
+                "&.Mui-focused fieldset": {
+                  border: "none",
                 },
               },
-              '& .MuiInputBase-input': {
-                padding: '8px',
-                '&:focus': {
-                  outline: 'none',
+              "& .MuiInputBase-input": {
+                padding: "8px",
+                "&:focus": {
+                  outline: "none",
                 },
               },
               marginLeft: "10px",
