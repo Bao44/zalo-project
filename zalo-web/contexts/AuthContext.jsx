@@ -79,6 +79,7 @@ export const AuthProvider = ({ children }) => {
 
       if (session) {
         const { error } = await supabase.auth.signOut();
+
         if (error && error.message !== "Auth session missing") {
           console.error("Lỗi khi xóa session Supabase:", error.message);
           // Tiếp tục đăng xuất ngay cả khi có lỗi
@@ -102,6 +103,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("sessionToken");
       localStorage.removeItem("user");
       localStorage.removeItem("lastLoginAt");
+      localStorage.removeItem("selectedConversation");
       console.log("Dữ liệu localStorage trên web đã được xóa");
 
       // Cập nhật trạng thái AuthContext

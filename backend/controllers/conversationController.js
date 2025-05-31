@@ -41,7 +41,11 @@ const createGroup = async (req, res) => {
   try {
     //Kiểm tra dữ liệu có tồn tại
     if (!admin || members.length < 2) {
-      return res.status(400).json({ message: "Nhóm phải có ít nhất 2 thành viên và cần có tên nhóm." });
+      return res
+        .status(400)
+        .json({
+          message: "Nhóm phải có ít nhất 2 thành viên và cần có tên nhóm.",
+        });
     }
 
     let avatarUrl = "";
@@ -51,10 +55,13 @@ const createGroup = async (req, res) => {
         if (!avatar) throw new Error("Thiếu dữ liệu fileBase64");
 
         const resourceType = avatar.isImage ? "image" : "raw";
-        const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
-          folder: "zalo/avatar-group-chat",
-          resource_type: resourceType,
-        });
+        const result = await cloudinary.uploader.upload(
+          `data:image/png;base64,${avatar.fileUri}`,
+          {
+            folder: "zalo/avatar-group-chat",
+            resource_type: resourceType,
+          }
+        );
         return result.secure_url;
       };
 
@@ -84,16 +91,31 @@ const createGroup = async (req, res) => {
       { new: true }
     )
       .populate("members", "name avatar")
-      .populate("lastMessage", "type content createdAt attachments media files senderId seen replyTo revoked")
+      .populate(
+        "lastMessage",
+        "type content createdAt attachments media files senderId seen replyTo revoked"
+      );
 
     // Gửi socket đến tất cả members
     const io = getSocketInstance();
-    savedConversation.members.forEach((memberId) => {
-      const memberSocketId = io.onlineUsers?.get(memberId);
-      if (memberSocketId) {
-        io.to(memberSocketId).emit("newConversation", updatedConversation);
+
+    for (const memberId of savedConversation.members) {
+      const deviceAndUserIdMobile = `${memberId}-mobile`;
+      const deviceAndUserIdWeb = `${memberId}-web`;
+
+      const memberSocketIdMobile = io.onlineUsers?.get(deviceAndUserIdMobile);
+      const memberSocketIdWeb = io.onlineUsers?.get(deviceAndUserIdWeb);
+
+      if (memberSocketIdMobile) {
+        io.to(memberSocketIdMobile).emit(
+          "newConversation",
+          updatedConversation
+        );
       }
-    });
+      if (memberSocketIdWeb) {
+        io.to(memberSocketIdWeb).emit("newConversation", updatedConversation);
+      }
+    }
 
     res.status(201).json(savedConversation);
   } catch (error) {
@@ -110,7 +132,10 @@ const getUserConversations = async (req, res) => {
     // Tìm tất cả các cuộc trò chuyện có userId trong danh sách members
     const conversations = await Conversation.find({ members: userId })
       .populate("members", "name avatar")
-      .populate("lastMessage", "type content createdAt attachments media files senderId seen replyTo revoked")
+      .populate(
+        "lastMessage",
+        "type content createdAt attachments media files senderId seen replyTo revoked"
+      )
       .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);
@@ -161,7 +186,10 @@ const getConversation1vs1 = async (req, res) => {
 const getConversationsGroup = async (req, res) => {
   try {
     const { userId } = req.params;
-    const conversations = await Conversation.find({ type: "group", members: userId })
+    const conversations = await Conversation.find({
+      type: "group",
+      members: userId,
+    })
       .populate("members", "name avatar")
       .populate("lastMessage", "type content createdAt")
       .sort({ updatedAt: -1 });
@@ -171,7 +199,7 @@ const getConversationsGroup = async (req, res) => {
     console.error("Error fetching conversations:", error);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 // 📌 Xóa cuộc trò chuyện 1 vs 1 (cập nhật lại delete_History)
 const deleteConversation1vs1 = async (req, res) => {
@@ -188,7 +216,7 @@ const deleteConversation1vs1 = async (req, res) => {
 
     // Kiểm tra xem userId đã có trong delete_history chưa
     const existingDeleteEntry = conversation.delete_history.find(
-      entry => entry.userId.toString() === userId
+      (entry) => entry.userId.toString() === userId
     );
 
     let updatedConversation;
@@ -198,12 +226,12 @@ const deleteConversation1vs1 = async (req, res) => {
         conversationId,
         {
           $set: {
-            "delete_history.$[elem].time_delete": time_delete
-          }
+            "delete_history.$[elem].time_delete": time_delete,
+          },
         },
         {
           arrayFilters: [{ "elem.userId": userId }],
-          new: true
+          new: true,
         }
       )
         .populate("members", "name avatar")
@@ -247,10 +275,13 @@ const updateAvataConversation = async (req, res) => {
     }
 
     const resourceType = avatar.isImage ? "image" : "raw";
-    const result = await cloudinary.uploader.upload(`data:image/png;base64,${avatar.fileUri}`, {
-      folder: "zalo/avatar-group-chat",
-      resource_type: resourceType,
-    });
+    const result = await cloudinary.uploader.upload(
+      `data:image/png;base64,${avatar.fileUri}`,
+      {
+        folder: "zalo/avatar-group-chat",
+        resource_type: resourceType,
+      }
+    );
 
     const updatedConversation = await Conversation.findByIdAndUpdate(
       conversationId,
@@ -266,7 +297,7 @@ const updateAvataConversation = async (req, res) => {
     console.error("Error updating conversation:", error);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 // 📌 Thêm thành viên
 const addMemberToGroup = async (req, res) => {
@@ -282,9 +313,13 @@ const addMemberToGroup = async (req, res) => {
     }
 
     // Kiểm tra xem các thành viên mới đã có trong danh sách listApprovedMembers chưa
-    const approvedMembers = conversation.listApprovedMembers.filter(member => newMembers.includes(member.toString()));
+    const approvedMembers = conversation.listApprovedMembers.filter((member) =>
+      newMembers.includes(member.toString())
+    );
     if (approvedMembers.length > 0) {
-      return res.status(400).json({ error: "Some members are already approved" });
+      return res
+        .status(400)
+        .json({ error: "Some members are already approved" });
     }
 
     // Thêm các thành viên mới
@@ -317,11 +352,15 @@ const removeMemberFromGroup = async (req, res) => {
 
     // Kiểm tra xem useRequest có phải là admin hoặc người đó tự rời nhóm
     if (conversation?.admin !== userRequest && memberId !== userRequest) {
-      return res.status(403).json({ error: "You are not authorized to remove this member" });
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to remove this member" });
     }
 
     // Xóa thành viên khỏi danh sách members
-    conversation.members = conversation.members.filter(member => member.toString() !== memberId);
+    conversation.members = conversation.members.filter(
+      (member) => member.toString() !== memberId
+    );
     await conversation.save();
 
     res.status(200).json(conversation);
@@ -346,7 +385,9 @@ const changeAdminGroup = async (req, res) => {
 
     // Kiểm tra xem newAdminId có trong danh sách members không
     if (!conversation.members.includes(newAdminId)) {
-      return res.status(400).json({ error: "New admin must be a member of the group" });
+      return res
+        .status(400)
+        .json({ error: "New admin must be a member of the group" });
     }
 
     // Cập nhật admin
@@ -380,7 +421,7 @@ const changeSettingApproved = async (req, res) => {
     console.error("Error changing setting approved:", error);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 // 📌 Duyệt hoặc xóa yêu cầu tham gia nhóm
 const approveOrDeleteMember = async (req, res) => {
@@ -397,16 +438,26 @@ const approveOrDeleteMember = async (req, res) => {
 
     // Kiểm tra xem userRequest có phải là admin không
     if (conversation?.admin !== userRequest) {
-      return res.status(403).json({ error: "Chỉ có admin mới có quyền duyệt hoặc xóa yêu cầu tham gia" });
+      return res
+        .status(403)
+        .json({
+          error: "Chỉ có admin mới có quyền duyệt hoặc xóa yêu cầu tham gia",
+        });
     }
 
     if (action === "approve") {
       // Duyệt yêu cầu tham gia
       conversation.members.push(memberId); // Thêm thành viên vào danh sách members
-      conversation.listApprovedMembers = conversation.listApprovedMembers.filter(member => member.toString() !== memberId); // Xóa khỏi danh sách yêu cầu tham gia
+      conversation.listApprovedMembers =
+        conversation.listApprovedMembers.filter(
+          (member) => member.toString() !== memberId
+        ); // Xóa khỏi danh sách yêu cầu tham gia
     } else if (action === "delete") {
       // Xóa yêu cầu tham gia
-      conversation.listApprovedMembers = conversation.listApprovedMembers.filter(member => member.toString() !== memberId); // Xóa khỏi danh sách yêu cầu tham gia
+      conversation.listApprovedMembers =
+        conversation.listApprovedMembers.filter(
+          (member) => member.toString() !== memberId
+        ); // Xóa khỏi danh sách yêu cầu tham gia
     } else {
       return res.status(400).json({ error: "Invalid action" });
     }
@@ -417,7 +468,7 @@ const approveOrDeleteMember = async (req, res) => {
     console.error("Error approving or deleting member:", error);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 module.exports = {
   create1vs1,
@@ -432,5 +483,5 @@ module.exports = {
   removeMemberFromGroup,
   changeAdminGroup,
   changeSettingApproved,
-  approveOrDeleteMember
+  approveOrDeleteMember,
 };
