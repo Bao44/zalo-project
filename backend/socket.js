@@ -30,6 +30,7 @@ const initSocket = (server) => {
     socket.on("user-online", (userId, deviceType) => {
       if (!userId || !deviceType) return;
       const key = getUserKey(userId, deviceType);
+      console.log('key', key);
       onlineUsers.set(key, socket.id);
       socket.join(userId);
       console.log(

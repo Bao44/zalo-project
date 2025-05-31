@@ -169,6 +169,10 @@ const authController = {
         .select("*")
         .eq("user_id", user.id);
 
+      console.log(
+        `Đang kiểm tra thiết bị đăng nhập cho user_id=${user.id}, device_type=${device_type}`
+      );
+
       if (devicesError) {
         return res.status(500).json({
           success: false,
@@ -377,5 +381,6 @@ const waitForClientResponse = (io, userId, device_type, timeout = 5000) => {
     }, timeout);
   });
 };
+
 
 module.exports = authController;
