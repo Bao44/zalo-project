@@ -1,4 +1,4 @@
-# 💬 Ứng Dụng Chat - Zalo Project
+# 💬 Ứng Dụng Chat - Realtime Chat
 
 **Một ứng dụng nhắn tin thời gian thực hiện đại, hỗ trợ trò chuyện cá nhân và nhóm, tích hợp đa phương tiện, mạng truyền thông xã hội và quản lý tài khoản người dùng.**
 
